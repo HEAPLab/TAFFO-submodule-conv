@@ -1,5 +1,5 @@
 #include "llvm/Pass.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 
 
@@ -8,24 +8,26 @@ using namespace llvm;
 
 namespace {
 
-struct Hello : public FunctionPass {
+struct FloatToFixed : public ModulePass {
   static char ID;
   
-  Hello(): FunctionPass(ID) { }
-  
-  bool runOnFunction(Function &F) override
-  {
-    errs() << "Hello: ";
-    errs().write_escaped(F.getName()) << '\n';
-    return false;
-  }
-  
+  FloatToFixed(): ModulePass(ID) { }
+  bool runOnModule(Module &M) override;
 };
 
 }
 
-char Hello::ID = 0;
 
-static RegisterPass<Hello> X("hello", "Hello World Pass",
-                             false /* Only looks at CFG */,
-                             false /* Analysis Pass */);
+char FloatToFixed::ID = 0;
+
+static RegisterPass<FloatToFixed> X(
+  "flttofix",
+  "Floating Point to Fixed Point conversion pass",
+  true /* Does not only look at CFG */,
+  true /* Optimization Pass */);
+
+
+bool FloatToFixed::runOnModule(Module &M)
+{
+  return false;
+}
