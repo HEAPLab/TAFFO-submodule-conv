@@ -2,6 +2,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/DenseMap.h"
 
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
@@ -16,6 +17,8 @@ namespace flttofix {
 
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
+  int fracBitsAmt = 16;
+  int bitsAmt = 32;
 
   FloatToFixed(): ModulePass(ID) { }
   bool runOnModule(llvm::Module &M) override;
@@ -28,6 +31,12 @@ struct FloatToFixed : public llvm::ModulePass {
   void printAnnotatedObj(llvm::Module &m);
   
   std::vector<llvm::Value*> buildConversionQueueForRootValue(llvm::Value *val);
+  void performConversion(llvm::Module& m, const std::vector<llvm::Value*>& q);
+  llvm::Value *convertSingleValue(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Value *val);
+  
+  llvm::Value *convertAlloca(llvm::Module& m, llvm::AllocaInst *alloca);
+  llvm::Value *genConvertFloatToFix(llvm::Module& m, llvm::Value *flt);
+  llvm::Value *genConvertFixToFloat(llvm::Module& m, llvm::Value *fix, llvm::Type *destt);
 };
 
 }

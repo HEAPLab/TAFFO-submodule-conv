@@ -36,6 +36,8 @@ bool FloatToFixed::runOnModule(Module &m)
       outs() << "\n";
     }
     outs() << "\n\n";
+    
+    performConversion(m, vals);
   }
 
   return false;
@@ -58,7 +60,6 @@ std::vector<Value*> FloatToFixed::buildConversionQueueForRootValue(Value *val)
   
   return queue;
 }
-
 
 
 
