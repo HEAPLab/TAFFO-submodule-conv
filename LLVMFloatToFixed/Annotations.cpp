@@ -47,6 +47,7 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readGlobalAnnotations(Module &m , b
   return functionAnnotation ? variables : removeNoFloatTy(variables);
 }
 
+
 SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readLocalAnnotations(Function &f)
 {
   SmallPtrSet <Value*,N_ANNO_VAR> variables;
@@ -62,6 +63,18 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readLocalAnnotations(Function &f)
     }
   }
   return removeNoFloatTy(variables);
+}
+
+
+SmallPtrSet<Value*, N_ANNO_VAR> FloatToFixed::readAllLocalAnnotations(Module &m)
+{
+  SmallPtrSet<Value*, N_ANNO_VAR> res;
+  
+  for (Function &f: m.functions()) {
+    SmallPtrSet<Value*, N_ANNO_VAR> t = readLocalAnnotations(f);
+    res.insert(t.begin(), t.end());
+  }
+  return res;
 }
 
 

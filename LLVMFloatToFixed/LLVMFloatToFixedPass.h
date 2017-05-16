@@ -19,8 +19,10 @@ struct FloatToFixed : public llvm::ModulePass {
 
   FloatToFixed(): ModulePass(ID) { }
   bool runOnModule(llvm::Module &M) override;
+  
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readGlobalAnnotations(llvm::Module &m, bool functionAnnotation = false);
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readLocalAnnotations(llvm::Function &f);
+  llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readAllLocalAnnotations(llvm::Module &m);
   bool isValidAnnotation(llvm::ConstantExpr *expr);
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> res);
   void printAnnotatedObj(llvm::Module &m);
