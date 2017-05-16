@@ -34,7 +34,8 @@ struct FloatToFixed : public llvm::ModulePass {
   void performConversion(llvm::Module& m, const std::vector<llvm::Value*>& q);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Value *val);
   
-  llvm::Value *convertAlloca(llvm::Module& m, llvm::AllocaInst *alloca);
+  llvm::Value *convertAlloca(llvm::AllocaInst *alloca);
+  llvm::Value *convertLoad(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::LoadInst *load);
   llvm::Value *genConvertFloatToFix(llvm::Module& m, llvm::Value *flt);
   llvm::Value *genConvertFixToFloat(llvm::Module& m, llvm::Value *fix, llvm::Type *destt);
 };

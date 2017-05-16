@@ -44,14 +44,17 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
 /* also inserts the new value in the basic blocks, alongside the old one */
 Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& operandPool, Value *val)
 {
+  Value *res = nullptr;
   if (AllocaInst *alloca = dyn_cast<AllocaInst>(val)) {
-    return convertAlloca(m, alloca);
+    res = convertAlloca(alloca);
+  } else if (LoadInst *load = dyn_cast<LoadInst>(val)) {
+    res = convertLoad(operandPool, load);
   }
-  return nullptr;
+  return res;
 }
 
 
-Value *FloatToFixed::convertAlloca(Module& m, AllocaInst *alloca)
+Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 {
   Type *prevt = alloca->getAllocatedType();
   if (!prevt->isFloatingPointTy()) {
@@ -70,6 +73,21 @@ Value *FloatToFixed::convertAlloca(Module& m, AllocaInst *alloca)
   newinst->setAllocatedType(Type::getIntNTy(newinst->getContext(), bitsAmt));
   newinst->setName("__" + alloca->getName() + "_fixp");
   newinst->insertAfter(alloca);
+  return newinst;
+}
+
+
+Value *FloatToFixed::convertLoad(DenseMap<Value *, Value *>& op, LoadInst *load)
+{
+  Value *ptr = load->getPointerOperand();
+  Value *newptr = op[ptr];
+  if (!newptr) {
+    return nullptr;
+  }
+  
+  LoadInst *newinst = dyn_cast<LoadInst>(load->clone());
+  newinst->setOperand(0, newptr);
+  newinst->insertAfter(load);
   return newinst;
 }
 
