@@ -26,6 +26,8 @@ struct FloatToFixed : public llvm::ModulePass {
   bool isValidAnnotation(llvm::ConstantExpr *expr);
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> res);
   void printAnnotatedObj(llvm::Module &m);
+  
+  std::vector<llvm::Value*> buildConversionQueueForRootValue(llvm::Value *val);
 };
 
 }
