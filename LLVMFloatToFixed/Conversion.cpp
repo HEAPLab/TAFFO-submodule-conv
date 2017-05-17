@@ -100,10 +100,10 @@ Value *FloatToFixed::genConvertFloatToFix(Module& m, Value *flt)
   if (!i)
     return nullptr;
   
-  IRBuilder<> builder(i);
+  IRBuilder<> builder(i->getNextNode());
   double twoebits = pow(2.0, fracBitsAmt);
   return builder.CreateFPToSI(
-    builder.CreateMul(
+    builder.CreateFMul(
       ConstantFP::get(flt->getType(), twoebits),
       flt),
     Type::getIntNTy(i->getContext(), bitsAmt));
@@ -116,7 +116,7 @@ Value *FloatToFixed::genConvertFixToFloat(Module& m, Value *fix, Type *destt)
   if (!i)
     return nullptr;
   
-  IRBuilder<> builder(i);
+  IRBuilder<> builder(i->getNextNode());
   double twoebits = pow(2.0, fracBitsAmt);
   return builder.CreateFDiv(
     builder.CreateSIToFP(
