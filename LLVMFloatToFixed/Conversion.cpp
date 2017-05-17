@@ -69,9 +69,11 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
     return nullptr;
   }
   
-  AllocaInst *newinst = dyn_cast<AllocaInst>(alloca->clone());
-  newinst->setAllocatedType(Type::getIntNTy(newinst->getContext(), bitsAmt));
-  newinst->setName("__" + alloca->getName() + "_fixp");
+  Type *alloct = Type::getIntNTy(alloca->getContext(), bitsAmt);
+  AllocaInst *newinst = new AllocaInst(alloct, as, alloca->getAlignment(),
+    "__" + alloca->getName() + "_fixp");
+  newinst->setUsedWithInAlloca(alloca->isUsedWithInAlloca());
+  newinst->setSwiftError(alloca->isSwiftError());
   newinst->insertAfter(alloca);
   return newinst;
 }
@@ -85,8 +87,8 @@ Value *FloatToFixed::convertLoad(DenseMap<Value *, Value *>& op, LoadInst *load)
     return nullptr;
   }
   
-  LoadInst *newinst = dyn_cast<LoadInst>(load->clone());
-  newinst->setOperand(0, newptr);
+  LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
+    load->getAlignment(), load->getOrdering(), load->getSynchScope());
   newinst->insertAfter(load);
   return newinst;
 }
