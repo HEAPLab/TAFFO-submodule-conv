@@ -24,8 +24,7 @@ Value *ConversionError = (Value *)(&ConversionError);
 void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
 {
   DenseMap<Value *, Value *> convertedPool;
-  bool convcomplete = true;
-
+  
   for (Value *v: q) {
     Value *newv = convertSingleValue(m, convertedPool, v);
     if (newv && newv != ConversionError) {
@@ -34,16 +33,17 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
       errs() << "warning: ";
       v->print(errs());
       errs() << " not converted\n";
-      convcomplete = false;
       convertedPool.insert({v, ConversionError});
     }
   }
 
-  if (convcomplete) {
-    for (Value *v: q) {
-      if (auto *i = dyn_cast<Instruction>(v))
-        i->removeFromParent();
-    }
+  /* remove all successfully converted stores. MAY PRODUCE INCORRECT RESULTS */
+  //TODO: better logic here!!
+  for (Value *v: q) {
+    auto *i = dyn_cast<StoreInst>(v);
+    auto *convi = convertedPool[v];
+    if (convi && convi != ConversionError && i)
+      i->eraseFromParent();
   }
 }
 
