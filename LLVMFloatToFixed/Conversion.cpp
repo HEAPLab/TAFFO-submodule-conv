@@ -111,7 +111,7 @@ Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruct
         il rispettivo value è un fix che deve essere convertito in float per retrocompatibilità.
         Se la chiave non è un float allora uso il rispettivo value associato così com'è.*/
       fixval = fallval->getType()->isFloatingPointTy()
-        ? dyn_cast<Instruction>(genConvertFixToFloat(m,op[fallval],fallval->getType()))
+        ? dyn_cast<Instruction>(genConvertFixToFloat(op[fallval],fallval->getType()))
         : dyn_cast<Instruction>(op[fallval]);
 
       errs() << "[Fallback] Substituted operand number : " << i+1 << " of " << n << "\n";
@@ -127,7 +127,7 @@ Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruct
     newinst->insertAfter(unsupp);
     errs() << "[Fallback] Not supported operation :" << *unsupp <<" converted to :" << *newinst << " \n";
     if (unsupp->getType()->isFloatingPointTy()) {
-      genConvertFloatToFix(m,newinst);
+      return genConvertFloatToFix(newinst);
     }
     return newinst;
   }
@@ -138,7 +138,7 @@ Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruct
 }
 
 
-Value *FloatToFixed::genConvertFloatToFix(Module& m, Value *flt)
+Value *FloatToFixed::genConvertFloatToFix(Value *flt)
 {
   Instruction *i = dyn_cast<Instruction>(flt);
   if (!i)
@@ -154,7 +154,7 @@ Value *FloatToFixed::genConvertFloatToFix(Module& m, Value *flt)
 }
 
 
-Value *FloatToFixed::genConvertFixToFloat(Module& m, Value *fix, Type *destt)
+Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
 {
   Instruction *i = dyn_cast<Instruction>(fix);
   if (!i)
