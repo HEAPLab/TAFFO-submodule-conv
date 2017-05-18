@@ -11,10 +11,14 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/APFloat.h"
 #include <cmath>
+#include <cassert>
 #include "LLVMFloatToFixedPass.h"
 
 using namespace llvm;
 using namespace flttofix;
+
+
+Value *ConversionError = (Value *)(&ConversionError);
 
 
 void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
@@ -24,13 +28,14 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
 
   for (Value *v: q) {
     Value *newv = convertSingleValue(m, convertedPool, v);
-    if (newv) {
+    if (newv && newv != ConversionError) {
       convertedPool.insert({v, newv});
     } else {
       errs() << "warning: ";
       v->print(errs());
       errs() << " not converted\n";
       convcomplete = false;
+      convertedPool.insert({v, ConversionError});
     }
   }
 
@@ -87,10 +92,10 @@ Value *FloatToFixed::convertLoad(DenseMap<Value *, Value *>& op, LoadInst *load)
 {
   Value *ptr = load->getPointerOperand();
   Value *newptr = op[ptr];
-  if (!newptr) {
+  if (newptr == ConversionError)
     return nullptr;
-  }
-
+  assert(newptr && "a load can't be in the conversion queue just because");
+  
   LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
     load->getAlignment(), load->getOrdering(), load->getSynchScope());
   newinst->insertAfter(load);
@@ -107,14 +112,19 @@ Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruct
 
   for (int i=0,n=unsupp->getNumOperands();i<n;i++) {
     fallval = unsupp->getOperand(i);
+    
+    Value *cvtfallval = op[fallval];
+    if (cvtfallval == ConversionError)
+      goto fail;
+    
     //se è stato precedentemente sostituito e non è un puntatore
-    if (op[fallval] && !fallval->getType()->isPointerTy()) {
+    if (cvtfallval && !fallval->getType()->isPointerTy()) {
       /*Nel caso in cui la chiave (valore rimosso in precedenze) è un float
         il rispettivo value è un fix che deve essere convertito in float per retrocompatibilità.
         Se la chiave non è un float allora uso il rispettivo value associato così com'è.*/
       fixval = fallval->getType()->isFloatingPointTy()
-        ? dyn_cast<Instruction>(genConvertFixToFloat(op[fallval],fallval->getType()))
-        : dyn_cast<Instruction>(op[fallval]);
+        ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval,fallval->getType()))
+        : dyn_cast<Instruction>(cvtfallval);
 
       errs() << "[Fallback] Substituted operand number : " << i+1 << " of " << n << "\n";
       newinst->setOperand(i,fixval);
@@ -133,10 +143,10 @@ Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruct
     }
     return newinst;
   }
-  else {
-    delete newinst;
-    return nullptr;
-  }
+  
+fail:
+  delete newinst;
+  return nullptr;
 }
 
 
