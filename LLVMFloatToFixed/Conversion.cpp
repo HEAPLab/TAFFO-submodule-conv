@@ -56,6 +56,8 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
     res = convertAlloca(alloca);
   } else if (LoadInst *load = dyn_cast<LoadInst>(val)) {
     res = convertLoad(operandPool, load);
+  } else if (StoreInst *store = dyn_cast<StoreInst>(val)) {
+    res = convertStore(operandPool, store);
   } else if (Instruction *unsupp = dyn_cast<Instruction>(val)){
     res = fallback(m,operandPool,unsupp);
   }
@@ -99,6 +101,27 @@ Value *FloatToFixed::convertLoad(DenseMap<Value *, Value *>& op, LoadInst *load)
   LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
     load->getAlignment(), load->getOrdering(), load->getSynchScope());
   newinst->insertAfter(load);
+  return newinst;
+}
+
+
+Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *store)
+{
+  Value *ptr = store->getPointerOperand();
+  Value *newptr = op[ptr];
+  if (!newptr)
+    newptr = ptr;
+  else if (newptr == ConversionError)
+    return nullptr;
+  
+  Value *val = store->getValueOperand();
+  Value *newval = translateOrMatchOperand(op, val);
+  if (!newval)
+    return nullptr;
+  
+  StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
+    store->getAlignment(), store->getOrdering(), store->getSynchScope());
+  newinst->insertAfter(store);
   return newinst;
 }
 
@@ -147,6 +170,27 @@ Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruct
 fail:
   delete newinst;
   return nullptr;
+}
+
+
+/* do not use on pointer operands */
+Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Value *val)
+{
+  Value *res = op[val];
+  if (res) {
+    if (res != ConversionError)
+      /* the value has been successfully converted in a previous step */
+      return res;
+    else
+      /* the value should have been converted but it hasn't; bail out */
+      return nullptr;
+  }
+  
+  if (!val->getType()->isFloatingPointTy())
+    /* doesn't need to be converted; return as is */
+    return val;
+
+  return genConvertFloatToFix(val);
 }
 
 
