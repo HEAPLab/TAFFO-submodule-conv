@@ -8,6 +8,8 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/APFloat.h"
 #include <cmath>
 #include "LLVMFloatToFixedPass.h"
 
@@ -140,17 +142,37 @@ Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruct
 
 Value *FloatToFixed::genConvertFloatToFix(Value *flt)
 {
-  Instruction *i = dyn_cast<Instruction>(flt);
-  if (!i)
-    return nullptr;
+  if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
+    return convertFloatConstantToFixConstant(fpc);
+    
+  } else if (Instruction *i = dyn_cast<Instruction>(flt)) {
+    IRBuilder<> builder(i->getNextNode());
+    double twoebits = pow(2.0, fracBitsAmt);
+    return builder.CreateFPToSI(
+      builder.CreateFMul(
+        ConstantFP::get(flt->getType(), twoebits),
+        flt),
+      Type::getIntNTy(i->getContext(), bitsAmt));
+    
+  }
+  return nullptr;
+}
 
-  IRBuilder<> builder(i->getNextNode());
-  double twoebits = pow(2.0, fracBitsAmt);
-  return builder.CreateFPToSI(
-    builder.CreateFMul(
-      ConstantFP::get(flt->getType(), twoebits),
-      flt),
-    Type::getIntNTy(i->getContext(), bitsAmt));
+
+Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc)
+{
+  bool precise = false;
+  APFloat val = fpc->getValueAPF();
+  
+  APFloat exp(pow(2.0, fracBitsAmt));
+  exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
+  val.multiply(exp, APFloat::rmTowardNegative);
+  
+  integerPart fixval;
+  val.convertToInteger(&fixval, 64, true, APFloat::rmTowardNegative, &precise);
+  
+  Type *intty = Type::getIntNTy(fpc->getType()->getContext(), bitsAmt);
+  return ConstantInt::get(intty, fixval, true);
 }
 
 
