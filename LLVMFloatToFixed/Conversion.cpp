@@ -128,17 +128,20 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
 
 Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruction *unsupp)
 {
-  Instruction *newinst = unsupp->clone();
   Value *fallval;
   Instruction *fixval;
-  bool substitute = false;
+  std::vector<Value *> newops;
+  
+  errs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n";
 
   for (int i=0,n=unsupp->getNumOperands();i<n;i++) {
     fallval = unsupp->getOperand(i);
     
     Value *cvtfallval = op[fallval];
-    if (cvtfallval == ConversionError)
-      goto fail;
+    if (cvtfallval == ConversionError) {
+      errs() << "  bail out on missing operand " << i+1 << " of " << n << "\n";
+      return nullptr;
+    }
     
     //se è stato precedentemente sostituito e non è un puntatore
     if (cvtfallval && !fallval->getType()->isPointerTy()) {
@@ -149,27 +152,24 @@ Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruct
         ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval,fallval->getType()))
         : dyn_cast<Instruction>(cvtfallval);
 
-      errs() << "[Fallback] Substituted operand number : " << i+1 << " of " << n << "\n";
-      newinst->setOperand(i,fixval);
-      substitute=true;
+      errs() << "  Substituted operand number : " << i+1 << " of " << n << "\n";
+      newops.push_back(fixval);
+    } else {
+      newops.push_back(fallval);
     }
   }
 
-  if (substitute) {
-    if (unsupp->hasName()) {
-      newinst->setName(unsupp->getName() + "_fallback");
-    }
-    newinst->insertAfter(unsupp);
-    errs() << "[Fallback] Not supported operation :" << *unsupp <<" converted to :" << *newinst << " \n";
-    if (unsupp->getType()->isFloatingPointTy()) {
-      return genConvertFloatToFix(newinst);
-    }
-    return newinst;
+  for (int i=0, n=unsupp->getNumOperands(); i<n; i++) {
+    unsupp->setOperand(i, newops[i]);
   }
-  
-fail:
-  delete newinst;
-  return nullptr;
+  errs() << "  mutated operands to:\n" << *unsupp << "\n";
+  if (unsupp->getType()->isFloatingPointTy()) {
+    Value *fallbackv = genConvertFloatToFix(unsupp);
+    if (unsupp->hasName())
+      fallbackv->setName(unsupp->getName() + "_fallback");
+    return fallbackv;
+  }
+  return unsupp;
 }
 
 
