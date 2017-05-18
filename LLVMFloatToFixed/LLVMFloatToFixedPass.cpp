@@ -39,8 +39,8 @@ bool FloatToFixed::runOnModule(Module &m)
     
     performConversion(m, vals);
   }
-
-  return false;
+  
+  return true;
 }
 
 
