@@ -10,3 +10,5 @@ CTestTestfile.cmake
 
 
 build
+test/_tmp*
+caldaia
