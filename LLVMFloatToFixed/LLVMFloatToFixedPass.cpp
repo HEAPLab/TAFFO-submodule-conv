@@ -53,6 +53,15 @@ std::vector<Value*> FloatToFixed::buildConversionQueueForRootValue(Value *val)
   while (next < queue.size()) {
     Value *v = queue.at(next);
     for (auto *u: v->users()) {
+      for (int i=0; i<queue.size();) {
+        if (queue[i] == u) {
+          queue.erase(queue.begin() + i);
+          if (i < next)
+            next--;
+        } else {
+          i++;
+        }
+      }
       queue.push_back(u);
     }
     next++;
