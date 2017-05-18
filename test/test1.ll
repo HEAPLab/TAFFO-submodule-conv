@@ -19,12 +19,21 @@ entry:
   %local1 = bitcast float* %local to i8*
   call void @llvm.var.annotation(i8* %local1, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 8)
   store float 2.000000e+00, float* %local, align 4
-  %0 = load float, float* %local, align 4
-  %conv = fptosi float %0 to i32
-  store i32 %conv, i32* %notafloat2, align 4
-  %1 = load i32, i32* %notafloat2, align 4
-  %conv2 = sitofp i32 %1 to float
-  ret float %conv2
+  %0 = load float, float* %param.addr, align 4
+  %1 = load float, float* %local, align 4
+  %mul = fmul float %1, %0
+  store float %mul, float* %local, align 4
+  %2 = load i32, i32* %notafloat.addr, align 4
+  %conv = sitofp i32 %2 to float
+  %3 = load float, float* %local, align 4
+  %add = fadd float %3, %conv
+  store float %add, float* %local, align 4
+  %4 = load float, float* %local, align 4
+  %conv2 = fptosi float %4 to i32
+  store i32 %conv2, i32* %notafloat2, align 4
+  %5 = load i32, i32* %notafloat2, align 4
+  %conv3 = sitofp i32 %5 to float
+  ret float %conv3
 }
 
 ; Function Attrs: nounwind

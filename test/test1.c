@@ -8,6 +8,8 @@ float test(float param, int notafloat)
   float local __attribute((annotate("no_float")));
   
   local = 2.0;
+  local *= param;
+  local += notafloat;
   notafloat2 = local;
   return notafloat2;
 }
