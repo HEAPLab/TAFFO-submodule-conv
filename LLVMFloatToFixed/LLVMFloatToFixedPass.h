@@ -2,6 +2,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 
 
@@ -30,7 +31,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> res);
   void printAnnotatedObj(llvm::Module &m);
 
-  std::vector<llvm::Value*> buildConversionQueueForRootValue(llvm::Value *val);
+  std::vector<llvm::Value*> buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val);
   void performConversion(llvm::Module& m, const std::vector<llvm::Value*>& q);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Value *val);
 

@@ -26,29 +26,26 @@ bool FloatToFixed::runOnModule(Module &m)
   printAnnotatedObj(m);
   
   auto roots = readAllLocalAnnotations(m);
-  for (Value *v: roots) {
-    auto vals = buildConversionQueueForRootValue(v);
-    outs() << "root from ";
-    v->print(outs());
-    outs() << "\n";
-    for (Value *val: vals) {
-      val->print(outs());
-      outs() << "\n";
-    }
-    outs() << "\n\n";
-    
-    performConversion(m, vals);
+  std::vector<Value*> rootsa(roots.begin(), roots.end());
+  auto vals = buildConversionQueueForRootValues(rootsa);
+  
+  errs() << "conversion queue:\n";
+  for (Value *val: vals) {
+    val->print(outs());
+    errs() << "\n";
   }
+  errs() << "\n\n";
+  
+  performConversion(m, vals);
   
   return true;
 }
 
 
-std::vector<Value*> FloatToFixed::buildConversionQueueForRootValue(Value *val)
+std::vector<Value*> FloatToFixed::buildConversionQueueForRootValues(const ArrayRef<Value*>& val)
 {
-  std::vector<Value*> queue;
+  std::vector<Value*> queue(val);
   size_t next = 0;
-  queue.push_back(val);
   
   while (next < queue.size()) {
     Value *v = queue.at(next);
