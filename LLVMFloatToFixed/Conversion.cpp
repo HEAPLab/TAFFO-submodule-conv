@@ -7,9 +7,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Debug.h"
 #include <cmath>
 #include <cassert>
 #include "LLVMFloatToFixedPass.h"
@@ -19,12 +20,14 @@ using namespace flttofix;
 
 
 Value *ConversionError = (Value *)(&ConversionError);
+Value *Unsupported = (Value *)(&Unsupported);
+
 
 
 void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
 {
   DenseMap<Value *, Value *> convertedPool;
-  
+
   for (Value *v: q) {
     Value *newv = convertSingleValue(m, convertedPool, v);
     if (newv && newv != ConversionError) {
@@ -51,16 +54,25 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
 /* also inserts the new value in the basic blocks, alongside the old one */
 Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& operandPool, Value *val)
 {
-  Value *res = nullptr;
+  Value *res = Unsupported;
   if (AllocaInst *alloca = dyn_cast<AllocaInst>(val)) {
     res = convertAlloca(alloca);
   } else if (LoadInst *load = dyn_cast<LoadInst>(val)) {
     res = convertLoad(operandPool, load);
   } else if (StoreInst *store = dyn_cast<StoreInst>(val)) {
     res = convertStore(operandPool, store);
-  } else if (Instruction *unsupp = dyn_cast<Instruction>(val)){
-    res = fallback(m,operandPool,unsupp);
+  } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
+    if (instr->isBinaryOp()) {
+      res = convertBinOp(operandPool,instr);
+    } else if (instr->isCast()){
+      ;
+    }
   }
+
+  if (res==Unsupported) {
+    res = fallback(operandPool,dyn_cast<Instruction>(val));
+  }
+
   return res;
 }
 
@@ -97,7 +109,7 @@ Value *FloatToFixed::convertLoad(DenseMap<Value *, Value *>& op, LoadInst *load)
   if (newptr == ConversionError)
     return nullptr;
   assert(newptr && "a load can't be in the conversion queue just because");
-  
+
   LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
     load->getAlignment(), load->getOrdering(), load->getSynchScope());
   newinst->insertAfter(load);
@@ -113,36 +125,65 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
     newptr = ptr;
   else if (newptr == ConversionError)
     return nullptr;
-  
+
   Value *val = store->getValueOperand();
   Value *newval = translateOrMatchOperand(op, val);
   if (!newval)
     return nullptr;
-  
+
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
     store->getAlignment(), store->getOrdering(), store->getSynchScope());
   newinst->insertAfter(store);
   return newinst;
 }
 
+Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *instr)
+{
+  IRBuilder<> builder(instr->getNextNode());
+  Instruction::BinaryOps ty;
+  int opc = instr->getOpcode();
+  /*le istruzioni Instruction::
+    [Add,Sub,Mul,SDiv,UDiv,SRem,URem,Shl,LShr,AShr,And,Or,Xor]
+    vengono gestite dalla fallback e non in questa funzione */
+  if (opc == Instruction::FAdd) {
+    ty = Instruction::Add;
+  } else if (opc == Instruction::FSub) {
+    ty = Instruction::Sub;
+  } else if (opc == Instruction::FMul) {
+    ty = Instruction::Mul;
+  } else if (opc == Instruction::FDiv) {
+    ty = Instruction::SDiv;
+  } else if (opc == Instruction::FRem) {
+    ty = Instruction::SRem;
+  } else {
+    return Unsupported;
+  }
 
-Value *FloatToFixed::fallback(Module &m,DenseMap<Value *, Value *>& op, Instruction *unsupp)
+  Value *val1 = translateOrMatchOperand(op,instr->getOperand(0));
+  Value *val2 = translateOrMatchOperand(op,instr->getOperand(1));
+
+  return val1 && val2
+    ? builder.CreateBinOp(ty,val1,val2)
+    : nullptr;
+}
+
+Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsupp)
 {
   Value *fallval;
   Instruction *fixval;
   std::vector<Value *> newops;
-  
+
   errs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n";
 
   for (int i=0,n=unsupp->getNumOperands();i<n;i++) {
     fallval = unsupp->getOperand(i);
-    
+
     Value *cvtfallval = op[fallval];
     if (cvtfallval == ConversionError) {
       errs() << "  bail out on missing operand " << i+1 << " of " << n << "\n";
       return nullptr;
     }
-    
+
     //se è stato precedentemente sostituito e non è un puntatore
     if (cvtfallval && !fallval->getType()->isPointerTy()) {
       /*Nel caso in cui la chiave (valore rimosso in precedenze) è un float
@@ -185,7 +226,7 @@ Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Val
       /* the value should have been converted but it hasn't; bail out */
       return nullptr;
   }
-  
+
   if (!val->getType()->isFloatingPointTy())
     /* doesn't need to be converted; return as is */
     return val;
@@ -198,7 +239,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt)
 {
   if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
     return convertFloatConstantToFixConstant(fpc);
-    
+
   } else if (Instruction *i = dyn_cast<Instruction>(flt)) {
     IRBuilder<> builder(i->getNextNode());
     double twoebits = pow(2.0, fracBitsAmt);
@@ -207,7 +248,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt)
         ConstantFP::get(flt->getType(), twoebits),
         flt),
       Type::getIntNTy(i->getContext(), bitsAmt));
-    
+
   }
   return nullptr;
 }
@@ -217,14 +258,14 @@ Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc)
 {
   bool precise = false;
   APFloat val = fpc->getValueAPF();
-  
+
   APFloat exp(pow(2.0, fracBitsAmt));
   exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
   val.multiply(exp, APFloat::rmTowardNegative);
-  
+
   integerPart fixval;
   val.convertToInteger(&fixval, 64, true, APFloat::rmTowardNegative, &precise);
-  
+
   Type *intty = Type::getIntNTy(fpc->getType()->getContext(), bitsAmt);
   return ConstantInt::get(intty, fixval, true);
 }
@@ -243,5 +284,3 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
       fix, destt),
     ConstantFP::get(destt, twoebits));
 }
-
-
