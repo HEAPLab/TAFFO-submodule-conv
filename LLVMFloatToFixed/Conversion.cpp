@@ -10,7 +10,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Debug.h"
+
 #include <cmath>
 #include <cassert>
 #include "LLVMFloatToFixedPass.h"
@@ -33,9 +33,10 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
     if (newv && newv != ConversionError) {
       convertedPool.insert({v, newv});
     } else {
-      errs() << "warning: ";
-      v->print(errs());
-      errs() << " not converted\n";
+      DEBUG(errs() << "warning: ";
+            v->print(errs());
+            errs() << " not converted\n";);
+
       convertedPool.insert({v, ConversionError});
     }
   }
@@ -65,6 +66,10 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
     if (instr->isBinaryOp()) {
       res = convertBinOp(operandPool,instr);
     } else if (instr->isCast()){
+      /*le istruzioni Instruction::
+        [Trunc,ZExt,SExt,FPToUI,FPToSI,UIToFP,SIToFP,FPTrunc,FPExt]
+        vengono gestite dalla fallback e non qui
+        [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori*/
       ;
     }
   }
@@ -137,6 +142,7 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
   return newinst;
 }
 
+
 Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *instr)
 {
   IRBuilder<> builder(instr->getNextNode());
@@ -167,25 +173,27 @@ Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *i
     : nullptr;
 }
 
+
 Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsupp)
 {
   Value *fallval;
   Instruction *fixval;
   std::vector<Value *> newops;
 
-  errs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n";
+  DEBUG(errs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n");
+
 
   for (int i=0,n=unsupp->getNumOperands();i<n;i++) {
     fallval = unsupp->getOperand(i);
 
     Value *cvtfallval = op[fallval];
-    if (cvtfallval == ConversionError) {
-      errs() << "  bail out on missing operand " << i+1 << " of " << n << "\n";
+    if (cvtfallval == ConversionError || fallval->getType()->isPointerTy()) {
+      DEBUG(errs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
       return nullptr;
     }
 
     //se è stato precedentemente sostituito e non è un puntatore
-    if (cvtfallval && !fallval->getType()->isPointerTy()) {
+    if (cvtfallval) {
       /*Nel caso in cui la chiave (valore rimosso in precedenze) è un float
         il rispettivo value è un fix che deve essere convertito in float per retrocompatibilità.
         Se la chiave non è un float allora uso il rispettivo value associato così com'è.*/
@@ -193,7 +201,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
         ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval,fallval->getType()))
         : dyn_cast<Instruction>(cvtfallval);
 
-      errs() << "  Substituted operand number : " << i+1 << " of " << n << "\n";
+      DEBUG(errs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
       newops.push_back(fixval);
     } else {
       newops.push_back(fallval);
@@ -203,7 +211,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
   for (int i=0, n=unsupp->getNumOperands(); i<n; i++) {
     unsupp->setOperand(i, newops[i]);
   }
-  errs() << "  mutated operands to:\n" << *unsupp << "\n";
+  DEBUG(errs() << "  mutated operands to:\n" << *unsupp << "\n");
   if (unsupp->getType()->isFloatingPointTy()) {
     Value *fallbackv = genConvertFloatToFix(unsupp);
     if (unsupp->hasName())

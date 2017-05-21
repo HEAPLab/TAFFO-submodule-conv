@@ -4,7 +4,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-
+#include "llvm/Support/Debug.h"
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
 #define __LLVM_FLOAT_TO_FIXED_PASS_H__
@@ -12,6 +12,9 @@
 
 #define N_ANNO_VAR 32
 #define NO_FLOAT_ANNO "no_float"
+
+#define DEBUG_TYPE "flttofix"
+#define DEBUG_ANNOTATION "annotation"
 
 
 namespace flttofix {

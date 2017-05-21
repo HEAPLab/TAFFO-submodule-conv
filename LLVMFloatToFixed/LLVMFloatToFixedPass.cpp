@@ -23,21 +23,23 @@ static RegisterPass<FloatToFixed> X(
 
 bool FloatToFixed::runOnModule(Module &m)
 {
-  printAnnotatedObj(m);
-  
+  DEBUG_WITH_TYPE(DEBUG_ANNOTATION,printAnnotatedObj(m));
+
+
   auto roots = readAllLocalAnnotations(m);
   std::vector<Value*> rootsa(roots.begin(), roots.end());
   auto vals = buildConversionQueueForRootValues(rootsa);
-  
-  errs() << "conversion queue:\n";
-  for (Value *val: vals) {
-    val->print(outs());
-    errs() << "\n";
-  }
-  errs() << "\n\n";
-  
+
+  DEBUG(errs() << "conversion queue:\n";
+        for (Value *val: vals) {
+          val->print(outs());
+          errs() << "\n";
+        }
+        errs() << "\n\n";);
+
+
   performConversion(m, vals);
-  
+
   return true;
 }
 
@@ -46,7 +48,7 @@ std::vector<Value*> FloatToFixed::buildConversionQueueForRootValues(const ArrayR
 {
   std::vector<Value*> queue(val);
   size_t next = 0;
-  
+
   while (next < queue.size()) {
     Value *v = queue.at(next);
     for (auto *u: v->users()) {
@@ -63,7 +65,7 @@ std::vector<Value*> FloatToFixed::buildConversionQueueForRootValues(const ArrayR
     }
     next++;
   }
-  
+
   return queue;
 }
 
