@@ -11,6 +11,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/raw_ostream.h"
 
+
 #include <cmath>
 #include <cassert>
 #include "LLVMFloatToFixedPass.h"
@@ -21,7 +22,6 @@ using namespace flttofix;
 
 Value *ConversionError = (Value *)(&ConversionError);
 Value *Unsupported = (Value *)(&Unsupported);
-
 
 
 void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
@@ -69,8 +69,9 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
       /*le istruzioni Instruction::
         [Trunc,ZExt,SExt,FPToUI,FPToSI,UIToFP,SIToFP,FPTrunc,FPExt]
         vengono gestite dalla fallback e non qui
-        [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori*/
-      ;
+        [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori*/;
+    } else if (FCmpInst *fcmp = dyn_cast<FCmpInst>(val)) {
+      res = convertCmp(operandPool,fcmp);
     }
   }
 
@@ -136,6 +137,10 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
   if (!newval)
     return nullptr;
 
+  if (newval->getType() != cast<PointerType>(newptr->getType())->getElementType()) {
+    //se l'area di memoria non è float , riporto il valore in float per memorizzarlo correttamente
+    newval = genConvertFixToFloat(newval,cast<PointerType>(newptr->getType())->getElementType());
+  }
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
     store->getAlignment(), store->getOrdering(), store->getSynchScope());
   newinst->insertAfter(store);
@@ -170,6 +175,58 @@ Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *i
 
   return val1 && val2
     ? builder.CreateBinOp(ty,val1,val2)
+    : nullptr;
+}
+
+
+Value *FloatToFixed::convertCmp(DenseMap<Value *, Value *>& op, FCmpInst *fcmp)
+{
+  IRBuilder<> builder (fcmp->getNextNode());
+  CmpInst::Predicate ty;
+  int pr = fcmp->getPredicate();
+  bool swapped = false;
+
+  //se unordered swappo, converto con la int, e poi mi ricordo di riswappare
+  if (!CmpInst::isOrdered(fcmp->getPredicate())) {
+    pr = fcmp->getInversePredicate();
+    swapped = true;
+  }
+
+  if (pr == CmpInst::FCMP_OEQ){
+    ty = CmpInst::ICMP_EQ;
+  } else if (pr == CmpInst::FCMP_ONE) {
+    ty = CmpInst::ICMP_NE;
+  } else if (pr == CmpInst::FCMP_OGT) {
+    ty = CmpInst::ICMP_SGT;
+  } else if (pr == CmpInst::FCMP_OGE) {
+    ty = CmpInst::ICMP_SGE;
+  } else if (pr == CmpInst::FCMP_OLE) {
+    ty = CmpInst::ICMP_SLE;
+  } else if (pr == CmpInst::FCMP_OLT) {
+    ty = CmpInst::ICMP_SLT;
+  } else if (pr == CmpInst::FCMP_ORD) {
+    ;
+    //TODO gestione NaN
+  } else if (pr == CmpInst::FCMP_TRUE) {
+    return builder.CreateICmpEQ(
+      ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0),
+      ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0));
+  } else if (pr == CmpInst::FCMP_FALSE) {
+    return builder.CreateICmpNE(
+      ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0),
+      ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0));
+  }
+
+
+  if (swapped) {
+    ty = CmpInst::getInversePredicate(ty);
+  }
+
+  Value *val1 = translateOrMatchOperand(op,fcmp->getOperand(0));
+  Value *val2 = translateOrMatchOperand(op,fcmp->getOperand(1));
+
+  return val1 && val2
+    ? builder.CreateICmp(ty,val1,val2)
     : nullptr;
 }
 
@@ -292,3 +349,4 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
       fix, destt),
     ConstantFP::get(destt, twoebits));
 }
+
