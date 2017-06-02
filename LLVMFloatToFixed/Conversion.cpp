@@ -238,7 +238,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
   std::vector<Value *> newops;
 
   DEBUG(errs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n");
-
+  FallbackCount++;
 
   for (int i=0,n=unsupp->getNumOperands();i<n;i++) {
     fallval = unsupp->getOperand(i);
@@ -306,6 +306,8 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt)
     return convertFloatConstantToFixConstant(fpc);
 
   } else if (Instruction *i = dyn_cast<Instruction>(flt)) {
+    FloatToFixCount++;
+    
     IRBuilder<> builder(i->getNextNode());
     double twoebits = pow(2.0, fracBitsAmt);
     return builder.CreateFPToSI(
@@ -341,6 +343,7 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
   Instruction *i = dyn_cast<Instruction>(fix);
   if (!i)
     return nullptr;
+  FixToFloatCount++;
 
   IRBuilder<> builder(i->getNextNode());
   double twoebits = pow(2.0, fracBitsAmt);

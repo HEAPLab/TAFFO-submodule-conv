@@ -36,7 +36,7 @@ bool FloatToFixed::runOnModule(Module &m)
           errs() << "\n";
         }
         errs() << "\n\n";);
-
+  ConversionCount = vals.size();
 
   performConversion(m, vals);
 

@@ -5,6 +5,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/ADT/Statistic.h"
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
 #define __LLVM_FLOAT_TO_FIXED_PASS_H__
@@ -15,6 +16,12 @@
 
 #define DEBUG_TYPE "flttofix"
 #define DEBUG_ANNOTATION "annotation"
+
+STATISTIC(FixToFloatCount, "Number of fixed point to floating point conversions");
+STATISTIC(FloatToFixCount, "Number of floating point to fixed point conversions");
+STATISTIC(FallbackCount, "Number of instructions not replaced by a "
+                         "fixed-point-native equivalent");
+STATISTIC(ConversionCount, "Number of instructions affected by flttofix");
 
 
 namespace flttofix {
