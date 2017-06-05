@@ -329,9 +329,24 @@ Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc)
   APFloat exp(pow(2.0, fracBitsAmt));
   exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
   val.multiply(exp, APFloat::rmTowardNegative);
-
+  
   integerPart fixval;
-  val.convertToInteger(&fixval, 64, true, APFloat::rmTowardNegative, &precise);
+  APFloat::opStatus cvtres = val.convertToInteger(&fixval, bitsAmt, true,
+    APFloat::rmTowardNegative, &precise);
+  if (cvtres != APFloat::opStatus::opOK) {
+    SmallVector<char, 64> valstr;
+    val.toString(valstr);
+    Twine valstr2 = valstr;
+    // TODO: emit a proper warning! we don't do it now because it's such a hassle
+    if (cvtres == APFloat::opStatus::opInexact) {
+      errs() << "fixed point conversion of constant " <<
+        valstr2 << " is not precise";
+    } else {
+      errs() << "impossible to convert constant " <<
+        valstr2 << " to fixed point";
+      return nullptr;
+    }
+  }
 
   Type *intty = Type::getIntNTy(fpc->getType()->getContext(), bitsAmt);
   return ConstantInt::get(intty, fixval, true);
