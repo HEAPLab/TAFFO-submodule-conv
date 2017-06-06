@@ -156,26 +156,50 @@ Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *i
   /*le istruzioni Instruction::
     [Add,Sub,Mul,SDiv,UDiv,SRem,URem,Shl,LShr,AShr,And,Or,Xor]
     vengono gestite dalla fallback e non in questa funzione */
+
+  Value *val1 = translateOrMatchOperand(op,instr->getOperand(0));
+  Value *val2 = translateOrMatchOperand(op,instr->getOperand(1));
+  if (!val1 || !val2)
+    return nullptr;
+
+  Type *fxt = Type::getIntNTy(instr->getContext(),bitsAmt);
+  Type *dbfxt = Type::getIntNTy(instr->getContext(),bitsAmt*2);
+
   if (opc == Instruction::FAdd) {
     ty = Instruction::Add;
   } else if (opc == Instruction::FSub) {
     ty = Instruction::Sub;
   } else if (opc == Instruction::FMul) {
-    ty = Instruction::Mul;
+
+    Value *ext1 = builder.CreateSExt(val1,dbfxt);
+    Value *ext2 = builder.CreateSExt(val2,dbfxt);
+
+    Value *fixop = builder.CreateMul(ext1,ext2);
+    return builder.CreateTrunc(
+      builder.CreateAShr(fixop,ConstantInt::get(dbfxt,fracBitsAmt)),
+      fxt);
+
   } else if (opc == Instruction::FDiv) {
-    ty = Instruction::SDiv;
+
+    Value *ext1 = builder.CreateShl(
+      builder.CreateSExt(val1,dbfxt),
+      ConstantInt::get(dbfxt,bitsAmt)
+      );
+    Value *ext2 = builder.CreateShl(
+      builder.CreateSExt(val2,dbfxt),
+      ConstantInt::get(dbfxt,fracBitsAmt)
+      );
+
+    Value *fixop = builder.CreateSDiv(ext1,ext2);
+    return builder.CreateTrunc(fixop,fxt);
+
   } else if (opc == Instruction::FRem) {
     ty = Instruction::SRem;
   } else {
     return Unsupported;
   }
 
-  Value *val1 = translateOrMatchOperand(op,instr->getOperand(0));
-  Value *val2 = translateOrMatchOperand(op,instr->getOperand(1));
-
-  return val1 && val2
-    ? builder.CreateBinOp(ty,val1,val2)
-    : nullptr;
+  return builder.CreateBinOp(ty,val1,val2);
 }
 
 
@@ -307,7 +331,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt)
 
   } else if (Instruction *i = dyn_cast<Instruction>(flt)) {
     FloatToFixCount++;
-    
+
     IRBuilder<> builder(i->getNextNode());
     double twoebits = pow(2.0, fracBitsAmt);
     return builder.CreateFPToSI(
@@ -329,7 +353,7 @@ Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc)
   APFloat exp(pow(2.0, fracBitsAmt));
   exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
   val.multiply(exp, APFloat::rmTowardNegative);
-  
+
   integerPart fixval;
   APFloat::opStatus cvtres = val.convertToInteger(&fixval, bitsAmt, true,
     APFloat::rmTowardNegative, &precise);
