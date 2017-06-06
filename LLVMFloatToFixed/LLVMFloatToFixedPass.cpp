@@ -12,6 +12,13 @@ using namespace llvm;
 using namespace flttofix;
 
 
+cl::opt<int> GlobalFracBitsAmt("fixpfracbitsamt", cl::value_desc("bits"),
+  cl::desc("Default amount of fractional bits in fixed point numbers"),
+  cl::init(16));
+cl::opt<int> GlobalBitsAmt("fixpbitsamt", cl::value_desc("bits"),
+  cl::desc("Default amount of bits in fixed point numbers"), cl::init(32));
+
+
 char FloatToFixed::ID = 0;
 
 static RegisterPass<FloatToFixed> X(
@@ -23,8 +30,9 @@ static RegisterPass<FloatToFixed> X(
 
 bool FloatToFixed::runOnModule(Module &m)
 {
-  DEBUG_WITH_TYPE(DEBUG_ANNOTATION,printAnnotatedObj(m));
-
+  DEBUG_WITH_TYPE(DEBUG_ANNOTATION, printAnnotatedObj(m));
+  fracBitsAmt = GlobalFracBitsAmt;
+  bitsAmt = GlobalBitsAmt;
 
   auto roots = readAllLocalAnnotations(m);
   std::vector<Value*> rootsa(roots.begin(), roots.end());

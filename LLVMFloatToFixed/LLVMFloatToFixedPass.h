@@ -6,6 +6,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Support/CommandLine.h"
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
 #define __LLVM_FLOAT_TO_FIXED_PASS_H__
@@ -28,8 +29,8 @@ namespace flttofix {
 
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
-  int fracBitsAmt = 16;
-  int bitsAmt = 32;
+  int fracBitsAmt;
+  int bitsAmt;
 
   FloatToFixed(): ModulePass(ID) { }
   bool runOnModule(llvm::Module &M) override;
