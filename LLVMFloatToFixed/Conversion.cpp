@@ -207,8 +207,8 @@ Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *i
   if (!val1 || !val2)
     return nullptr;
 
-  Type *fxt = Type::getIntNTy(instr->getContext(),bitsAmt);
-  Type *dbfxt = Type::getIntNTy(instr->getContext(),bitsAmt*2);
+  Type *fxt = getFixedPointType(instr->getContext());
+  Type *dbfxt = Type::getIntNTy(instr->getContext(), bitsAmt*2);
 
   if (opc == Instruction::FAdd) {
     ty = Instruction::Add;
@@ -277,6 +277,8 @@ Value *FloatToFixed::convertCmp(DenseMap<Value *, Value *>& op, FCmpInst *fcmp)
     ;
     //TODO gestione NaN
   } else if (pr == CmpInst::FCMP_TRUE) {
+    /* there is no integer-only always-true / always-false comparison 
+     * operator... so we roll out our own by producing a tautology */
     return builder.CreateICmpEQ(
       ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0),
       ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0));
@@ -383,7 +385,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt)
       builder.CreateFMul(
         ConstantFP::get(flt->getType(), twoebits),
         flt),
-      Type::getIntNTy(i->getContext(), bitsAmt));
+      getFixedPointType(i->getContext()));
 
   }
   return nullptr;
@@ -417,7 +419,7 @@ Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc)
     }
   }
 
-  Type *intty = Type::getIntNTy(fpc->getType()->getContext(), bitsAmt);
+  Type *intty = getFixedPointType(fpc->getType()->getContext());
   return ConstantInt::get(intty, fixval, true);
 }
 
