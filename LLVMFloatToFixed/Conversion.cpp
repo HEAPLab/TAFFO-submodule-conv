@@ -392,3 +392,9 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
     ConstantFP::get(destt, twoebits));
 }
 
+
+Type *FloatToFixed::getFixedPointType(LLVMContext &ctxt)
+{
+  return Type::getIntNTy(ctxt, bitsAmt);
+}
+
