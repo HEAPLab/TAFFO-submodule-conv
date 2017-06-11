@@ -33,9 +33,9 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
     if (newv && newv != ConversionError) {
       convertedPool.insert({v, newv});
     } else {
-      DEBUG(errs() << "warning: ";
-            v->print(errs());
-            errs() << " not converted\n";);
+      DEBUG(dbgs() << "warning: ";
+            v->print(dbgs());
+            dbgs() << " not converted\n";);
 
       convertedPool.insert({v, ConversionError});
     }
@@ -261,7 +261,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
   Instruction *fixval;
   std::vector<Value *> newops;
 
-  DEBUG(errs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n");
+  DEBUG(dbgs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n");
   FallbackCount++;
 
   for (int i=0,n=unsupp->getNumOperands();i<n;i++) {
@@ -269,7 +269,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
 
     Value *cvtfallval = op[fallval];
     if (cvtfallval == ConversionError || fallval->getType()->isPointerTy()) {
-      DEBUG(errs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
+      DEBUG(dbgs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
       return nullptr;
     }
 
@@ -282,7 +282,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
         ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval,fallval->getType()))
         : dyn_cast<Instruction>(cvtfallval);
 
-      DEBUG(errs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
+      DEBUG(dbgs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
       newops.push_back(fixval);
     } else {
       newops.push_back(fallval);
@@ -292,7 +292,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
   for (int i=0, n=unsupp->getNumOperands(); i<n; i++) {
     unsupp->setOperand(i, newops[i]);
   }
-  DEBUG(errs() << "  mutated operands to:\n" << *unsupp << "\n");
+  DEBUG(dbgs() << "  mutated operands to:\n" << *unsupp << "\n");
   if (unsupp->getType()->isFloatingPointTy()) {
     Value *fallbackv = genConvertFloatToFix(unsupp);
     if (unsupp->hasName())
