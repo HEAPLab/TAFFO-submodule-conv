@@ -62,6 +62,8 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
     res = convertLoad(operandPool, load);
   } else if (StoreInst *store = dyn_cast<StoreInst>(val)) {
     res = convertStore(operandPool, store);
+  } else if (PHINode *phi = dyn_cast<PHINode>(val)) {
+    res = convertPhi(operandPool, phi);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
     if (instr->isBinaryOp()) {
       res = convertBinOp(operandPool,instr);
@@ -145,6 +147,49 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
     store->getAlignment(), store->getOrdering(), store->getSynchScope());
   newinst->insertAfter(store);
   return newinst;
+}
+
+
+Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
+{
+  if (!load->getType()->isFloatingPointTy()) {
+    /* in the conversion chain the floating point number was converted to
+     * an int at some point; we just upgrade the incoming values in place */
+    
+    /* if all of our incoming values were not converted, we want to propagate
+     * that information across the phi. If at least one of them was converted
+     * the phi is converted as well; otherwise we it is not. */
+    bool donesomething = false;
+    
+    for (int i=0; i<load->getNumIncomingValues(); i++) {
+      Value *thisval = load->getIncomingValue(i);
+      Value *newval = op[thisval];
+      if (newval && newval != ConversionError) {
+        load->setIncomingValue(i, newval);
+        donesomething = true;
+      }
+    }
+    return donesomething ? load : nullptr;
+  }
+
+  /* if we have to do a type change, create a new phi node. The new type is for
+   * sure that of a fixed point value; because the original type was a float
+   * and thus all of its incoming values were floats */
+  PHINode *newphi = PHINode::Create(getFixedPointType(load->getContext()),
+    load->getNumIncomingValues());
+  
+  for (int i=0; i<load->getNumIncomingValues(); i++) {
+    Value *thisval = load->getIncomingValue(i);
+    BasicBlock *thisbb = load->getIncomingBlock(i);
+    Value *newval = translateOrMatchOperand(op, thisval);
+    if (!newval) {
+      delete newphi;
+      return nullptr;
+    }
+    newphi->addIncoming(newval, thisbb);
+  }
+  newphi->insertAfter(load);
+  return newphi;
 }
 
 
