@@ -67,11 +67,8 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
     if (instr->isBinaryOp()) {
       res = convertBinOp(operandPool,instr);
-    } else if (instr->isCast()){
-      /*le istruzioni Instruction::
-        [Trunc,ZExt,SExt,FPToUI,FPToSI,UIToFP,SIToFP,FPTrunc,FPExt]
-        vengono gestite dalla fallback e non qui
-        [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori*/;
+    } else if (CastInst *cast = dyn_cast<CastInst>(instr)){
+      res = convertCast(operandPool,cast);
     } else if (FCmpInst *fcmp = dyn_cast<FCmpInst>(val)) {
       res = convertCmp(operandPool,fcmp);
     }
@@ -155,12 +152,12 @@ Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
   if (!load->getType()->isFloatingPointTy()) {
     /* in the conversion chain the floating point number was converted to
      * an int at some point; we just upgrade the incoming values in place */
-    
+
     /* if all of our incoming values were not converted, we want to propagate
      * that information across the phi. If at least one of them was converted
      * the phi is converted as well; otherwise we it is not. */
     bool donesomething = false;
-    
+
     for (int i=0; i<load->getNumIncomingValues(); i++) {
       Value *thisval = load->getIncomingValue(i);
       Value *newval = op[thisval];
@@ -177,7 +174,7 @@ Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
    * and thus all of its incoming values were floats */
   PHINode *newphi = PHINode::Create(getFixedPointType(load->getContext()),
     load->getNumIncomingValues());
-  
+
   for (int i=0; i<load->getNumIncomingValues(); i++) {
     Value *thisval = load->getIncomingValue(i);
     BasicBlock *thisbb = load->getIncomingBlock(i);
@@ -277,7 +274,7 @@ Value *FloatToFixed::convertCmp(DenseMap<Value *, Value *>& op, FCmpInst *fcmp)
     ;
     //TODO gestione NaN
   } else if (pr == CmpInst::FCMP_TRUE) {
-    /* there is no integer-only always-true / always-false comparison 
+    /* there is no integer-only always-true / always-false comparison
      * operator... so we roll out our own by producing a tautology */
     return builder.CreateICmpEQ(
       ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0),
@@ -299,6 +296,45 @@ Value *FloatToFixed::convertCmp(DenseMap<Value *, Value *>& op, FCmpInst *fcmp)
   return val1 && val2
     ? builder.CreateICmp(ty,val1,val2)
     : nullptr;
+}
+
+
+Value *FloatToFixed::convertCast(DenseMap<Value *, Value *>& op, CastInst *cast)
+{
+  /*le istruzioni Instruction::
+  [FPToSI,FPToUI,SIToFP,UIToFP]
+  vengono gestite qui
+  [Trunc,ZExt,SExt,FPTrunc,FPExt]
+  vengono gestite dalla fallback e non qui
+  [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori*/
+  IRBuilder<> builder(cast->getNextNode());
+  Value *val = translateOrMatchOperand(op,cast->getOperand(0));
+  if (cast->getOpcode() == Instruction::FPToSI) {
+    return builder.CreateSExtOrTrunc(
+      builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()),fracBitsAmt)),
+      cast->getType()
+    );
+  }
+  else if (cast->getOpcode() == Instruction::FPToUI) {
+    return builder.CreateZExtOrTrunc(
+      builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()),fracBitsAmt)),
+      cast->getType()
+    );
+  }
+  else if (cast->getOpcode() == Instruction::SIToFP) {
+    return builder.CreateShl(
+      builder.CreateSExtOrTrunc(val,getFixedPointType(val->getContext())),
+      ConstantInt::get(getFixedPointType(val->getContext()) ,fracBitsAmt)
+    );
+  }
+  else if (cast->getOpcode() == Instruction::UIToFP){
+    return builder.CreateShl(
+      builder.CreateZExtOrTrunc(val,getFixedPointType(val->getContext())),
+      ConstantInt::get(getFixedPointType(val->getContext()) ,fracBitsAmt)
+    );
+  }
+
+  return Unsupported;
 }
 
 
@@ -411,10 +447,10 @@ Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc)
     // TODO: emit a proper warning! we don't do it now because it's such a hassle
     if (cvtres == APFloat::opStatus::opInexact) {
       errs() << "fixed point conversion of constant " <<
-        valstr2 << " is not precise";
+        valstr2 << " is not precise\n";
     } else {
       errs() << "impossible to convert constant " <<
-        valstr2 << " to fixed point";
+        valstr2 << " to fixed point\n";
       return nullptr;
     }
   }
