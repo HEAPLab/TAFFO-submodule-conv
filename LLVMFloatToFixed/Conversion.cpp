@@ -64,6 +64,8 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
     res = convertStore(operandPool, store);
   } else if (PHINode *phi = dyn_cast<PHINode>(val)) {
     res = convertPhi(operandPool, phi);
+  } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
+    res = convertSelect(operandPool, select);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
     if (instr->isBinaryOp()) {
       res = convertBinOp(operandPool,instr);
@@ -187,6 +189,36 @@ Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
   }
   newphi->insertAfter(load);
   return newphi;
+}
+
+
+Value *FloatToFixed::convertSelect(DenseMap<Value *, Value *>& op, SelectInst *sel)
+{
+  if (!sel->getType()->isFloatingPointTy()) {
+    Value *newcond = op[sel->getCondition()];
+    Value *newtruev = op[sel->getTrueValue()];
+    Value *newfalsev = op[sel->getFalseValue()];
+  
+    /* like phi, upgrade in place */
+    if (newcond && newcond != ConversionError)
+      sel->setCondition(newcond);
+    if (newtruev && newtruev != ConversionError)
+      sel->setTrueValue(newtruev);
+    if (newfalsev && newfalsev != ConversionError)
+      sel->setFalseValue(newfalsev);
+    return sel;
+  }
+  
+  /* otherwise create a new one */
+  Value *newtruev = translateOrMatchOperand(op, sel->getTrueValue());
+  Value *newfalsev = translateOrMatchOperand(op, sel->getFalseValue());
+  Value *newcond = translateOrMatchOperand(op, sel->getCondition());
+  if (!newtruev || !newfalsev || !newcond)
+    return nullptr;
+  
+  SelectInst *newsel = SelectInst::Create(newcond, newtruev, newfalsev);
+  newsel->insertAfter(sel);
+  return newsel;
 }
 
 
