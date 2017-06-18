@@ -1,5 +1,8 @@
 
 
+/* compile with -O1 */
+
+
 float random(void)
 {
   static unsigned int seed = 123456;
@@ -8,7 +11,7 @@ float random(void)
 }
 
 
-float test(int p1, int p2, float num1, float num2, float num3)
+float test(int p1, int p2, int p3, float num1, float num2, float num3)
 {
   float phi __attribute((annotate("no_float")));
   
@@ -22,6 +25,20 @@ float test(int p1, int p2, float num1, float num2, float num3)
     phi *= random();
   } else
     phi /= random();
+  return phi;
+}
+
+
+float test2(int p1)
+{
+  float phi __attribute((annotate("no_float"))) = 0.0;
+  
+  if (p1)
+    phi += random();
+  else
+    phi += 2.0;
+  phi += random();
+  
   return phi;
 }
   
