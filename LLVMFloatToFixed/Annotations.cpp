@@ -99,10 +99,21 @@ bool FloatToFixed::isValidAnnotation(ConstantExpr *annoPtrInst)
 
 SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::removeNoFloatTy(SmallPtrSet<Value*,N_ANNO_VAR> &res)
 {
-  for(auto it : res)
-  {
-    if (!dyn_cast<PointerType>(it->getType())->getElementType()->isFloatingPointTy())
-    {
+  for (auto it: res) {
+    AllocaInst *alloca = dyn_cast<AllocaInst>(it);
+    if (!alloca) {
+      DEBUG(dbgs() << "annotated instruction " << it <<
+        " not an alloca, ignored");
+      res.erase(it);
+      continue;
+    }
+    
+    Type *ty = alloca->getAllocatedType();
+    if (ty->isArrayTy())
+      ty = ty->getArrayElementType();
+    if (!ty->isFloatingPointTy()) {
+      DEBUG(dbgs() << "annotated instruction " << it << " does not allocate a"
+        " kind of float; ignored");
       res.erase(it);
     }
   }
