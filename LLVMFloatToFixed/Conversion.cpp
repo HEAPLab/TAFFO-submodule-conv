@@ -87,20 +87,23 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
 Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 {
   Type *prevt = alloca->getAllocatedType();
-  if (!prevt->isFloatingPointTy()) {
-    errs() << *alloca << " does not directly allocate a float\n";
+  
+  Type *testt = prevt->isArrayTy() ? prevt->getArrayElementType() : prevt;
+  if (!testt->isFloatingPointTy()) {
+    DEBUG(dbgs() << *alloca << " does not allocate a float or an array of floats\n");
     return nullptr;
+  }
+  
+  Type *newt;
+  if (prevt->isArrayTy()) {
+    Type *baset = getFixedPointType(prevt->getContext());
+    newt = ArrayType::get(baset, prevt->getArrayNumElements());
+  } else {
+    newt = getFixedPointType(prevt->getContext());
   }
 
   Value *as = alloca->getArraySize();
-  ConstantInt *ci = dyn_cast<ConstantInt>(as);
-  if (!ci || ci->getSExtValue() != 1) {
-    errs() << *alloca << " is not a single value!\n";
-    return nullptr;
-  }
-
-  Type *alloct = Type::getIntNTy(alloca->getContext(), bitsAmt);
-  AllocaInst *newinst = new AllocaInst(alloct, as, alloca->getAlignment(),
+  AllocaInst *newinst = new AllocaInst(newt, as, alloca->getAlignment(),
     "__" + alloca->getName() + "_fixp");
   newinst->setUsedWithInAlloca(alloca->isUsedWithInAlloca());
   newinst->setSwiftError(alloca->isSwiftError());

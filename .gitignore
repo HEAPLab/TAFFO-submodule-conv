@@ -12,3 +12,4 @@ CTestTestfile.cmake
 build
 test/_tmp*
 caldaia
+array1.ll
