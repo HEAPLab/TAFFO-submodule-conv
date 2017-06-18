@@ -160,7 +160,7 @@ Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
 
     /* if all of our incoming values were not converted, we want to propagate
      * that information across the phi. If at least one of them was converted
-     * the phi is converted as well; otherwise we it is not. */
+     * the phi is converted as well; otherwise it is not. */
     bool donesomething = false;
 
     for (int i=0; i<load->getNumIncomingValues(); i++) {
