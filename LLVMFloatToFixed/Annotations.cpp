@@ -97,7 +97,7 @@ bool FloatToFixed::isValidAnnotation(ConstantExpr *annoPtrInst)
   return false;
 }
 
-SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::removeNoFloatTy(SmallPtrSet<Value*,N_ANNO_VAR> res)
+SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::removeNoFloatTy(SmallPtrSet<Value*,N_ANNO_VAR> &res)
 {
   for(auto it : res)
   {

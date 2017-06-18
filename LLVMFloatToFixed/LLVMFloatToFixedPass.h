@@ -39,7 +39,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readLocalAnnotations(llvm::Function &f);
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readAllLocalAnnotations(llvm::Module &m);
   bool isValidAnnotation(llvm::ConstantExpr *expr);
-  llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> res);
+  llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> &res);
   void printAnnotatedObj(llvm::Module &m);
 
   std::vector<llvm::Value*> buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val);
