@@ -49,6 +49,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *convertAlloca(llvm::AllocaInst *alloca);
   llvm::Value *convertLoad(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::LoadInst *load);
   llvm::Value *convertStore(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::StoreInst *load);
+  llvm::Value *convertGep(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::GetElementPtrInst *gep);
   llvm::Value *convertPhi(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::PHINode *load);
   llvm::Value *convertSelect(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::SelectInst *sel);
   llvm::Value *convertBinOp(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Instruction *instr);

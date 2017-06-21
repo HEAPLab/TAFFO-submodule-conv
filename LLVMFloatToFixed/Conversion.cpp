@@ -62,6 +62,8 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
     res = convertLoad(operandPool, load);
   } else if (StoreInst *store = dyn_cast<StoreInst>(val)) {
     res = convertStore(operandPool, store);
+  } else if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(val)) {
+    res = convertGep(operandPool, gep);
   } else if (PHINode *phi = dyn_cast<PHINode>(val)) {
     res = convertPhi(operandPool, phi);
   } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
@@ -87,13 +89,13 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
 Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 {
   Type *prevt = alloca->getAllocatedType();
-  
+
   Type *testt = prevt->isArrayTy() ? prevt->getArrayElementType() : prevt;
   if (!testt->isFloatingPointTy()) {
     DEBUG(dbgs() << *alloca << " does not allocate a float or an array of floats\n");
     return nullptr;
   }
-  
+
   Type *newt;
   if (prevt->isArrayTy()) {
     Type *baset = getFixedPointType(prevt->getContext());
@@ -152,6 +154,22 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
 }
 
 
+Value *FloatToFixed::convertGep(DenseMap<Value *, Value *>& op, GetElementPtrInst *gep)
+{
+  IRBuilder <> builder (gep);
+  Value *newval = translateOrMatchOperand(op,gep->getPointerOperand());
+
+  std::vector<Value*> vals;
+  for (auto a : gep->operand_values() ) {
+    vals.push_back(a);
+  }
+  vals.erase(vals.begin());
+
+  ArrayRef <Value*> idxlist(vals);
+  return builder.CreateInBoundsGEP(newval,idxlist);
+}
+
+
 Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
 {
   if (!load->getType()->isFloatingPointTy()) {
@@ -201,7 +219,7 @@ Value *FloatToFixed::convertSelect(DenseMap<Value *, Value *>& op, SelectInst *s
     Value *newcond = op[sel->getCondition()];
     Value *newtruev = op[sel->getTrueValue()];
     Value *newfalsev = op[sel->getFalseValue()];
-  
+
     /* like phi, upgrade in place */
     if (newcond && newcond != ConversionError)
       sel->setCondition(newcond);
@@ -211,14 +229,14 @@ Value *FloatToFixed::convertSelect(DenseMap<Value *, Value *>& op, SelectInst *s
       sel->setFalseValue(newfalsev);
     return sel;
   }
-  
+
   /* otherwise create a new one */
   Value *newtruev = translateOrMatchOperand(op, sel->getTrueValue());
   Value *newfalsev = translateOrMatchOperand(op, sel->getFalseValue());
   Value *newcond = translateOrMatchOperand(op, sel->getCondition());
   if (!newtruev || !newfalsev || !newcond)
     return nullptr;
-  
+
   SelectInst *newsel = SelectInst::Create(newcond, newtruev, newfalsev);
   newsel->insertAfter(sel);
   return newsel;
