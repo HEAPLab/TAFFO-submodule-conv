@@ -2,7 +2,7 @@
 
 ROOT=$(dirname "$0")
 
-if [ $# -ne 1 ]; then
+if [ $# -lt 1 ]; then
   echo "usage: $0 <filename.c>";
   echo 'compiles a binary but by converting floats to fixed point first';
   echo 'output to filename (without the extension) and to various _tmp* files';
@@ -28,8 +28,8 @@ OUTNAME=$(echo "$1" | sed -E 's/\.[^\.]$//')
 
 $CLANG -S -emit-llvm "$1" -o "_tmp0.$1.ll"
 $OPT -load="$PASSLIB" -S -flttofix -debug-only=flttofix -dce "_tmp0.$1.ll" -o "_tmp1.$1.ll"
-$LLC -o "_tmp2.$1.o" "_tmp1.$1.ll" -filetype=obj
-$CLANG -o "$OUTNAME" "_tmp2.$1.o"
+$LLC -o "_tmp2.$1.s" "_tmp1.$1.ll" $2 -filetype=asm
+$CLANG -o "$OUTNAME" "_tmp2.$1.s"
 
-$LLC -o "_tmp2_not_opt.$1.o" "_tmp0.$1.ll" -filetype=obj
-$CLANG -o "$OUTNAME._not_opt" "_tmp2_not_opt.$1.o"
+$LLC -o "_tmp2_not_opt.$1.s" "_tmp0.$1.ll" $2 -filetype=asm
+$CLANG -o "$OUTNAME._not_opt" "_tmp2_not_opt.$1.s"
