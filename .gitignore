@@ -13,3 +13,5 @@ build
 test/_tmp*
 caldaia
 array1.ll
+*._not_opt
+array3
