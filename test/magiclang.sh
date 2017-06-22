@@ -31,3 +31,5 @@ $OPT -load="$PASSLIB" -S -flttofix -debug-only=flttofix -dce "_tmp0.$1.ll" -o "_
 $LLC -o "_tmp2.$1.o" "_tmp1.$1.ll" -filetype=obj
 $CLANG -o "$OUTNAME" "_tmp2.$1.o"
 
+$LLC -o "_tmp2_not_opt.$1.o" "_tmp0.$1.ll" -filetype=obj
+$CLANG -o "$OUTNAME._not_opt" "_tmp2_not_opt.$1.o"
