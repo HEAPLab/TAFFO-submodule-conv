@@ -89,19 +89,22 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
 Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 {
   Type *prevt = alloca->getAllocatedType();
+  Type *newt;
+  std::vector<int> dim;
 
-  Type *testt = prevt->isArrayTy() ? prevt->getArrayElementType() : prevt;
-  if (!testt->isFloatingPointTy()) {
+  while (prevt->isArrayTy()) {
+    dim.push_back(prevt->getArrayNumElements());
+    prevt = prevt->getArrayElementType();
+  }
+
+  if (!prevt->isFloatingPointTy()) {
     DEBUG(dbgs() << *alloca << " does not allocate a float or an array of floats\n");
     return nullptr;
   }
 
-  Type *newt;
-  if (prevt->isArrayTy()) {
-    Type *baset = getFixedPointType(prevt->getContext());
-    newt = ArrayType::get(baset, prevt->getArrayNumElements());
-  } else {
-    newt = getFixedPointType(prevt->getContext());
+  newt = getFixedPointType(prevt->getContext());
+  for (int i=dim.size()-1;i>=0;i--) {
+    newt = ArrayType::get(newt, dim[i]);
   }
 
   Value *as = alloca->getArraySize();
