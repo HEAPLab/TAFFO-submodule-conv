@@ -96,27 +96,24 @@ int randomInRange(int a, int b)
 }
 
 
-#define N 0x80000
+#define N 0x40000
 #define PREHEAT 10
 #define TRIES 1000
 
 
-#define gen_perform(op, ini) {                                \
+#define gen_perform(op) {                                     \
   printf("operation: %s\n", #op);                             \
                                                               \
-  __attribute__((annotate("no_float"))) float accum;          \
   uint64_t samples[TRIES];                                    \
                                                               \
   for (int t=0; t<TRIES; t++) {                               \
     timerStart();                                             \
-    accum = ini;                                              \
-    for (int i=0; i<N;) {                                     \
-      __attribute__((annotate("no_float"))) float a, b, c;    \
-      a = buf[i++] op buf[i++];                               \
-      b = buf[i++] op buf[i++];                               \
-      c = a op b;                                             \
-      accum = accum op c;                                     \
+    for (int i=0; i<N; i+=2) {                                \
+      buf[i] = buf[i] op buf[i+1];                            \
     }                                                         \
+    __attribute__((annotate("no_float"))) float sync = 0.0;   \
+    for (int i=0; i<N; i++)                                   \
+      sync += buf[i];                                         \
     samples[t] = timerStop();                                 \
   }                                                           \
                                                               \
@@ -125,24 +122,23 @@ int randomInRange(int a, int b)
     avg += samples[t];                                        \
   }                                                           \
   avg /= TRIES - PREHEAT;                                     \
-  printf("result: %f\n", accum);                              \
   printf("avg time (ns): %" PRIu64 "\n", avg);                \
 }
 
 
 int main(int argc, char *argv[])
 {
-  __attribute__((annotate("no_float"))) float buf[N];
+  __attribute__((annotate("no_float"))) float buf[N*2];
 
   for (int i=0; i<N; i++) {
     buf[i] = (float)randomInRange(0, 0x100) / 32768.0;
   }
-  gen_perform(+, 0.0)
+  gen_perform(+)
   
   for (int i=0; i<N; i++) {
     buf[i] = 1.0 + (float)randomInRange(0, (i+1) % 4) / 32768.0;
   }
-  gen_perform(*, 1.0)
+  gen_perform(*)
 
   return 0;
 }
