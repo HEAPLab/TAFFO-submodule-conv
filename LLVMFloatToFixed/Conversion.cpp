@@ -147,7 +147,11 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
     return nullptr;
 
   if (newval->getType() != cast<PointerType>(newptr->getType())->getElementType()) {
-    //se l'area di memoria non è float , riporto il valore in float per memorizzarlo correttamente
+    /* if the destination is to a floating point value and the source is not,
+     * convert back to a float and store the converted value
+     * we can't do that if the source is a pointer though; in that case bail out */
+    if (newval->getType()->isPointerTy())
+      return nullptr;
     newval = genConvertFixToFloat(newval,cast<PointerType>(newptr->getType())->getElementType());
   }
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
