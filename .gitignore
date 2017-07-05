@@ -15,3 +15,5 @@ caldaia
 array1.ll
 *._not_opt
 array3
+test/inlinetest
+test/test
