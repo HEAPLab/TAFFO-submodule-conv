@@ -357,12 +357,10 @@ Value *FloatToFixed::convertCmp(DenseMap<Value *, Value *>& op, FCmpInst *fcmp)
 
 Value *FloatToFixed::convertCast(DenseMap<Value *, Value *>& op, CastInst *cast)
 {
-  /*le istruzioni Instruction::
-  [FPToSI,FPToUI,SIToFP,UIToFP]
-  vengono gestite qui
-  [Trunc,ZExt,SExt,FPTrunc,FPExt]
-  vengono gestite dalla fallback e non qui
-  [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori*/
+  /* le istruzioni Instruction::
+   * - [FPToSI,FPToUI,SIToFP,UIToFP] vengono gestite qui
+   * - [Trunc,ZExt,SExt] vengono gestite dalla fallback e non qui
+   * - [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori */
   
   IRBuilder<> builder(cast->getNextNode());
   Value *val = translateOrMatchOperand(op, cast->getOperand(0), cast);
@@ -372,24 +370,29 @@ Value *FloatToFixed::convertCast(DenseMap<Value *, Value *>& op, CastInst *cast)
       builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()),fracBitsAmt)),
       cast->getType()
     );
-  }
-  else if (cast->getOpcode() == Instruction::FPToUI) {
+    
+  } else if (cast->getOpcode() == Instruction::FPToUI) {
     return builder.CreateZExtOrTrunc(
       builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()),fracBitsAmt)),
       cast->getType()
     );
-  }
-  else if (cast->getOpcode() == Instruction::SIToFP) {
+    
+  } else if (cast->getOpcode() == Instruction::SIToFP) {
     return builder.CreateShl(
       builder.CreateSExtOrTrunc(val,getFixedPointType(val->getContext())),
       ConstantInt::get(getFixedPointType(val->getContext()) ,fracBitsAmt)
     );
-  }
-  else if (cast->getOpcode() == Instruction::UIToFP){
+    
+  } else if (cast->getOpcode() == Instruction::UIToFP) {
     return builder.CreateShl(
       builder.CreateZExtOrTrunc(val,getFixedPointType(val->getContext())),
       ConstantInt::get(getFixedPointType(val->getContext()) ,fracBitsAmt)
     );
+    
+  } else if (cast->getOpcode() == Instruction::FPTrunc ||
+             cast->getOpcode() == Instruction::FPExt) {
+    /* there is just one type of fixed point type; nothing to convert */
+    return val;
   }
 
   return Unsupported;
