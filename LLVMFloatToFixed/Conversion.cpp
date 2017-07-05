@@ -42,7 +42,8 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
   }
 
   /* remove all successfully converted stores. MAY PRODUCE INCORRECT RESULTS */
-  //TODO: better logic here!!
+  /* TODO: better logic here!! correct logic would be to remove all stores to
+   * a float only if all of them were correctly converted */
   for (Value *v: q) {
     auto *i = dyn_cast<StoreInst>(v);
     auto *convi = convertedPool[v];
@@ -417,6 +418,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
 
     Value *cvtfallval = op[fallval];
     if (cvtfallval == ConversionError || fallval->getType()->isPointerTy()) {
+    if (cvtfallval == ConversionError || (cvtfallval && cvtfallval->getType()->isPointerTy())) {
       DEBUG(dbgs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
       return nullptr;
     }
