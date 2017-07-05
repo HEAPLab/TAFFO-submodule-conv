@@ -417,7 +417,6 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
     fallval = unsupp->getOperand(i);
 
     Value *cvtfallval = op[fallval];
-    if (cvtfallval == ConversionError || fallval->getType()->isPointerTy()) {
     if (cvtfallval == ConversionError || (cvtfallval && cvtfallval->getType()->isPointerTy())) {
       DEBUG(dbgs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
       return nullptr;
