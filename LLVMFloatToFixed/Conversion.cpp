@@ -142,7 +142,7 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
     return nullptr;
 
   Value *val = store->getValueOperand();
-  Value *newval = translateOrMatchOperand(op, val);
+  Value *newval = translateOrMatchOperand(op, val, store);
   if (!newval)
     return nullptr;
 
@@ -160,7 +160,7 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
 Value *FloatToFixed::convertGep(DenseMap<Value *, Value *>& op, GetElementPtrInst *gep)
 {
   IRBuilder <> builder (gep);
-  Value *newval = translateOrMatchOperand(op,gep->getPointerOperand());
+  Value *newval = translateOrMatchOperand(op, gep->getPointerOperand(), gep);
 
   std::vector<Value*> vals;
   for (auto a : gep->operand_values() ) {
@@ -204,7 +204,7 @@ Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
   for (int i=0; i<load->getNumIncomingValues(); i++) {
     Value *thisval = load->getIncomingValue(i);
     BasicBlock *thisbb = load->getIncomingBlock(i);
-    Value *newval = translateOrMatchOperand(op, thisval);
+    Value *newval = translateOrMatchOperand(op, thisval, load);
     if (!newval) {
       delete newphi;
       return nullptr;
@@ -234,9 +234,9 @@ Value *FloatToFixed::convertSelect(DenseMap<Value *, Value *>& op, SelectInst *s
   }
 
   /* otherwise create a new one */
-  Value *newtruev = translateOrMatchOperand(op, sel->getTrueValue());
-  Value *newfalsev = translateOrMatchOperand(op, sel->getFalseValue());
-  Value *newcond = translateOrMatchOperand(op, sel->getCondition());
+  Value *newtruev = translateOrMatchOperand(op, sel->getTrueValue(), sel);
+  Value *newfalsev = translateOrMatchOperand(op, sel->getFalseValue(), sel);
+  Value *newcond = translateOrMatchOperand(op, sel->getCondition(), sel);
   if (!newtruev || !newfalsev || !newcond)
     return nullptr;
 
@@ -255,8 +255,8 @@ Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *i
     [Add,Sub,Mul,SDiv,UDiv,SRem,URem,Shl,LShr,AShr,And,Or,Xor]
     vengono gestite dalla fallback e non in questa funzione */
 
-  Value *val1 = translateOrMatchOperand(op,instr->getOperand(0));
-  Value *val2 = translateOrMatchOperand(op,instr->getOperand(1));
+  Value *val1 = translateOrMatchOperand(op, instr->getOperand(0), instr);
+  Value *val2 = translateOrMatchOperand(op, instr->getOperand(1), instr);
   if (!val1 || !val2)
     return nullptr;
 
@@ -346,8 +346,8 @@ Value *FloatToFixed::convertCmp(DenseMap<Value *, Value *>& op, FCmpInst *fcmp)
     ty = CmpInst::getInversePredicate(ty);
   }
 
-  Value *val1 = translateOrMatchOperand(op,fcmp->getOperand(0));
-  Value *val2 = translateOrMatchOperand(op,fcmp->getOperand(1));
+  Value *val1 = translateOrMatchOperand(op, fcmp->getOperand(0), fcmp);
+  Value *val2 = translateOrMatchOperand(op, fcmp->getOperand(1), fcmp);
 
   return val1 && val2
     ? builder.CreateICmp(ty,val1,val2)
@@ -363,8 +363,10 @@ Value *FloatToFixed::convertCast(DenseMap<Value *, Value *>& op, CastInst *cast)
   [Trunc,ZExt,SExt,FPTrunc,FPExt]
   vengono gestite dalla fallback e non qui
   [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori*/
+  
   IRBuilder<> builder(cast->getNextNode());
-  Value *val = translateOrMatchOperand(op,cast->getOperand(0));
+  Value *val = translateOrMatchOperand(op, cast->getOperand(0), cast);
+  
   if (cast->getOpcode() == Instruction::FPToSI) {
     return builder.CreateSExtOrTrunc(
       builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()),fracBitsAmt)),
@@ -433,9 +435,9 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
   }
   DEBUG(dbgs() << "  mutated operands to:\n" << *unsupp << "\n");
   if (unsupp->getType()->isFloatingPointTy()) {
-    Value *fallbackv = genConvertFloatToFix(unsupp);
+    Value *fallbackv = genConvertFloatToFix(unsupp, unsupp);
     if (unsupp->hasName())
-      fallbackv->setName(unsupp->getName() + "_fallback");
+      fallbackv->setName(unsupp->getName() + ".fallback");
     return fallbackv;
   }
   return unsupp;
@@ -443,7 +445,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
 
 
 /* do not use on pointer operands */
-Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Value *val)
+Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Value *val, Instruction *ip)
 {
   Value *res = op[val];
   if (res) {
@@ -459,28 +461,30 @@ Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Val
     /* doesn't need to be converted; return as is */
     return val;
 
-  return genConvertFloatToFix(val);
+  return genConvertFloatToFix(val, ip);
 }
 
 
-Value *FloatToFixed::genConvertFloatToFix(Value *flt)
+Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
 {
   if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
     return convertFloatConstantToFixConstant(fpc);
-
-  } else if (Instruction *i = dyn_cast<Instruction>(flt)) {
-    FloatToFixCount++;
-
-    IRBuilder<> builder(i->getNextNode());
-    double twoebits = pow(2.0, fracBitsAmt);
-    return builder.CreateFPToSI(
-      builder.CreateFMul(
-        ConstantFP::get(flt->getType(), twoebits),
-        flt),
-      getFixedPointType(i->getContext()));
-
   }
-  return nullptr;
+  
+  FloatToFixCount++;
+  
+  if (Instruction *i = dyn_cast<Instruction>(flt))
+    ip = i->getNextNode();
+  assert(ip && "ip is mandatory if not passing an instruction/constant value");
+
+  /* insert new instructions before ip */
+  IRBuilder<> builder(ip);
+  double twoebits = pow(2.0, fracBitsAmt);
+  return builder.CreateFPToSI(
+    builder.CreateFMul(
+      ConstantFP::get(flt->getType(), twoebits),
+      flt),
+    getFixedPointType(flt->getContext()));
 }
 
 
