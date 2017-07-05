@@ -1,4 +1,4 @@
-
+#include <stdio.h>
 
 
 float hello(__attribute__((annotate("no_float"))) float abc) __attribute__((always_inline)) {
