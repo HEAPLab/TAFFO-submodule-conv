@@ -29,6 +29,13 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
   DenseMap<Value *, Value *> convertedPool;
 
   for (Value *v: q) {
+    if (CallInst *anno = dyn_cast<CallInst>(v)) {
+      if (anno->getCalledFunction()->getName() == "llvm.var.annotation") {
+        anno->eraseFromParent();
+        continue;
+      }
+    }
+
     Value *newv = convertSingleValue(m, convertedPool, v);
     if (newv && newv != ConversionError) {
       convertedPool.insert({v, newv});
@@ -366,34 +373,34 @@ Value *FloatToFixed::convertCast(DenseMap<Value *, Value *>& op, CastInst *cast)
    * - [FPToSI,FPToUI,SIToFP,UIToFP] vengono gestite qui
    * - [Trunc,ZExt,SExt] vengono gestite dalla fallback e non qui
    * - [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori */
-  
+
   IRBuilder<> builder(cast->getNextNode());
   Value *val = translateOrMatchOperand(op, cast->getOperand(0), cast);
-  
+
   if (cast->getOpcode() == Instruction::FPToSI) {
     return builder.CreateSExtOrTrunc(
       builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()),fracBitsAmt)),
       cast->getType()
     );
-    
+
   } else if (cast->getOpcode() == Instruction::FPToUI) {
     return builder.CreateZExtOrTrunc(
       builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()),fracBitsAmt)),
       cast->getType()
     );
-    
+
   } else if (cast->getOpcode() == Instruction::SIToFP) {
     return builder.CreateShl(
       builder.CreateSExtOrTrunc(val,getFixedPointType(val->getContext())),
       ConstantInt::get(getFixedPointType(val->getContext()) ,fracBitsAmt)
     );
-    
+
   } else if (cast->getOpcode() == Instruction::UIToFP) {
     return builder.CreateShl(
       builder.CreateZExtOrTrunc(val,getFixedPointType(val->getContext())),
       ConstantInt::get(getFixedPointType(val->getContext()) ,fracBitsAmt)
     );
-    
+
   } else if (cast->getOpcode() == Instruction::FPTrunc ||
              cast->getOpcode() == Instruction::FPExt) {
     /* there is just one type of fixed point type; nothing to convert */
@@ -478,9 +485,9 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
   if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
     return convertFloatConstantToFixConstant(fpc);
   }
-  
+
   FloatToFixCount++;
-  
+
   if (Instruction *i = dyn_cast<Instruction>(flt))
     ip = i->getNextNode();
   assert(ip && "ip is mandatory if not passing an instruction/constant value");
