@@ -173,6 +173,8 @@ Value *FloatToFixed::convertGep(DenseMap<Value *, Value *>& op, GetElementPtrIns
 {
   IRBuilder <> builder (gep);
   Value *newval = translateOrMatchOperand(op, gep->getPointerOperand(), gep);
+  if (!newval)
+    return nullptr;
 
   std::vector<Value*> vals;
   for (auto a : gep->operand_values() ) {
