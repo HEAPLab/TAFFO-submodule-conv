@@ -32,10 +32,12 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
     if (CallInst *anno = dyn_cast<CallInst>(v)) {
       if (!anno->getCalledFunction())
         continue;
-      if (anno->getCalledFunction()->getName() == "llvm.var.annotation")
+      if (anno->getCalledFunction()->getName() == "llvm.var.annotation") {
         anno->eraseFromParent();
+        continue;
+      }
     }
-
+    
     Value *newv = convertSingleValue(m, convertedPool, v);
     if (newv && newv != ConversionError) {
       convertedPool.insert({v, newv});
@@ -101,7 +103,7 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 
   Value *as = alloca->getArraySize();
   AllocaInst *newinst = new AllocaInst(newt, as, alloca->getAlignment(),
-    alloca->getName() + ".fixp");
+    alloca->hasName() ? alloca->getName() + ".fixp" : "fixp");
   
   newinst->setUsedWithInAlloca(alloca->isUsedWithInAlloca());
   newinst->setSwiftError(alloca->isSwiftError());
