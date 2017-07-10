@@ -27,7 +27,7 @@ PASSLIB="$ROOT/../build/LLVMFloatToFixed/Debug/LLVMFloatToFixed.$SOEXT"
 OUTNAME=$(echo "$1" | sed -E 's/\.[^\.]$//')
 
 $CLANG -S -emit-llvm "$1" -o "_tmp0.$1.ll" $3
-$OPT -load="$PASSLIB" -S -flttofix -debug-only=flttofix "_tmp0.$1.ll" -o "_tmp1.$1.ll"
+$OPT -load="$PASSLIB" -S -flttofix -debug-only=flttofix -dce "_tmp0.$1.ll" -o "_tmp1.$1.ll"
 $CLANG -S -o "_tmp2.$1.s" "_tmp1.$1.ll" $2 $3
 $CLANG -o "$OUTNAME" "_tmp2.$1.s" $2 $3
 
