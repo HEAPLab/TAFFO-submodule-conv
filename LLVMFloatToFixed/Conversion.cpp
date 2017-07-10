@@ -30,11 +30,11 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
 
   for (Value *v: q) {
     if (CallInst *anno = dyn_cast<CallInst>(v)) {
-      if (!anno->getCalledFunction())
-        continue;
-      if (anno->getCalledFunction()->getName() == "llvm.var.annotation") {
-        anno->eraseFromParent();
-        continue;
+      if (anno->getCalledFunction()) {
+        if (anno->getCalledFunction()->getName() == "llvm.var.annotation") {
+          anno->eraseFromParent();
+          continue;
+        }
       }
     }
     
