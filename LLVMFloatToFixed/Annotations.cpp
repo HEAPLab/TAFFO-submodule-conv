@@ -51,12 +51,16 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readGlobalAnnotations(Module &m , b
 SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readLocalAnnotations(Function &f)
 {
   SmallPtrSet <Value*,N_ANNO_VAR> variables;
-  for (inst_iterator iIt = inst_begin(&f), iItEnd = inst_end(&f); iIt != iItEnd; iIt++)
-  {
-    if (iIt->getOpcode() == Instruction::Call &&  cast<CallInst>(*iIt).getCalledFunction()->getName() == "llvm.var.annotation")
-    {
-      if (isValidAnnotation(cast<ConstantExpr>(iIt->getOperand(1))))
-      {
+  for (inst_iterator iIt = inst_begin(&f), iItEnd = inst_end(&f); iIt != iItEnd; iIt++) {
+    CallInst *call = dyn_cast<CallInst>(&(*iIt));
+    if (!call)
+      continue;
+    
+    if (!call->getCalledFunction())
+      continue;
+    
+    if (call->getCalledFunction()->getName() == "llvm.var.annotation") {
+      if (isValidAnnotation(cast<ConstantExpr>(iIt->getOperand(1)))) {
         Instruction *var = cast<Instruction>(iIt->getOperand(0));
         variables.insert(var->getOperand(0));
       }
