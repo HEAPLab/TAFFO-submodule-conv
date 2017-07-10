@@ -109,8 +109,11 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::removeNoFloatTy(SmallPtrSet<Value*,
     }
 
     Type *ty = alloca->getAllocatedType();
-    while (ty->isArrayTy()) {
-      ty = ty->getArrayElementType();
+    while (ty->isArrayTy() || ty->isPointerTy()) {
+      if (ty->isPointerTy())
+        ty = ty->getPointerElementType();
+      else
+        ty = ty->getArrayElementType();
     }
     if (!ty->isFloatingPointTy()) {
       DEBUG(dbgs() << "annotated instruction " << *it << " does not allocate a"

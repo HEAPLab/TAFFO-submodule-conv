@@ -62,6 +62,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Constant *convertFloatConstantToFixConstant(llvm::ConstantFP *flt);
   llvm::Value *genConvertFixToFloat(llvm::Value *fix, llvm::Type *destt);
 
+  llvm::Type *getFixedPointTypeForFloatType(llvm::Type *srct);
   llvm::Type *getFixedPointType(llvm::LLVMContext &ctxt);
 };
 

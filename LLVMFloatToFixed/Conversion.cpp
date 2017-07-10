@@ -97,27 +97,12 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
 Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 {
   Type *prevt = alloca->getAllocatedType();
-  Type *newt;
-  std::vector<int> dim;
-
-  while (prevt->isArrayTy()) {
-    dim.push_back(prevt->getArrayNumElements());
-    prevt = prevt->getArrayElementType();
-  }
-
-  if (!prevt->isFloatingPointTy()) {
-    DEBUG(dbgs() << *alloca << " does not allocate a float or an array of floats\n");
-    return nullptr;
-  }
-
-  newt = getFixedPointType(prevt->getContext());
-  for (int i=dim.size()-1;i>=0;i--) {
-    newt = ArrayType::get(newt, dim[i]);
-  }
+  Type *newt = getFixedPointTypeForFloatType(prevt);
 
   Value *as = alloca->getArraySize();
   AllocaInst *newinst = new AllocaInst(newt, as, alloca->getAlignment(),
-    "__" + alloca->getName() + "_fixp");
+    alloca->getName() + ".fixp");
+  
   newinst->setUsedWithInAlloca(alloca->isUsedWithInAlloca());
   newinst->setSwiftError(alloca->isSwiftError());
   newinst->insertAfter(alloca);
@@ -550,6 +535,27 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
     builder.CreateSIToFP(
       fix, destt),
     ConstantFP::get(destt, twoebits));
+}
+
+
+Type *FloatToFixed::getFixedPointTypeForFloatType(Type *srct)
+{
+  if (srct->isPointerTy()) {
+    Type *enc = getFixedPointTypeForFloatType(srct->getPointerElementType());
+    return enc->getPointerTo();
+    
+  } else if (srct->isArrayTy()) {
+    int nel = srct->getArrayNumElements();
+    Type *enc = getFixedPointTypeForFloatType(srct->getArrayElementType());
+    return ArrayType::get(enc, nel);
+    
+  } else if (srct->isFloatingPointTy()) {
+    return getFixedPointType(srct->getContext());
+    
+  }
+  DEBUG(srct->dump());
+  assert(0 && "getFixedPointTypeForFloatType given a non-float type");
+  return nullptr;
 }
 
 
