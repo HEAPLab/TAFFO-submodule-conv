@@ -1,4 +1,6 @@
 _tmp*
 atax_out
 atax_out._not_opt
-
+floyd-warshall_out
+floyd-warshall_out._not_opt
+*.output.csv
