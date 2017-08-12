@@ -30,16 +30,16 @@ void init_array(int ni, int nj, int nk, int nl, int nm,
 
   for (i = 0; i < ni; i++)
     for (j = 0; j < nk; j++)
-      A[i][j] = ((DATA_TYPE) i*j) / ni;
+      A[i][j] = ((DATA_TYPE) i*j) / ni*nk / 128;
   for (i = 0; i < nk; i++)
     for (j = 0; j < nj; j++)
-      B[i][j] = ((DATA_TYPE) i*(j+1)) / nj;
+      B[i][j] = ((DATA_TYPE) i*((nj-j)+1)) / nj*nk / 128;
   for (i = 0; i < nj; i++)
     for (j = 0; j < nm; j++)
-      C[i][j] = ((DATA_TYPE) i*(j+3)) / nl;
+      C[i][j] = ((DATA_TYPE) (nj-i)*(j+3)) / nj*nm / 128;
   for (i = 0; i < nm; i++)
     for (j = 0; j < nl; j++)
-      D[i][j] = ((DATA_TYPE) i*(j+2)) / nk;
+      D[i][j] = ((DATA_TYPE) (nm-i)*((nl-j)+2)) / nm*nl / 128;
 }
 
 
