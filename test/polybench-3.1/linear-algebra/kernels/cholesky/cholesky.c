@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <stdint.h>
 
 /* Include polybench common header. */
 #include <polybench.h>
@@ -28,9 +29,12 @@ void init_array(int n,
 
   for (i = 0; i < n; i++)
     {
-      p[i] = 1.0 / n;
-      for (j = 0; j < n; j++)
-	A[i][j] = 1.0 / n;
+      p[i] = 0.0;
+      for (j = 0; j < n; j++) {
+        A[i][j] = (DATA_TYPE)(((uint32_t)(n*i+j))*((uint32_t)1635131741)) / (DATA_TYPE)(UINT32_MAX) / n;
+        if (i == j)
+          A[i][j] += 1.0;
+      }
     }
 }
 
@@ -39,15 +43,20 @@ void init_array(int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
+     DATA_TYPE POLYBENCH_1D(p,N,n),
 		 DATA_TYPE POLYBENCH_2D(A,N,N,n,n)) __attribute__((always_inline))
 
 {
   int i, j;
 
   for (i = 0; i < n; i++)
+    fprintf(stderr, DATA_PRINTF_MODIFIER, p[i]);
+  fprintf(stderr, "\n");
+  for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++) {
-    fprintf (stderr, DATA_PRINTF_MODIFIER, A[i][j]);
-    if ((i * N + j) % 20 == 0) fprintf (stderr, "\n");
+      fprintf (stderr, DATA_PRINTF_MODIFIER, A[i][j]);
+    }
+    fprintf(stderr, "\n");
   }
 }
 
@@ -108,7 +117,7 @@ int main(int argc, char** argv)
 
   /* Prevent dead-code elimination. All live-out data must be printed
      by the function call in argument. */
-  polybench_prevent_dce(print_array(n, POLYBENCH_ARRAY(A)));
+  polybench_prevent_dce(print_array(n, POLYBENCH_ARRAY(p), POLYBENCH_ARRAY(A)));
 
   /* Be clean. */
   POLYBENCH_FREE_ARRAY(A);

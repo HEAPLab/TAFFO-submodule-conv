@@ -13,7 +13,7 @@ echo bicg
 ./magiclang.sh 'linear-algebra/kernels/bicg/bicg.c' '-O3' '-I utilities -I linear-algebra/kernels/bicg -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'bicg_out' 'utilities/polybench.c' '-fixpfracbitsamt=8 -fixpbitsamt=32' 
 
 echo cholesky
-./magiclang.sh 'linear-algebra/kernels/cholesky/cholesky.c' '-O3' '-I utilities -I linear-algebra/kernels/cholesky -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'cholesky_out' 'utilities/polybench.c' '-fixpfracbitsamt=8 -fixpbitsamt=32' 
+./magiclang.sh 'linear-algebra/kernels/cholesky/cholesky.c' '-O3' '-I utilities -I linear-algebra/kernels/cholesky -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'cholesky_out' 'utilities/polybench.c' '-fixpfracbitsamt=30 -fixpbitsamt=32'
 
 echo doitgen
 ./magiclang.sh 'linear-algebra/kernels/doitgen/doitgen.c' '-O3' '-I utilities -I linear-algebra/kernels/doitgen -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'doitgen_out' 'utilities/polybench.c' '-fixpfracbitsamt=8 -fixpbitsamt=32' 
