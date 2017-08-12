@@ -282,12 +282,9 @@ Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *i
 
     Value *ext1 = builder.CreateShl(
       builder.CreateSExt(val1,dbfxt),
-      ConstantInt::get(dbfxt,bitsAmt)
-      );
-    Value *ext2 = builder.CreateShl(
-      builder.CreateSExt(val2,dbfxt),
       ConstantInt::get(dbfxt,fracBitsAmt)
       );
+    Value *ext2 = builder.CreateSExt(val2,dbfxt);
 
     Value *fixop = builder.CreateSDiv(ext1,ext2);
     return builder.CreateTrunc(fixop,fxt);
