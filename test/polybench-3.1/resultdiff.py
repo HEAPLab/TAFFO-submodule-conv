@@ -26,7 +26,8 @@ for svfix, svflo in zip(ReadValues(sys.argv[1]), ReadValues(sys.argv[2])):
     fix_nofl += 1
   elif math.isnan(vflo):
     flo_nofl += 1
-  elif abs(vflo - vfix) > vflo:
+    fix_nofl += 1
+  elif abs(vflo - vfix) > abs(vflo):
     fix_nofl += 1
   else:
     n += 1
