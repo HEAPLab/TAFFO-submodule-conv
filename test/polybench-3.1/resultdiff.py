@@ -16,6 +16,7 @@ def ReadValues(filename):
 
 n = 0
 accerr = 0
+accval = 0
 fix_nofl = 0
 flo_nofl = 0
 
@@ -30,6 +31,7 @@ for svfix, svflo in zip(ReadValues(sys.argv[1]), ReadValues(sys.argv[2])):
   else:
     n += 1
     accerr += abs(vflo - vfix)
+    accval += vflo
   
-print(fix_nofl, flo_nofl, '%.2f' % (accerr / n))
+print(fix_nofl, flo_nofl, '%.2f' % (accerr / accval * 100))
 

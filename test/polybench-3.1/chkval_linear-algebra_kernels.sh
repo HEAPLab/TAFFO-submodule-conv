@@ -25,7 +25,7 @@ check() {
         printf $FORMAT $1 $FIXT $FLOT $OFLC $OFLC_OPT $OFLC_NOPT $ERROR
 }
 
-printf $FORMAT '' 'fix T' 'flo T' '39' '# ofl fix' '# ofl flo' 'avg error'
+printf $FORMAT '' 'fix T' 'flo T' '39' '# ofl fix' '# ofl flo' 'avg error %'
 
 if [ "$#" = "1" ]; then
         check $1;
