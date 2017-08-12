@@ -26,12 +26,14 @@ for svfix, svflo in zip(ReadValues(sys.argv[1]), ReadValues(sys.argv[2])):
     fix_nofl += 1
   elif math.isnan(vflo):
     flo_nofl += 1
-  elif abs(vflo - vfix) > vflo/2:
+  elif abs(vflo - vfix) > vflo:
     fix_nofl += 1
   else:
     n += 1
     accerr += abs(vflo - vfix)
     accval += vflo
   
-print(fix_nofl, flo_nofl, '%.2f' % (accerr / accval * 100))
+print(fix_nofl, flo_nofl, \
+      '%.2f' % (accerr / accval * 100) if accval > 0 and n > 0 else '-', \
+      '%.5e' % (accerr / n) if n > 0 else '-')
 
