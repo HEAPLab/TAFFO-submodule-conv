@@ -23,27 +23,27 @@ static
 void init_array(int ni, int nj, int nk, int nl,
 		DATA_TYPE *alpha,
 		DATA_TYPE *beta,
-		DATA_TYPE POLYBENCH_2D(A,NI,NK,ni,nl),
+		DATA_TYPE POLYBENCH_2D(A,NI,NK,ni,nk),
 		DATA_TYPE POLYBENCH_2D(B,NK,NJ,nk,nj),
 		DATA_TYPE POLYBENCH_2D(C,NL,NJ,nl,nj),
 		DATA_TYPE POLYBENCH_2D(D,NI,NL,ni,nl)) __attribute__((always_inline))
 {
   int i, j;
 
-  *alpha = 32412;
-  *beta = 2123;
+  *alpha = 0.32412;
+  *beta = 0.02123;
   for (i = 0; i < ni; i++)
     for (j = 0; j < nk; j++)
-      A[i][j] = ((DATA_TYPE) i*j) / ni;
+      A[i][j] = ((DATA_TYPE) i*j) / ni*nj / 50.0;
   for (i = 0; i < nk; i++)
     for (j = 0; j < nj; j++)
-      B[i][j] = ((DATA_TYPE) i*(j+1)) / nj;
+      B[i][j] = ((DATA_TYPE) (i/2 + (nk-i)/2 *(j/2 + (nj-j)/2+1))) / nk*(nj+1) / 50.0;
   for (i = 0; i < nl; i++)
     for (j = 0; j < nj; j++)
-      C[i][j] = ((DATA_TYPE) i*(j+3)) / nl;
+      C[i][j] = ((DATA_TYPE) ((nl-i)*((nl-j)+3))) / nl*(nj+3) / 50.0;
   for (i = 0; i < ni; i++)
     for (j = 0; j < nl; j++)
-      D[i][j] = ((DATA_TYPE) i*(j+2)) / nk;
+      D[i][j] = ((DATA_TYPE) i*(j+2)) / ni*(nl+2) / 10000.0;
 }
 
 
