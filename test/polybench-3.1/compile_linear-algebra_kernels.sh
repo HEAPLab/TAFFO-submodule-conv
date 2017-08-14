@@ -22,7 +22,7 @@ echo gemm
 ./magiclang.sh 'linear-algebra/kernels/gemm/gemm.c' '-O3' '-I utilities -I linear-algebra/kernels/gemm -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'gemm_out' 'utilities/polybench.c' '-fixpfracbitsamt=8 -fixpbitsamt=32' 
 
 echo gemver
-./magiclang.sh 'linear-algebra/kernels/gemver/gemver.c' '-O3' '-I utilities -I linear-algebra/kernels/gemver -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'gemver_out' 'utilities/polybench.c' '-fixpfracbitsamt=8 -fixpbitsamt=32' 
+./magiclang.sh 'linear-algebra/kernels/gemver/gemver.c' '-O3' '-I utilities -I linear-algebra/kernels/gemver -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'gemver_out' 'utilities/polybench.c' '-fixpfracbitsamt=18 -fixpbitsamt=32' 
 
 echo gesummv
 ./magiclang.sh 'linear-algebra/kernels/gesummv/gesummv.c' '-O3' '-I utilities -I linear-algebra/kernels/gesummv -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'gesummv_out' 'utilities/polybench.c' '-fixpfracbitsamt=8 -fixpbitsamt=32' 

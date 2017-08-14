@@ -29,8 +29,8 @@ void init_array(int ni, int nj, int nk,
 {
   int i, j;
 
-  *alpha = 32412;
-  *beta = 2123;
+  *alpha = 324.12;
+  *beta = 212.3;
   for (i = 0; i < ni; i++)
     for (j = 0; j < nj; j++)
       C[i][j] = ((DATA_TYPE) i*j) / ni;

@@ -35,8 +35,8 @@ void init_array (int n,
 {
   int i, j;
 
-  *alpha = 43532;
-  *beta = 12313;
+  *alpha = 4.3532;
+  *beta = 1.2313;
 
   for (i = 0; i < n; i++)
     {
