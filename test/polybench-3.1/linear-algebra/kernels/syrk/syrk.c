@@ -32,10 +32,10 @@ void init_array(int ni, int nj,
   *beta = 2123;
   for (i = 0; i < ni; i++)
     for (j = 0; j < nj; j++)
-      A[i][j] = ((DATA_TYPE) i*j) / ni;
+      A[i][j] = ((DATA_TYPE) i*j) / (ni*nj);
   for (i = 0; i < ni; i++)
     for (j = 0; j < ni; j++)
-      C[i][j] = ((DATA_TYPE) i*j) / ni;
+      C[i][j] = ((DATA_TYPE) i*j) / (ni*nj);
 }
 
 
