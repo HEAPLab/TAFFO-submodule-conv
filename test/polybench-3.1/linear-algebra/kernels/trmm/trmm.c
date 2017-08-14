@@ -27,11 +27,11 @@ void init_array(int ni,
 {
   int i, j;
 
-  *alpha = 32412;
+  *alpha = 0.32412;
   for (i = 0; i < ni; i++)
     for (j = 0; j < ni; j++) {
-      A[i][j] = ((DATA_TYPE) i*j) / ni;
-      B[i][j] = ((DATA_TYPE) i*j) / ni;
+      A[i][j] = ((DATA_TYPE) i*j) / (ni*ni);
+      B[i][j] = ((DATA_TYPE) i*j) / (ni*ni);
     }
 }
 
