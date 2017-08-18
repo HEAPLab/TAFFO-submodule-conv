@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FORMAT='\033[33m%10s\033[39m%10s%10s\033[%sm%11s%11s\033[39m%11s%13s\n'
+FORMAT='\033[33m%15s\033[39m%10s%10s\033[%sm%9s%9s\033[39m%11s%13s\n'
 
 check() {
         OPT="./$1_out"
@@ -26,7 +26,7 @@ check() {
         printf $FORMAT $1 $FIXT $FLOT $OFLC $OFLC_OPT $OFLC_NOPT $ERROR $ABSERROR
 }
 
-printf $FORMAT '' 'fix T' 'flo T' '39' '# ofl fix' '# ofl flo' 'avg err %' 'avg abs err'
+printf $FORMAT '' 'fix T' 'flo T' '39' '#ofl fix' '#ofl flo' 'avg err %' 'avg abs err'
 
 if [ "$#" = "1" ]; then
         check $1;
