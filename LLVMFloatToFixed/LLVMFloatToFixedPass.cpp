@@ -4,6 +4,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include "LLVMFloatToFixedPass.h"
@@ -57,7 +58,7 @@ bool FloatToFixed::runOnModule(Module &m)
   DenseMap<Value*, Value*> operandPool;
   performConversion(m, vals, operandPool);
   
-  cleanup(operandPool, vals, itemtoroot);
+  cleanup(operandPool, vals, itemtoroot, rootsa);
 
   return true;
 }
@@ -106,18 +107,72 @@ void FloatToFixed::buildConversionQueueForRootValues(
 }
 
 
+bool potentiallyUsesMemory(Value *val)
+{
+  if (isa<BitCastInst>(val))
+    return false;
+  if (CallInst *call = dyn_cast<CallInst>(val)) {
+    Function *f = call->getCalledFunction();
+    if (!f)
+      return true;
+    if (f->isIntrinsic()) {
+      Intrinsic::ID fiid = f->getIntrinsicID();
+      if (fiid == Intrinsic::lifetime_start ||
+          fiid == Intrinsic::lifetime_end)
+        return false;
+    }
+    return !f->doesNotAccessMemory();
+  }
+  return true;
+}
+
+
 void FloatToFixed::cleanup(
   DenseMap<Value*, Value*> convertedPool,
-  std::vector<Value*>& q,
-  DenseMap<Value*, SmallPtrSet<Value*, 5>>& itemtoroot)
+  const std::vector<Value*>& q,
+  const DenseMap<Value*, SmallPtrSet<Value*, 5>>& itemtoroot,
+  const std::vector<Value*>& roots)
 {
-  /* remove all successfully converted stores. MAY PRODUCE INCORRECT RESULTS */
-  /* TODO: better logic here!! correct logic would be to remove all stores to
-   * a float only if all of them were correctly converted */
+  DenseMap<Value*, bool> isrootok;
+  for (Value *root: roots)
+    isrootok[root] = true;
+  
+  for (Value *qi: q) {
+    Value *cqi = convertedPool[qi];
+    assert(cqi && "every value should have been processed at this point!!");
+    if (cqi == ConversionError) {
+      if (!potentiallyUsesMemory(qi)) {
+        continue;
+      }
+      DEBUG(qi->print(errs());
+            errs() << " not converted; invalidates roots ");
+      const auto& rootsaffected = itemtoroot.find(qi)->getSecond();
+      for (Value *root: rootsaffected) {
+        isrootok[root] = false;
+        DEBUG(root->print(errs()));
+      }
+      DEBUG(errs() << '\n');
+    }
+  }
+  
   for (Value *v: q) {
-    auto *i = dyn_cast<StoreInst>(v);
-    auto *convi = convertedPool[v];
-    if (convi && convi != ConversionError && i)
+    StoreInst *i = dyn_cast<StoreInst>(v);
+    if (!i)
+      continue;
+    const auto& roots = itemtoroot.find(v)->getSecond();
+    
+    bool allok = true;
+    for (Value *root: roots) {
+      if (!isrootok[root]) {
+        DEBUG(i->print(errs());
+              errs() << " not deleted: involves root ";
+              root->print(errs());
+              errs() << '\n');
+        allok = false;
+        break;
+      }
+    }
+    if (allok)
       i->eraseFromParent();
   }
 }

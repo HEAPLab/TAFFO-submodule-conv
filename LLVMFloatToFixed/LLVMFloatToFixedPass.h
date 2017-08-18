@@ -48,7 +48,7 @@ struct FloatToFixed : public llvm::ModulePass {
   void printAnnotatedObj(llvm::Module &m);
 
   void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res, llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot);
-  void performConversion(llvm::Module& m, const std::vector<llvm::Value*>& q, llvm::DenseMap<llvm::Value *, llvm::Value *>& opPool);
+  void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q, llvm::DenseMap<llvm::Value *, llvm::Value *>& opPool);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Value *val);
 
   llvm::Value *convertAlloca(llvm::AllocaInst *alloca);
@@ -70,7 +70,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Type *getFixedPointTypeForFloatType(llvm::Type *srct);
   llvm::Type *getFixedPointType(llvm::LLVMContext &ctxt);
   
-  void cleanup(llvm::DenseMap<llvm::Value*, llvm::Value*> cvtmap, std::vector<llvm::Value*>& queue, llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot);
+  void cleanup(llvm::DenseMap<llvm::Value*, llvm::Value*> cvtmap, const std::vector<llvm::Value*>& queue, const llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot, const std::vector<llvm::Value*>& roots);
 };
 
 }

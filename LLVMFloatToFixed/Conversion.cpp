@@ -26,14 +26,18 @@ Value *Unsupported = (Value *)(&Unsupported);
 
 void FloatToFixed::performConversion(
   Module& m,
-  const std::vector<Value*>& q,
+  std::vector<Value*>& q,
   DenseMap<Value *, Value *>& convertedPool)
 {
-  for (Value *v: q) {
+  
+  for (auto i = q.begin(); i != q.end();) {
+    Value *v = *i;
+    
     if (CallInst *anno = dyn_cast<CallInst>(v)) {
       if (anno->getCalledFunction()) {
         if (anno->getCalledFunction()->getName() == "llvm.var.annotation") {
           anno->eraseFromParent();
+          i = q.erase(i);
           continue;
         }
       }
@@ -49,6 +53,8 @@ void FloatToFixed::performConversion(
 
       convertedPool.insert({v, ConversionError});
     }
+    
+    i++;
   }
 }
 
