@@ -30,6 +30,7 @@ void init_array (int cz,
 		 DATA_TYPE POLYBENCH_3D(Ex,CZ+1,CYM+1,CXM+1,cz+1,cym+1,cxm+1),
 		 DATA_TYPE POLYBENCH_3D(Ey,CZ+1,CYM+1,CXM+1,cz+1,cym+1,cxm+1),
 		 DATA_TYPE POLYBENCH_3D(Hz,CZ+1,CYM+1,CXM+1,cz+1,cym+1,cxm+1),
+		 DATA_TYPE POLYBENCH_3D(Bza,CZ+1,CYM+1,CXM+1,cz+1,cym+1,cxm+1),
 		 DATA_TYPE POLYBENCH_1D(czm,CZ+1,cz+1),
 		 DATA_TYPE POLYBENCH_1D(czp,CZ+1,cz+1),
 		 DATA_TYPE POLYBENCH_1D(cxmh,CXM+1,cxm+1),
@@ -66,6 +67,7 @@ void init_array (int cz,
 	    Ex[i][j][k] = ((DATA_TYPE) i*(j+3) + k + 1) / cxm;
 	    Ey[i][j][k] = ((DATA_TYPE) i*(j+4) + k + 2) / cym;
 	    Hz[i][j][k] = ((DATA_TYPE) i*(j+5) + k + 3) / cz;
+	    Bza[i][j][k] = 0.0;
 	  }
       }
 }
@@ -196,6 +198,7 @@ int main(int argc, char** argv)
   	      POLYBENCH_ARRAY(Ex),
   	      POLYBENCH_ARRAY(Ey),
   	      POLYBENCH_ARRAY(Hz),
+  	      POLYBENCH_ARRAY(Bza),
   	      POLYBENCH_ARRAY(czm),
   	      POLYBENCH_ARRAY(czp),
   	      POLYBENCH_ARRAY(cxmh),
