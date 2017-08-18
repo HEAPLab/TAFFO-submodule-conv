@@ -38,22 +38,22 @@ void init_array (int cz,
 		 DATA_TYPE POLYBENCH_1D(cyph,CYM+1,cym+1)) __attribute__((always_inline))
 {
   int i, j, k;
-  *mui = 13;
-  *ch = 23;
+  *mui = 7;
+  *ch = 7;
   for (i = 0; i <= cz; i++)
     {
-      czm[i] = ((DATA_TYPE) i + 1) / cxm*1000;
+      czm[i] = ((DATA_TYPE) i + 1) / cxm*100;
       czp[i] = ((DATA_TYPE) i + 2) / cxm*1000;
     }
   for (i = 0; i <= cxm; i++)
     {
-      cxmh[i] = ((DATA_TYPE) i + 3) / cxm*1000;
-      cxph[i] = ((DATA_TYPE) i + 4) / cxm*1000;
+      cxmh[i] = ((DATA_TYPE) i + 3) / cxm*100;
+      cxph[i] = ((DATA_TYPE) i + 4) / cxm*100;
     }
   for (i = 0; i <= cym; i++)
     {
-      cymh[i] = ((DATA_TYPE) i + 5) / cxm*1000;
-      cyph[i] = ((DATA_TYPE) i + 6) / cxm*1000;
+      cymh[i] = ((DATA_TYPE) i + 5) / cxm*100;
+      cyph[i] = ((DATA_TYPE) i + 6) / cxm*100;
     }
 
   for (i = 0; i <= cz; i++)
