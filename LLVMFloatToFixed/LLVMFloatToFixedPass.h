@@ -42,8 +42,8 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> &res);
   void printAnnotatedObj(llvm::Module &m);
 
-  std::vector<llvm::Value*> buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val);
   void performConversion(llvm::Module& m, const std::vector<llvm::Value*>& q);
+  void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res, llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Value *val);
 
   llvm::Value *convertAlloca(llvm::AllocaInst *alloca);

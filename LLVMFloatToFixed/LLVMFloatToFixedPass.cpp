@@ -36,11 +36,19 @@ bool FloatToFixed::runOnModule(Module &m)
 
   auto roots = readAllLocalAnnotations(m);
   std::vector<Value*> rootsa(roots.begin(), roots.end());
-  auto vals = buildConversionQueueForRootValues(rootsa);
+  std::vector<Value*> vals;
+  DenseMap<Value*, SmallPtrSet<Value*, 5>> itemtoroot;
+  buildConversionQueueForRootValues(rootsa, vals, itemtoroot);
 
   DEBUG(errs() << "conversion queue:\n";
         for (Value *val: vals) {
-          val->print(outs());
+          errs() << "[";
+            for (Value *rootv: itemtoroot[val]) {
+              rootv->print(errs());
+              errs() << ' ';
+            }
+            errs() << "] ";
+            val->print(errs());
           errs() << "\n";
         }
         errs() << "\n\n";);
@@ -52,14 +60,24 @@ bool FloatToFixed::runOnModule(Module &m)
 }
 
 
-std::vector<Value*> FloatToFixed::buildConversionQueueForRootValues(const ArrayRef<Value*>& val)
+void FloatToFixed::buildConversionQueueForRootValues(
+  const ArrayRef<Value*>& val,
+  std::vector<Value*>& queue,
+  DenseMap<Value*, SmallPtrSet<Value*, 5>>& itemtoroot)
 {
-  std::vector<Value*> queue(val);
-  size_t next = 0;
+  queue.insert(queue.begin(), val.begin(), val.end());
+  for (auto i = queue.begin(); i != queue.end(); i++) {
+    itemtoroot[*i] = {*i};
+  }
 
+  size_t next = 0;
   while (next < queue.size()) {
     Value *v = queue.at(next);
+    SmallPtrSet<Value*, 5>& newroots = itemtoroot[v];
+    
     for (auto *u: v->users()) {
+      /* Insert u at the end of the queue.
+       * If u exists already in the queue, *move* it to the end instead. */
       for (int i=0; i<queue.size();) {
         if (queue[i] == u) {
           queue.erase(queue.begin() + i);
@@ -70,11 +88,18 @@ std::vector<Value*> FloatToFixed::buildConversionQueueForRootValues(const ArrayR
         }
       }
       queue.push_back(u);
+      
+      auto oldrootsi = itemtoroot.find(u);
+      if (oldrootsi == itemtoroot.end()) {
+        itemtoroot[u] = newroots;
+      } else {
+        SmallPtrSet<Value*, 5> merge(newroots);
+        merge.insert(oldrootsi->getSecond().begin(), oldrootsi->getSecond().end());
+        itemtoroot[u] = merge;
+      }
     }
     next++;
   }
-
-  return queue;
 }
 
 
