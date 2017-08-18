@@ -54,7 +54,10 @@ bool FloatToFixed::runOnModule(Module &m)
         errs() << "\n\n";);
   ConversionCount = vals.size();
 
-  performConversion(m, vals);
+  DenseMap<Value*, Value*> operandPool;
+  performConversion(m, vals, operandPool);
+  
+  cleanup(operandPool, vals, itemtoroot);
 
   return true;
 }
@@ -103,5 +106,20 @@ void FloatToFixed::buildConversionQueueForRootValues(
 }
 
 
+void FloatToFixed::cleanup(
+  DenseMap<Value*, Value*> convertedPool,
+  std::vector<Value*>& q,
+  DenseMap<Value*, SmallPtrSet<Value*, 5>>& itemtoroot)
+{
+  /* remove all successfully converted stores. MAY PRODUCE INCORRECT RESULTS */
+  /* TODO: better logic here!! correct logic would be to remove all stores to
+   * a float only if all of them were correctly converted */
+  for (Value *v: q) {
+    auto *i = dyn_cast<StoreInst>(v);
+    auto *convi = convertedPool[v];
+    if (convi && convi != ConversionError && i)
+      i->eraseFromParent();
+  }
+}
 
 

@@ -24,10 +24,11 @@ Value *ConversionError = (Value *)(&ConversionError);
 Value *Unsupported = (Value *)(&Unsupported);
 
 
-void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
+void FloatToFixed::performConversion(
+  Module& m,
+  const std::vector<Value*>& q,
+  DenseMap<Value *, Value *>& convertedPool)
 {
-  DenseMap<Value *, Value *> convertedPool;
-
   for (Value *v: q) {
     if (CallInst *anno = dyn_cast<CallInst>(v)) {
       if (anno->getCalledFunction()) {
@@ -48,16 +49,6 @@ void FloatToFixed::performConversion(Module& m, const std::vector<Value*>& q)
 
       convertedPool.insert({v, ConversionError});
     }
-  }
-
-  /* remove all successfully converted stores. MAY PRODUCE INCORRECT RESULTS */
-  /* TODO: better logic here!! correct logic would be to remove all stores to
-   * a float only if all of them were correctly converted */
-  for (Value *v: q) {
-    auto *i = dyn_cast<StoreInst>(v);
-    auto *convi = convertedPool[v];
-    if (convi && convi != ConversionError && i)
-      i->eraseFromParent();
   }
 }
 

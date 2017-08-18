@@ -25,6 +25,11 @@ STATISTIC(FallbackCount, "Number of instructions not replaced by a "
 STATISTIC(ConversionCount, "Number of instructions affected by flttofix");
 
 
+/* flags in conversionPool */
+extern llvm::Value *ConversionError;
+extern llvm::Value *Unsupported;
+
+
 namespace flttofix {
 
 struct FloatToFixed : public llvm::ModulePass {
@@ -42,8 +47,8 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> &res);
   void printAnnotatedObj(llvm::Module &m);
 
-  void performConversion(llvm::Module& m, const std::vector<llvm::Value*>& q);
   void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res, llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot);
+  void performConversion(llvm::Module& m, const std::vector<llvm::Value*>& q, llvm::DenseMap<llvm::Value *, llvm::Value *>& opPool);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Value *val);
 
   llvm::Value *convertAlloca(llvm::AllocaInst *alloca);
@@ -64,6 +69,8 @@ struct FloatToFixed : public llvm::ModulePass {
 
   llvm::Type *getFixedPointTypeForFloatType(llvm::Type *srct);
   llvm::Type *getFixedPointType(llvm::LLVMContext &ctxt);
+  
+  void cleanup(llvm::DenseMap<llvm::Value*, llvm::Value*> cvtmap, std::vector<llvm::Value*>& queue, llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot);
 };
 
 }
