@@ -29,12 +29,12 @@ void init_array(int ni, int nj,
 
   for (i = 0; i < ni; i++)
     for (j = 0; j < nj; j++) {
-      A[i][j] = i==j ? ((DATA_TYPE) i*j) * 100/ ni : 0.01;
-      Q[i][j] = i==j ? ((DATA_TYPE) i*(j+1)) * 100 / nj : 0.01;
+      A[i][j] = i==j ? ((DATA_TYPE) i*j) * 5/ (ni*nj) : 0.1;
+      Q[i][j] = i==j ? ((DATA_TYPE) j*(i+1)) * 5 / (nj*ni) : 0.1;
     }
   for (i = 0; i < nj; i++)
     for (j = 0; j < nj; j++)
-      R[i][j] = i==j ? ((DATA_TYPE) i*(j+2)) : 0.01 ;
+      R[i][j] = i==j ? ((DATA_TYPE) j*(i+2)) / (ni*nj) : 0.1;
 }
 
 
