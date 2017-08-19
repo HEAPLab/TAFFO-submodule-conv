@@ -27,11 +27,11 @@ void init_array (int m,
 {
   int i, j;
 
-  *float_n = 1.2;
+  *float_n = 10.2;
 
   for (i = 0; i < m; i++)
     for (j = 0; j < n; j++)
-      data[i][j] = ((DATA_TYPE) sqrt(i+(j*i*0.000001))) / M*M;
+      data[i][j] = ((DATA_TYPE) sqrt(i+(j*i*0.00003))) / M*M*1.111;
 }
 
 
