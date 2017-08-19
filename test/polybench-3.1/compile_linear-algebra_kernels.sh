@@ -40,7 +40,7 @@ echo syrk
 ./magiclang.sh 'linear-algebra/kernels/syrk/syrk.c' '-O3' '-I utilities -I linear-algebra/kernels/syrk -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'syrk_out' 'utilities/polybench.c' '-fixpfracbitsamt=8 -fixpbitsamt=32' 
 
 echo trisolv
-./magiclang.sh 'linear-algebra/kernels/trisolv/trisolv.c' '-O3' '-I utilities -I linear-algebra/kernels/trisolv -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'trisolv_out' 'utilities/polybench.c' '-fixpfracbitsamt=8 -fixpbitsamt=32' 
+./magiclang.sh 'linear-algebra/kernels/trisolv/trisolv.c' '-O3' '-I utilities -I linear-algebra/kernels/trisolv -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'trisolv_out' 'utilities/polybench.c' '-fixpfracbitsamt=29 -fixpbitsamt=32' 
 
 echo trmm
 ./magiclang.sh 'linear-algebra/kernels/trmm/trmm.c' '-O3' '-I utilities -I linear-algebra/kernels/trmm -DPOLYBENCH_TIME -DMINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'trmm_out' 'utilities/polybench.c' '-fixpfracbitsamt=24 -fixpbitsamt=32' 
