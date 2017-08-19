@@ -7,7 +7,7 @@ echo dynprog
 ./magiclang.sh 'linear-algebra/solvers/dynprog/dynprog.c' '-O3' '-I utilities -I linear-algebra/solvers/dynprog -DPOLYBENCH_TIME -DSTANDARD_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'dynprog_out' 'utilities/polybench.c' '-fixpfracbitsamt=16 -fixpbitsamt=32' 
 
 echo gramschmidt
-./magiclang.sh 'linear-algebra/solvers/gramschmidt/gramschmidt.c' '-O3' '-I utilities -I linear-algebra/solvers/gramschmidt -lm -DPOLYBENCH_TIME -DSMALL_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'gramschmidt_out' 'utilities/polybench.c' '-fixpfracbitsamt=18 -fixpbitsamt=32' 
+./magiclang.sh 'linear-algebra/solvers/gramschmidt/gramschmidt.c' '-O3' '-I utilities -I linear-algebra/solvers/gramschmidt -lm -DPOLYBENCH_TIME -DSMALL_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'gramschmidt_out' 'utilities/polybench.c' '-fixpfracbitsamt=26 -fixpbitsamt=32' 
 
 echo lu
 ./magiclang.sh 'linear-algebra/solvers/lu/lu.c' '-O3' '-I utilities -I linear-algebra/solvers/lu -DPOLYBENCH_TIME -DSTANDARD_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS' '' 'lu_out' 'utilities/polybench.c' '-fixpfracbitsamt=20 -fixpbitsamt=32' 
