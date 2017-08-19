@@ -31,7 +31,7 @@ void init_array (int m,
 
   for (i = 0; i < m; i++)
     for (j = 0; j < n; j++)
-      data[i][j] = ((DATA_TYPE) sqrt(i+(j*i*0.00003))) / M*M*1.111;
+      data[i][j] = ((DATA_TYPE) sqrt(i+(j*i))) / (M*N);
 }
 
 

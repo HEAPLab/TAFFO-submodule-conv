@@ -45,7 +45,7 @@
 
 # ifndef DATA_TYPE
 #  define DATA_TYPE __attribute__((annotate("no_float"))) float
-#  define DATA_PRINTF_MODIFIER "%0.4lf "
+#  define DATA_PRINTF_MODIFIER "%0.6lf "
 # endif
 
 
