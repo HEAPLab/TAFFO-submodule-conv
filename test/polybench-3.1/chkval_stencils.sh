@@ -2,9 +2,15 @@
 
 FORMAT='\033[33m%15s\033[39m%10s%10s\033[%sm%9s%9s\033[39m%11s%13s\n'
 
+TASKSET=""
+which -s taskset
+if [ $? -eq 0 ]; then
+        TASKSET="taskset -c 0 "
+fi
+
 check() {
-        OPT="./$1_out"
-        NOPT="./$1_out._not_opt"
+        OPT="$TASKSET./$1_out"
+        NOPT="$TASKSET./$1_out._not_opt"
         OPT_OUT="$OPT.output.csv"
         NOPT_OUT="$NOPT.output.csv"
         
