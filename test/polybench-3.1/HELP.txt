@@ -1,0 +1,35 @@
+How to test polybench
+=====================
+
+1. cd polybench-3.1 (IMPORTANT!!!)
+2. Ensure that LLVM_DIR is set to a valid install of llvm 4.0 with clang
+   (for example LLVM_DIR=/usr/lib/llvm-4.0)
+3. Compile the benchmarks with the compile_* scripts
+4. Execute ulimit -s unlimited (optional; if some test crashes do it)
+5. Execute the chkval_* scripts to automatically run the benchmarks
+
+
+Options for the compile_* scripts
+---------------------------------
+
+Some additional options are available at compile time. Specify them on the
+command line.
+
+64bit   Doubles the size of every fixed point value (fractional part included)
+        and sets the floating point type to double. Has no effect for benchmarks
+        that are required to use 64-bit fixed point to work (like adi)
+
+*_DATASET   where * can be MINI, SMALL, STANDARD, LARGE, EXTRALARGE
+            Forces all benchmarks to be compiled with the specified dataset
+            size.
+            
+Example: ./compile_datamining.sh 64bit MINI_DATASET
+         Compiles the benchmarks in the datamining folder using doubles/64-bit
+         fixed point, and set the dataset size to MINI.
+            
+            
+Options for the chkval_* scripts
+--------------------------------
+
+You can specify the name of a benchmark on the command line to test just that
+benchmark.

@@ -29,7 +29,7 @@ done
 
 
 echo adi
-./magiclang.sh "stencils/adi/adi.c" "-O3" "-I utilities -I stencils/adi -lm -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "adi_out" "utilities/polybench.c" "-fixpfracbitsamt=32 -fixpbitsamt=64" 
+./magiclang.sh "stencils/adi/adi.c" "-O3" "-I utilities -I stencils/adi -lm -DPOLYBENCH_TIME -D$D_MINI_DATASET -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "adi_out" "utilities/polybench.c" "-fixpfracbitsamt=32 -fixpbitsamt=64" 
 
 echo fdtd-2d
 ./magiclang.sh "stencils/fdtd-2d/fdtd-2d.c" "-O3" "-I utilities -I stencils/fdtd-2d -DPOLYBENCH_TIME -D$D_SMALL_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "fdtd-2d_out" "utilities/polybench.c" "-fixpfracbitsamt=$((24 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
