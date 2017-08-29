@@ -15,7 +15,7 @@ check() {
         NOPT_OUT="$NOPT.output.csv"
         
         FIXT=$($TASKSET $OPT 2> $OPT_OUT)
-        FLOT=$($TASKSET $NOPT 2> $NOPT_OUT))
+        FLOT=$($TASKSET $NOPT 2> $NOPT_OUT)
         
         RESDIFF=($(./resultdiff.py "$OPT_OUT" "$NOPT_OUT"))
         
