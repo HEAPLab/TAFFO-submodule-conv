@@ -40,8 +40,8 @@
 
 # ifndef DATA_TYPE
 #  define DATA_TYPE __attribute__((annotate("no_float"))) double
-#  define DATA_PRINTF_MODIFIER "%0.2lf "
 # endif
+#  define DATA_PRINTF_MODIFIER "%0.2lf "
 
 
 #endif /* !LUDCMP */

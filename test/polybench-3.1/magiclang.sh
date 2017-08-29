@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 ROOT=$(dirname "$0")
 
