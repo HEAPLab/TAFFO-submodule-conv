@@ -3,19 +3,19 @@
 FORMAT='\033[33m%15s\033[39m%10s%10s\033[%sm%9s%9s\033[39m%11s%13s\n'
 
 TASKSET=""
-which -s taskset
+which taskset > /dev/null
 if [ $? -eq 0 ]; then
         TASKSET="taskset -c 0 "
 fi
 
 check() {
-        OPT="$TASKSET./$1_out"
-        NOPT="$TASKSET./$1_out._not_opt"
+        OPT="./$1_out"
+        NOPT="./$1_out._not_opt"
         OPT_OUT="$OPT.output.csv"
         NOPT_OUT="$NOPT.output.csv"
         
-        FIXT=$($OPT 2> $OPT_OUT)
-        FLOT=$($NOPT 2> $NOPT_OUT)
+        FIXT=$($TASKSET $OPT 2> $OPT_OUT)
+        FLOT=$($TASKSET $NOPT 2> $NOPT_OUT)
         
         RESDIFF=($(./resultdiff.py "$OPT_OUT" "$NOPT_OUT"))
         
