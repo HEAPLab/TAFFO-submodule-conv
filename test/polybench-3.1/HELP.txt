@@ -4,6 +4,7 @@ How to test polybench
 1. cd polybench-3.1 (IMPORTANT!!!)
 2. Ensure that LLVM_DIR is set to a valid install of llvm 4.0 with clang
    (for example LLVM_DIR=/usr/lib/llvm-4.0)
+   You can use llvm-config --prefix
 3. Compile the benchmarks with the compile_* scripts
 4. Execute ulimit -s unlimited (optional; if some test crashes do it)
 5. Execute the chkval_* scripts to automatically run the benchmarks
