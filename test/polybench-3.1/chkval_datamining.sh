@@ -1,6 +1,9 @@
 #!/bin/bash
 
-FORMAT='\033[33m%11s\033[39m%10s%10s\033[%sm%11s%11s\033[39m%11s%13s\n'
+PRINTF="/usr/bin/printf"
+if [ "x$FORMAT" = "x" ]; then
+        FORMAT='\033[33m%11s\033[39m%10s%10s\033[%sm%11s%11s\033[39m%11s%13s\n'
+fi
 
 TASKSET=""
 which taskset > /dev/null
@@ -29,10 +32,12 @@ check() {
         ERROR=${RESDIFF[2]}
         ABSERROR=${RESDIFF[3]}
         
-        printf $FORMAT $1 $FIXT $FLOT $OFLC $OFLC_OPT $OFLC_NOPT $ERROR $ABSERROR
+        $PRINTF $FORMAT $1 $FIXT $FLOT $OFLC $OFLC_OPT $OFLC_NOPT $ERROR $ABSERROR
 }
 
-printf $FORMAT '' 'fix T' 'flo T' '39' '# ofl fix' '# ofl flo' 'avg err %' 'avg abs err'
+if [ "x$NOHEADER" = "x" ]; then
+        $PRINTF $FORMAT '' 'fix T' 'flo T' '39' '# ofl fix' '# ofl flo' 'avg err %' 'avg abs err'
+fi
 
 if [ "$#" = "1" ]; then
         check $1;

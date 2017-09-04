@@ -9,6 +9,11 @@ How to test polybench
 4. Execute ulimit -s unlimited (optional; if some test crashes do it)
 5. Execute the chkval_* scripts to automatically run the benchmarks
 
+To generate a data file with the results of all the benchmarks use 
+chkval_everything.sh and pipe the output to the file. Using the other scripts
+for this purpose adds extra unnecessary table headers, misaligned columns and
+ANSI escapes, while chkval_everything.sh does not have these problems.
+
 
 Options for the compile_* scripts
 ---------------------------------
@@ -29,8 +34,12 @@ Example: ./compile_datamining.sh 64bit MINI_DATASET
          fixed point, and set the dataset size to MINI.
             
             
-Options for the chkval_* scripts
---------------------------------
+Options for the chkval_* scripts (except for chkval_everything.sh)
+------------------------------------------------------------------
 
 You can specify the name of a benchmark on the command line to test just that
 benchmark.
+
+If $FORMAT is set, the specified format will be used to print every row of
+the data table. If $NOHEADER is set to a non-empty string, the header will not
+be printed.
