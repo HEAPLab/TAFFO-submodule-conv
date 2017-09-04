@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PRINTF="/usr/bin/printf"
+PRINTF="./printfx.py"
 if [ "x$FORMAT" = "x" ]; then
         FORMAT='\033[33m%15s\033[39m%10s%10s\033[%sm%9s%9s\033[39m%11s%13s\n'
 fi
