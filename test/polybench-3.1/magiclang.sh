@@ -15,6 +15,9 @@ if [ -z ${LLVM_DIR+x} ]; then
   exit;
 fi
 
+OUTDIR='./build'
+mkdir -p $OUTDIR
+
 SOEXT="so"
 if [ $(uname -s) = "Darwin" ]; then
   SOEXT="dylib";
@@ -35,10 +38,10 @@ if [ $ISDEBUG != '1' ]; then
   DEBUGONLYFLAG='';
 fi
 
-$CLANG -S -emit-llvm "$1" -o "_tmp0.$5.ll" $3 $4
-$OPT -load="$PASSLIB" -S -flttofix -dce $DEBUGONLYFLAG "_tmp0.$5.ll" -o "_tmp1.$5.ll" $7
-$CLANG -S -o "_tmp2.$5.s" "_tmp1.$5.ll" $2 $3
-$CLANG -o "$OUTNAME" "_tmp2.$5.s" $2 $3 $6
+$CLANG -S -emit-llvm "$1" -o "$OUTDIR/_tmp0.$5.ll" $3 $4
+$OPT -load="$PASSLIB" -S -flttofix -dce $DEBUGONLYFLAG "$OUTDIR/_tmp0.$5.ll" -o "$OUTDIR/_tmp1.$5.ll" $7
+$CLANG -S -o "$OUTDIR/_tmp2.$5.s" "$OUTDIR/_tmp1.$5.ll" $2 $3
+$CLANG -o "$OUTDIR/$OUTNAME" "$OUTDIR/_tmp2.$5.s" $2 $3 $6
 
-$CLANG -S -o "_tmp2_not_opt.$5.s" "_tmp0.$5.ll" $2 $3
-$CLANG -o "$OUTNAME._not_opt" "_tmp2_not_opt.$5.s" $2 $3 $6
+$CLANG -S -o "$OUTDIR/_tmp2_not_opt.$5.s" "$OUTDIR/_tmp0.$5.ll" $2 $3
+$CLANG -o "$OUTDIR/$OUTNAME""_not_opt" "$OUTDIR/_tmp2_not_opt.$5.s" $2 $3 $6
