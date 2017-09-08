@@ -70,3 +70,4 @@ for i in range(ntries-1):
   SumEverything(t, t2)
 DivideEverything(t, ntries)
 PrettyPrint(t)
+os.remove(".tmp")
