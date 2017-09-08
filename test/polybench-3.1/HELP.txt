@@ -15,8 +15,8 @@ for this purpose adds extra unnecessary table headers, misaligned columns and
 ANSI escapes, while chkval_everything.sh does not have these problems.
 
 
-Options for the compile_* scripts
----------------------------------
+Options for the compile_* scripts (also for compile_everything.sh)
+------------------------------------------------------------------
 
 Some additional options are available at compile time. Specify them on the
 command line.
