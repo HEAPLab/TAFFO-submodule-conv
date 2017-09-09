@@ -40,8 +40,8 @@ void init_array (int n,
 
   for (i = 0; i < n; i++)
     {
-      u1[i] = i;
-      u2[i] = (i+1)/n/2.0;
+      u1[i] = i / (n * sqrt(sqrt(n) * n));
+      u2[i] = (i+1)/ (2.0* n * sqrt(sqrt(n) * n));
       v1[i] = (i+1)/n/4.0;
       v2[i] = (i+1)/n/6.0;
       y[i] = (i+1)/n/8.0;
@@ -49,7 +49,7 @@ void init_array (int n,
       x[i] = 0.0;
       w[i] = 0.0;
       for (j = 0; j < n; j++)
-	A[i][j] = ((DATA_TYPE) i*j) / n;
+	A[i][j] = ((DATA_TYPE) i*j) / (n*n*sqrt(sqrt(n)*n));
     }
 }
 

@@ -50,16 +50,16 @@ echo gemm
 ./magiclang.sh "linear-algebra/kernels/gemm/gemm.c" "-O3" "-I utilities -I linear-algebra/kernels/gemm -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "gemm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((19 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo gemver
-./magiclang.sh "linear-algebra/kernels/gemver/gemver.c" "-O3" "-I utilities -I linear-algebra/kernels/gemver -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "gemver_out" "utilities/polybench.c" "-fixpfracbitsamt=$((18 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/gemver/gemver.c" "-O3" "-I utilities -I linear-algebra/kernels/gemver -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "gemver_out" "utilities/polybench.c" "-fixpfracbitsamt=$((28 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo gesummv
-./magiclang.sh "linear-algebra/kernels/gesummv/gesummv.c" "-O3" "-I utilities -I linear-algebra/kernels/gesummv -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "gesummv_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/gesummv/gesummv.c" "-O3" "-I utilities -I linear-algebra/kernels/gesummv -DPOLYBENCH_TIME -D$D_SMALL_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "gesummv_out" "utilities/polybench.c" "-fixpfracbitsamt=$((18 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo mvt
-./magiclang.sh "linear-algebra/kernels/mvt/mvt.c" "-O3" "-I utilities -I linear-algebra/kernels/mvt -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "mvt_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/mvt/mvt.c" "-O3" "-I utilities -I linear-algebra/kernels/mvt -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "mvt_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo symm
-./magiclang.sh "linear-algebra/kernels/symm/symm.c" "-O3" "-I utilities -I linear-algebra/kernels/symm -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "symm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((12 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/symm/symm.c" "-O3" "-I utilities -I linear-algebra/kernels/symm -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "symm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((29 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo syr2k
 ./magiclang.sh "linear-algebra/kernels/syr2k/syr2k.c" "-O3" "-I utilities -I linear-algebra/kernels/syr2k -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "syr2k_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 

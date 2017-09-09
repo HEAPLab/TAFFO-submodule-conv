@@ -33,10 +33,10 @@ void init_array(int n,
   *beta = 1231.3;
   for (i = 0; i < n; i++)
     {
-      x[i] = ((DATA_TYPE) i) / n;
+      x[i] = ((DATA_TYPE) i) / (n * sqrt(n));
       for (j = 0; j < n; j++) {
-	A[i][j] = ((DATA_TYPE) i*j) / n;
-	B[i][j] = ((DATA_TYPE) i*j) / n;
+	A[i][j] = ((DATA_TYPE) i*j) / (n*n*sqrt(n));
+	B[i][j] = ((DATA_TYPE) i*j) / (n*n*sqrt(n));
       }
     }
 }

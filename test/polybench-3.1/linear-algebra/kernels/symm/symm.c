@@ -29,16 +29,16 @@ void init_array(int ni, int nj,
 {
   int i, j;
 
-  *alpha = 324.12;
-  *beta = 21.23;
+  *alpha = 3.2412;
+  *beta = 0.2123;
   for (i = 0; i < ni; i++)
     for (j = 0; j < nj; j++) {
-      C[i][j] = ((DATA_TYPE) i*j) / (ni*nj/2);
-      B[i][j] = ((DATA_TYPE) i*j) / (ni*nj/2);
+      C[i][j] = ((DATA_TYPE) i*j) / (ni*nj*sqrt(nj));
+      B[i][j] = ((DATA_TYPE) i*j) / (ni*nj*sqrt(nj));
     }
   for (i = 0; i < nj; i++)
     for (j = 0; j < nj; j++)
-      A[i][j] = ((DATA_TYPE) i*j) / (ni*nj/2);
+      A[i][j] = ((DATA_TYPE) i*j) / (ni*nj*sqrt(nj));
 }
 
 
