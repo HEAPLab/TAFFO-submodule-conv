@@ -15,6 +15,10 @@ if [ -z ${LLVM_DIR+x} ]; then
   exit;
 fi
 
+if [ 'x'"$LOG_ONLY" != 'x' ]; then
+  exit;
+fi
+
 OUTDIR='./build'
 mkdir -p $OUTDIR
 

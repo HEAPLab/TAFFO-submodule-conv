@@ -10,7 +10,12 @@ which taskset > /dev/null
 if [ $? -eq 0 ]; then
         TASKSET="taskset -c 0 "
 fi
-ulimit -s 65532
+
+STACKSIZE='unlimited'
+if [ $(uname -s) = "Darwin" ]; then
+  STACKSIZE='65532';
+fi
+ulimit -s $STACKSIZE
 
 check() {
         OPT="./build/$1_out"
