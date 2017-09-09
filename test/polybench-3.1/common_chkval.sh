@@ -10,6 +10,7 @@ which taskset > /dev/null
 if [ $? -eq 0 ]; then
         TASKSET="taskset -c 0 "
 fi
+ulimit -s 65532
 
 check() {
         OPT="./build/$1_out"
