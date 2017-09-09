@@ -41,13 +41,13 @@ echo bicg
 ./magiclang.sh "linear-algebra/kernels/bicg/bicg.c" "-O3" "-I utilities -I linear-algebra/kernels/bicg -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "bicg_out" "utilities/polybench.c" "-fixpfracbitsamt=$((31 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo cholesky
-./magiclang.sh "linear-algebra/kernels/cholesky/cholesky.c" "-O3" "-I utilities -I linear-algebra/kernels/cholesky -lm -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "cholesky_out" "utilities/polybench.c" "-fixpfracbitsamt=$((30 * $D_M)) -fixpbitsamt=$((32 * $D_M))"
+./magiclang.sh "linear-algebra/kernels/cholesky/cholesky.c" "-O3" "-I utilities -I linear-algebra/kernels/cholesky -lm -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "cholesky_out" "utilities/polybench.c" "-fixpfracbitsamt=$((30 * $D_M)) -fixpbitsamt=$((32 * $D_M))"
 
 echo doitgen
-./magiclang.sh "linear-algebra/kernels/doitgen/doitgen.c" "-O3" "-I utilities -I linear-algebra/kernels/doitgen -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "doitgen_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/doitgen/doitgen.c" "-O3" "-I utilities -I linear-algebra/kernels/doitgen -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "doitgen_out" "utilities/polybench.c" "-fixpfracbitsamt=$((11 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo gemm
-./magiclang.sh "linear-algebra/kernels/gemm/gemm.c" "-O3" "-I utilities -I linear-algebra/kernels/gemm -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "gemm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/gemm/gemm.c" "-O3" "-I utilities -I linear-algebra/kernels/gemm -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "gemm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((19 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo gemver
 ./magiclang.sh "linear-algebra/kernels/gemver/gemver.c" "-O3" "-I utilities -I linear-algebra/kernels/gemver -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "gemver_out" "utilities/polybench.c" "-fixpfracbitsamt=$((18 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 

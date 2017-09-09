@@ -33,13 +33,13 @@ void init_array(int ni, int nj, int nk,
   *beta = 212.3;
   for (i = 0; i < ni; i++)
     for (j = 0; j < nj; j++)
-      C[i][j] = ((DATA_TYPE) i*j) / ni;
+      C[i][j] = ((DATA_TYPE) i*j) / (ni*nj*sqrt(ni));
   for (i = 0; i < ni; i++)
     for (j = 0; j < nk; j++)
-      A[i][j] = ((DATA_TYPE) i*j) / ni;
+      A[i][j] = ((DATA_TYPE) i*j) / (ni*nj*sqrt(ni));
   for (i = 0; i < nk; i++)
     for (j = 0; j < nj; j++)
-      B[i][j] = ((DATA_TYPE) i*j) / ni;
+      B[i][j] = ((DATA_TYPE) i*j) / (nj*nk);
 }
 
 
