@@ -35,10 +35,10 @@ echo 3mm
 ./magiclang.sh "linear-algebra/kernels/3mm/3mm.c" "-O3" "-I utilities -I linear-algebra/kernels/3mm -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "3mm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((30 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo atax
-./magiclang.sh "linear-algebra/kernels/atax/atax.c" "-O3" "-I utilities -I linear-algebra/kernels/atax -DPOLYBENCH_TIME -D$D_SMALL_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "atax_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/atax/atax.c" "-O3" "-I utilities -I linear-algebra/kernels/atax -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "atax_out" "utilities/polybench.c" "-fixpfracbitsamt=$((31 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo bicg
-./magiclang.sh "linear-algebra/kernels/bicg/bicg.c" "-O3" "-I utilities -I linear-algebra/kernels/bicg -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "bicg_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/bicg/bicg.c" "-O3" "-I utilities -I linear-algebra/kernels/bicg -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "bicg_out" "utilities/polybench.c" "-fixpfracbitsamt=$((31 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo cholesky
 ./magiclang.sh "linear-algebra/kernels/cholesky/cholesky.c" "-O3" "-I utilities -I linear-algebra/kernels/cholesky -lm -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "cholesky_out" "utilities/polybench.c" "-fixpfracbitsamt=$((30 * $D_M)) -fixpbitsamt=$((32 * $D_M))"

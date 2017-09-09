@@ -28,11 +28,11 @@ void init_array (int nx, int ny,
   int i, j;
 
   for (i = 0; i < ny; i++)
-    p[i] = i * M_PI;
+    p[i] = i * M_PI / (ny * sqrt(ny));
   for (i = 0; i < nx; i++) {
-    r[i] = i * M_PI;
+    r[i] = i * M_PI / (nx * sqrt(nx));
     for (j = 0; j < ny; j++)
-      A[i][j] = ((DATA_TYPE) i*(j+1))/nx;
+      A[i][j] = ((DATA_TYPE) i*(j+1)) / (nx * ny * sqrt(nx * ny));
   }
 }
 
