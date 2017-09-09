@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <stdint.h>
 
 /* Include polybench common header. */
 #include <polybench.h>
@@ -16,6 +17,16 @@
 /* Include benchmark-specific header. */
 /* Default data type is double, default size is 4000. */
 #include "2mm.h"
+
+
+uint64_t xorshift64star(void)
+{
+  static uint64_t x = UINT64_C(1970835257944453882);
+  x ^= x >> 12;
+  x ^= x << 25;
+  x ^= x >> 27;
+  return x * UINT64_C(2685821657736338717);
+}
 
 
 /* Array initialization. */
@@ -30,20 +41,20 @@ void init_array(int ni, int nj, int nk, int nl,
 {
   int i, j;
 
-  *alpha = 0.32412;
-  *beta = 0.02123;
+  *alpha = 3.2412;
+  *beta = 2.123;
   for (i = 0; i < ni; i++)
     for (j = 0; j < nk; j++)
-      A[i][j] = ((DATA_TYPE) i*j) / ni*nj / 50.0;
+      A[i][j] = ((DATA_TYPE) (((uint32_t)xorshift64star()) / 4294967296.0) / sqrt(sqrt(nj) * nk));
   for (i = 0; i < nk; i++)
     for (j = 0; j < nj; j++)
-      B[i][j] = ((DATA_TYPE) (i/2 + (nk-i)/2 *(j/2 + (nj-j)/2+1))) / nk*(nj+1) / 50.0;
+      B[i][j] = ((DATA_TYPE) (((uint32_t)xorshift64star()) / 4294967296.0) / sqrt(sqrt(nj) * nk));
   for (i = 0; i < nl; i++)
     for (j = 0; j < nj; j++)
-      C[i][j] = ((DATA_TYPE) ((nl-i)*((nl-j)+3))) / nl*(nj+3) / 50.0;
+      C[i][j] = ((DATA_TYPE) (((uint32_t)xorshift64star()) / 4294967296.0) / sqrt(nk));
   for (i = 0; i < ni; i++)
     for (j = 0; j < nl; j++)
-      D[i][j] = ((DATA_TYPE) i*(j+2)) / ni*(nl+2) / 10000.0;
+      D[i][j] = ((DATA_TYPE) ((uint32_t)xorshift64star()) / 4294967296.0);
 }
 
 

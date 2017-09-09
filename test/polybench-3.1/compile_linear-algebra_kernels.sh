@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 D_MINI_DATASET="MINI_DATASET"
 D_SMALL_DATASET="SMALL_DATASET"
@@ -29,10 +29,10 @@ done
 
 
 echo 2mm
-./magiclang.sh "linear-algebra/kernels/2mm/2mm.c" "-O3" "-I utilities -I linear-algebra/kernels/2mm -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "2mm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/2mm/2mm.c" "-O3" "-I utilities -I linear-algebra/kernels/2mm -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "2mm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((28 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo 3mm
-./magiclang.sh "linear-algebra/kernels/3mm/3mm.c" "-O3" "-I utilities -I linear-algebra/kernels/3mm -DPOLYBENCH_TIME -D$D_MINI_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "3mm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
+./magiclang.sh "linear-algebra/kernels/3mm/3mm.c" "-O3" "-I utilities -I linear-algebra/kernels/3mm -DPOLYBENCH_TIME -D$D_STANDARD_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "3mm_out" "utilities/polybench.c" "-fixpfracbitsamt=$((30 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 
 
 echo atax
 ./magiclang.sh "linear-algebra/kernels/atax/atax.c" "-O3" "-I utilities -I linear-algebra/kernels/atax -DPOLYBENCH_TIME -D$D_SMALL_DATASET -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" "" "atax_out" "utilities/polybench.c" "-fixpfracbitsamt=$((8 * $D_M)) -fixpbitsamt=$((32 * $D_M))" 

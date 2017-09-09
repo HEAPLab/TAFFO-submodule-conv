@@ -61,7 +61,7 @@
 # ifndef DATA_TYPE
 #  define DATA_TYPE __attribute__((annotate("no_float"))) float
 # endif
-#  define DATA_PRINTF_MODIFIER "%0.2lf "
+#  define DATA_PRINTF_MODIFIER "%0.12lf "
 
 
 #endif /* !_3MM */
