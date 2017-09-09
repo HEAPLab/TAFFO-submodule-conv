@@ -37,6 +37,6 @@ for svfix, svflo in zip(ReadValues(sys.argv[1]), ReadValues(sys.argv[2])):
     accval += vflo
   
 print(fix_nofl, flo_nofl, \
-      '%.2f' % (accerr / accval * 100) if accval > 0 and n > 0 else '-', \
+      '%.5f' % (accerr / accval * 100) if accval > 0 and n > 0 else '-', \
       '%.5e' % (accerr / n) if n > 0 else '-')
 
