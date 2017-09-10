@@ -30,8 +30,8 @@ void init_array(int ni,
   *alpha = 0.32412;
   for (i = 0; i < ni; i++)
     for (j = 0; j < ni; j++) {
-      A[i][j] = ((DATA_TYPE) i*j) / (ni*ni);
-      B[i][j] = ((DATA_TYPE) i*j) / (ni*ni);
+      A[i][j] = ((DATA_TYPE) i*j) / (ni*ni*sqrt(ni));
+      B[i][j] = ((DATA_TYPE) i*j) / (ni*ni*sqrt(ni));
     }
 }
 
