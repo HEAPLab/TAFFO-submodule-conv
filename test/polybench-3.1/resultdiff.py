@@ -2,6 +2,7 @@
 
 import sys
 import math
+from decimal import *
 
 
 def ReadValues(filename):
@@ -15,25 +16,24 @@ def ReadValues(filename):
 
 
 n = 0
-accerr = 0
-accval = 0
+accerr = Decimal(0)
+accval = Decimal(0)
 fix_nofl = 0
 flo_nofl = 0
 
 for svfix, svflo in zip(ReadValues(sys.argv[1]), ReadValues(sys.argv[2])):
-  vfix, vflo = float(svfix), float(svflo)
-  if math.isnan(vfix):
+  vfix, vflo = Decimal(svfix), Decimal(svflo)
+  if vfix.is_nan():
     fix_nofl += 1
-  elif math.isnan(vflo):
+  elif vflo.is_nan():
     flo_nofl += 1
     fix_nofl += 1
-  elif abs(vflo) > 0.01 and ( \
-         (abs(vflo + vfix) != abs(vflo) + abs(vfix)) or \
-         (vflo > 1.0 and abs(vflo - vfix) > abs(vflo) * 2.0)):
+  elif vflo.copy_abs() > 0.01 and ( \
+         ((vflo + vfix).copy_abs() != vflo.copy_abs() + vfix.copy_abs()):
     fix_nofl += 1
   else:
     n += 1
-    accerr += abs(vflo - vfix)
+    accerr += (vflo - vfix).copy_abs()
     accval += vflo
   
 print(fix_nofl, flo_nofl, \
