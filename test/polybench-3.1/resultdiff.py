@@ -21,6 +21,8 @@ accval = Decimal(0)
 fix_nofl = 0
 flo_nofl = 0
 
+thres_ofl_cp = Decimal('0.01')
+
 for svfix, svflo in zip(ReadValues(sys.argv[1]), ReadValues(sys.argv[2])):
   vfix, vflo = Decimal(svfix), Decimal(svflo)
   if vfix.is_nan():
@@ -28,8 +30,7 @@ for svfix, svflo in zip(ReadValues(sys.argv[1]), ReadValues(sys.argv[2])):
   elif vflo.is_nan():
     flo_nofl += 1
     fix_nofl += 1
-  elif vflo.copy_abs() > 0.01 and ( \
-         ((vflo + vfix).copy_abs() != vflo.copy_abs() + vfix.copy_abs()):
+  elif ((vflo + vfix).copy_abs() - (vflo.copy_abs() + vfix.copy_abs())) > thres_ofl_cp:
     fix_nofl += 1
   else:
     n += 1
