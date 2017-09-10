@@ -10,6 +10,7 @@ D_DATA_TYPE='__attribute__((annotate("no_float")))float'
 ONLY='*'
 FRAC=''
 TOT=''
+TBLDUMP=0
 
 for arg; do
   case $arg in
@@ -33,6 +34,9 @@ for arg; do
     --tot=*)
       FIX="${arg#*=}"
       ;;
+    --dump-option-table)
+      TBLDUMP=1
+      ;;
     *)
       echo Unrecognized option $arg
       exit 1
@@ -55,6 +59,12 @@ compile() {
     if [ 'x'$TOT != 'x' ]; then
       totx=$TOT;
     fi
+    if [ $TBLDUMP -eq 1 ]; then
+      printf '%s & \\texttt{%s} & %s & %s & %s & %s \\\\\n' $1 \
+        $(echo -n $2 | sed 's/\_/\\\_/g') \
+        $fracx $totx $(($fracx * 2)) $(($totx * 2))
+      return;
+    fi;
     echo $1
     ./magiclang.sh "$ROOT/$1/$1.c" "-O3" \
       "-I utilities -I $ROOT/$1 -DPOLYBENCH_TIME -D$2 -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" \

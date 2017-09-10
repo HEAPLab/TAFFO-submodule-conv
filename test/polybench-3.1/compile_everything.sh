@@ -1,11 +1,22 @@
 #!/bin/bash
 
+source common_compile.sh
 
-./compile_linear-algebra_kernels.sh "$@" &
-./compile_linear-algebra_solvers.sh "$@" &
+NOTCONCURRENT=''
+if [ $TBLDUMP -eq 1 ]; then
+  NOTCONCURRENT='wait';
+fi
+
 ./compile_datamining.sh "$@" &
+$NOTCONCURRENT
+./compile_linear-algebra_kernels.sh "$@" &
+$NOTCONCURRENT
+./compile_linear-algebra_solvers.sh "$@" &
+$NOTCONCURRENT
 ./compile_medley.sh "$@" &
+$NOTCONCURRENT
 ./compile_stencil.sh "$@" &
+$NOTCONCURRENT
 wait
 
 

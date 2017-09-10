@@ -30,6 +30,9 @@ command line.
 --frac=<x>  Force the fractional bits to <x> for all benchmarks being compiled
 --tot=<x>   Force the total fixed point bits to <x> for all benchmarks being 
             compiled
+--dump-option-table   Does not compile anything but it dumps a LaTeX tabular
+                      table body with all the default options for compiling all
+                      the benchmarks
             
 Example: ./compile_datamining.sh 64bit MINI_DATASET
          Compiles the benchmarks in the datamining folder using doubles/64-bit
