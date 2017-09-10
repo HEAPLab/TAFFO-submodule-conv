@@ -38,7 +38,7 @@ def DivideEverything(table, n):
        
 def PrettyPrint(table):
   widths=[15,  10,  10,   11,  11, 11,  13]
-  format=['s','.6f','.6f','d','d','.2f','.5e']
+  format=['s','.6f','.6f','d','d','.5f','.5e']
   titles=['', 'fix T', 'flo T', '# ofl fix', '# ofl flo', 'avg err %', 'avg abs err']
   normalfmt=['%' + str(widths[i]) + format[i] for i in range(len(widths))]
   fallbackfmt=['%' + str(widths[i]) + 's' for i in range(len(widths))]
