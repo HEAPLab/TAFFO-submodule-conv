@@ -6,7 +6,6 @@ How to test polybench
    (for example LLVM_DIR=/usr/lib/llvm-4.0)
    You can use llvm-config --prefix
 3. Compile the benchmarks with the compile_* scripts
-4. Execute ulimit -s unlimited (optional; if some test crashes do it)
 5. Execute the chkval_* scripts to automatically run the benchmarks
 
 To generate a data file with the results of all the benchmarks use 
@@ -14,12 +13,26 @@ chkval_everything.sh and pipe the output to the file. Using the other scripts
 for this purpose adds extra unnecessary table headers, misaligned columns and
 ANSI escapes, while chkval_everything.sh does not have these problems.
 
+Use run_experiment.sh to execute a standardized experiment which tests every 
+benchmark both in 32 bit and 64 bit mode.
+
+
+Options for run_experiment.sh
+-----------------------------
+
+./run_experiment.sh machine_name [n_tries]
+
+machine_name  Base name for the test files:
+              Test output: machine_name_std.txt, machine_name_64.txt
+              Build log: machine_name_build.log
+n_tries       Number of times the benchmarks are repeated. Default = 20
+
 
 Options for the compile_* scripts (also for compile_everything.sh)
 ------------------------------------------------------------------
 
-Some additional options are available at compile time. Specify them on the
-command line.
+./compile_* [64bit *_DATASET --only=<x> --frac=<x> --tot=<x> 
+             --dump-option-table]
 
 64bit       Doubles the size of every fixed point value (fractional part 
             included) and sets the floating point type to double.

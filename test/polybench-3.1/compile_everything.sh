@@ -7,6 +7,8 @@ if [ $TBLDUMP -eq 1 ]; then
   NOTCONCURRENT='wait';
 fi
 
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+
 ./compile_datamining.sh "$@" &
 $NOTCONCURRENT
 ./compile_linear-algebra_kernels.sh "$@" &
