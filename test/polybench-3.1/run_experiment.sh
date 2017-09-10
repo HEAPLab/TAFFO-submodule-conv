@@ -25,5 +25,5 @@ main() {
   ./chkval_everything_better.py $TRIES > $1_64.txt
 }
 
-trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM
 main & wait

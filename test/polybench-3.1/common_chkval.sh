@@ -38,11 +38,11 @@ check() {
         ERROR=${RESDIFF[2]}
         ABSERROR=${RESDIFF[3]}
         
-        $PRINTF $FORMAT $1 $FIXT $FLOT $OFLC $OFLC_OPT $OFLC_NOPT $ERROR $ABSERROR
+        $PRINTF "$FORMAT" $1 $FIXT $FLOT $OFLC $OFLC_OPT $OFLC_NOPT $ERROR $ABSERROR
 }
 
 if [ "x$NOHEADER" = "x" ]; then
-        $PRINTF $FORMAT '' 'fix T' 'flo T' '39' '# ofl fix' '# ofl flo' 'avg err %' 'avg abs err'
+        $PRINTF "$FORMAT" '' 'fix T' 'flo T' '39' '# ofl fix' '# ofl flo' 'avg err %' 'avg abs err'
 fi
 
 if [ "$#" = "1" ]; then
