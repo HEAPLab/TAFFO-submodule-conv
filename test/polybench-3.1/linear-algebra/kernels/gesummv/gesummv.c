@@ -29,8 +29,8 @@ void init_array(int n,
 {
   int i, j;
 
-  *alpha = 4353.2;
-  *beta = 1231.3;
+  *alpha = 4.3532;
+  *beta = 1.2313;
   for (i = 0; i < n; i++)
     {
       x[i] = ((DATA_TYPE) i) / (n * sqrt(n));

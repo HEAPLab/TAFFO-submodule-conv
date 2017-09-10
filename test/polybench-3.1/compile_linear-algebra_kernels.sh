@@ -11,7 +11,7 @@ compile "cholesky" $D_STANDARD_DATASET 30 32
 compile "doitgen" $D_STANDARD_DATASET 11 32
 compile "gemm" $D_STANDARD_DATASET 19 32
 compile "gemver" $D_STANDARD_DATASET 28 32
-compile "gesummv" $D_SMALL_DATASET 18 32
+compile "gesummv" $D_STANDARD_DATASET 28 32
 compile "mvt" $D_STANDARD_DATASET 8 32
 compile "symm" $D_STANDARD_DATASET 29 32
 compile "syr2k" $D_STANDARD_DATASET 26 32
