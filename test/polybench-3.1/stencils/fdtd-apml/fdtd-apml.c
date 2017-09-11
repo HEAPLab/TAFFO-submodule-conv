@@ -49,12 +49,12 @@ void init_array (int cz,
   for (i = 0; i <= cxm; i++)
     {
       cxmh[i] = ((DATA_TYPE) i + 3) / cxm*100;
-      cxph[i] = ((DATA_TYPE) i + 4) / cxm*100;
+      cxph[i] = ((DATA_TYPE) i + 4) / cxm*1000;
     }
   for (i = 0; i <= cym; i++)
     {
       cymh[i] = ((DATA_TYPE) i + 5) / cxm*100;
-      cyph[i] = ((DATA_TYPE) i + 6) / cxm*100;
+      cyph[i] = ((DATA_TYPE) i + 6) / cxm*1000;
     }
 
   for (i = 0; i <= cz; i++)

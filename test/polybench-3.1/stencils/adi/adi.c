@@ -30,9 +30,9 @@ void init_array (int n,
   for (i = 0; i < n; i++)
     for (j = 0; j < n; j++)
       {
-	X[i][j] = ((DATA_TYPE) (i*(j+1) + 1)) / sqrt(n);
-	A[i][j] = ((DATA_TYPE) (i*(j+2) + 2)) / sqrt(n);
-	B[i][j] = ((DATA_TYPE) (i*(j+3) + 3)) / sqrt(n);
+	X[i][j] = ((DATA_TYPE) (i*(j+1) + 1)) / sqrt(n)*n/2;
+	A[i][j] = ((DATA_TYPE) (i*(j+2) + 2)) / sqrt(n)*n/2;
+	B[i][j] = ((DATA_TYPE) (i*(j+3) + 3)) / sqrt(n)*n/2;
       }
 }
 
