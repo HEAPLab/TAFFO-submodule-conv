@@ -21,7 +21,15 @@ NOERROR=0
 NORUN=0
 FORCEDATADIR=''
 
+if [ "x$CHKVAL_ONLY" = 'x' ]; then
+  CHKVAL_ONLY='(.*)';
+fi
+
 check() {
+  if [[ ! ( "$1" =~ $CHKVAL_ONLY ) ]]; then
+    return;
+  fi
+  
   OPT="./build/$1_out"
   NOPT="./build/$1_out_not_opt"
   
