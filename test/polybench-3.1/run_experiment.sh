@@ -13,16 +13,19 @@ TRIES=$2
 if [ 'x'$TRIES = 'x' ]; then
   TRIES=20;
 fi
+NAME=$1
 
 main() {
   echo Compiling 32 bit
-  ./compile_everything.sh 2> $1_build.log
+  ./compile_everything.sh 2> $NAME_build.log
   echo Running 32 bit
-  ./chkval_everything_better.py $TRIES > $1_std.txt
+  ./chkval_everything_better.py $TRIES > $NAME_std.txt
+  mv raw-times raw-times-32
   echo Compiling 64 bit
-  ./compile_everything.sh 64bit 2>> $1_build.log
+  ./compile_everything.sh 64bit 2>> $NAME_build.log
   echo Running 64 bit
-  ./chkval_everything_better.py $TRIES > $1_64.txt
+  ./chkval_everything_better.py $TRIES > $NAME_64.txt
+  mv raw-times raw-times-64
 }
 
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM

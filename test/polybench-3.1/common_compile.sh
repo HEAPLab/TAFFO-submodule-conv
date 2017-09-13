@@ -66,6 +66,11 @@ compile() {
       return;
     fi;
     echo $1
+    if [ $D_M -eq 2 ]; then
+      touch "build/$1_64";
+    else
+      rm -f "build/$1_64";
+    fi
     ./magiclang.sh "$ROOT/$1/$1.c" "-O3" \
       "-I utilities -I $ROOT/$1 -DPOLYBENCH_TIME -D$2 -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" \
       "" "$1_out" "-lm utilities/polybench.c" "-fixpfracbitsamt=$(($fracx * $D_M)) -fixpbitsamt=$(($totx * $D_M))"; 

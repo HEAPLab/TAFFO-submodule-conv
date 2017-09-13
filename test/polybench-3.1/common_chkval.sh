@@ -1,7 +1,7 @@
 # NOT TO BE EXECUTED BY ITSELF
 
 DATADIR='./result-data'
-mkdir -p $DATADIR
+
 
 PRINTF="./printfx.py"
 
@@ -19,10 +19,23 @@ ulimit -s $STACKSIZE
 
 NOERROR=0
 NORUN=0
+FORCEDATADIR=''
 
 check() {
   OPT="./build/$1_out"
   NOPT="./build/$1_out_not_opt"
+  
+  if [[ ( $NORUN -eq 0 ) || ( "x$FORCEDATADIR" = 'x' ) ]]; then
+    if [ -e "./build/$1_64" ]; then
+      DATADIR='./output-data-64';
+    else
+      DATADIR='./output-data-32';
+    fi;
+  else
+    DATADIR="$FORCEDATADIR";
+  fi
+  mkdir -p $DATADIR
+  
   OPT_OUT="$DATADIR/$1_out.output.csv"
   NOPT_OUT="$DATADIR/$1_out_not_opt.output.csv"
   
@@ -34,8 +47,6 @@ check() {
     FLOT='0';
   fi
   
-  RESDIFF=($(./resultdiff.py "$OPT_OUT" "$NOPT_OUT"))
-  
   if [ $NOERROR -eq 1 ]; then
     OFLC_OPT='0'
     OFLC_NOPT='0'
@@ -43,12 +54,13 @@ check() {
     ABSERROR='0'
     OFLC='39';
   else
+    RESDIFF=($(./resultdiff.py "$OPT_OUT" "$NOPT_OUT"))
     OFLC_OPT=${RESDIFF[0]}
     OFLC_NOPT=${RESDIFF[1]}
     if [ "$OFLC_OPT" = "$OFLC_NOPT" ]; then
-            OFLC='32'
+      OFLC='32';
     else
-            OFLC='31'
+      OFLC='31';
     fi
     ERROR=${RESDIFF[2]}
     ABSERROR=${RESDIFF[3]}
@@ -69,8 +81,11 @@ for arg; do
     --norun)
       NORUN=1
       ;;
-    --64bitdir)
-      DATADIR='./result-data-64'
+    --64bit)
+      FORCEDATADIR='./output-data-64'
+      ;;
+    --32bit)
+      FORCEDATADIR='./output-data-32'
       ;;
     *)
       check $arg

@@ -60,14 +60,14 @@ ntries = int(sys.argv[1])
 
 t = None
 t2 = None
+os.system("mkdir -p raw-times")
 print("trial 1", file=sys.stderr)
-os.system("./chkval_everything.sh > .tmp")
-t = ParseInput(".tmp")
+os.system("./chkval_everything.sh --noerror > raw-times/1.txt")
+t = ParseInput("raw-times/1.txt")
 for i in range(ntries-1):
   print('trial %d' % (i+2), file=sys.stderr)
-  os.system("./chkval_everything.sh > .tmp")
-  t2 = ParseInput(".tmp")
+  os.system("./chkval_everything.sh --noerror > raw-times/%d.txt" % (i+2))
+  t2 = ParseInput("raw-times/%d.txt" % (i+2))
   SumEverything(t, t2)
 DivideEverything(t, ntries)
 PrettyPrint(t)
-os.remove(".tmp")

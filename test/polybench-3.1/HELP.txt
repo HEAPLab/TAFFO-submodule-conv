@@ -14,7 +14,7 @@ for this purpose adds extra unnecessary table headers, misaligned columns and
 ANSI escapes, while chkval_everything.sh does not have these problems.
 
 Use run_experiment.sh to execute a standardized experiment which tests every 
-benchmark both in 32 bit and 64 bit mode.
+benchmark both in 32 bit and 64 bit mode, but does not collect error data.
 
 
 Options for run_experiment.sh
@@ -55,8 +55,16 @@ Example: ./compile_datamining.sh 64bit MINI_DATASET
 Options for the chkval_* scripts (except for chkval_everything.sh)
 ------------------------------------------------------------------
 
-You can specify the name of a benchmark on the command line to test just that
-benchmark.
+./chkval_* [--norun|--noerror] [--64bit --32bit] [benchname]+
+
+benchname   Only the specified benchmark will be executed and tested
+--norun     Only checks the error using old data without rerunning the benchs.
+            By default uses the same bitness as the binary available in
+            build and compiled by ./compile_*.
+--64bit     If --norun is set, forces error calculations on the 64 bit results.
+--32bit     If --norun is set, forces error calculations on the 32 bit results.
+--noerror   Does not compute the error, but only runs the benchs and prints
+            the times.
 
 If $FORMAT is set, the specified format will be used to print every row of
 the data table. If $NOHEADER is set to a non-empty string, the header will not
