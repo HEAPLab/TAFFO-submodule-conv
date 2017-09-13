@@ -16,16 +16,20 @@ fi
 NAME=$1
 
 main() {
-  echo Compiling 32 bit
-  ./compile_everything.sh 2> $NAME_build.log
-  echo Running 32 bit
-  ./chkval_everything_better.py $TRIES > $NAME_std.txt
-  mv raw-times raw-times-32
-  echo Compiling 64 bit
-  ./compile_everything.sh 64bit 2>> $NAME_build.log
-  echo Running 64 bit
-  ./chkval_everything_better.py $TRIES > $NAME_64.txt
-  mv raw-times raw-times-64
+  if [ "x$NO32" = 'x' ]; then
+    echo Compiling 32 bit
+    #./compile_everything.sh 2> $NAME_build.log
+    echo Running 32 bit
+    #./chkval_everything_better.py $TRIES > $NAME_std.txt
+    mv raw-times raw-times-32;
+  fi
+  if [ "x$NO64" = 'x' ]; then
+    echo Compiling 64 bit
+    #./compile_everything.sh 64bit 2>> $NAME_build.log
+    echo Running 64 bit
+    #./chkval_everything_better.py $TRIES > $NAME_64.txt
+    mv raw-times raw-times-64;
+  fi
 }
 
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM

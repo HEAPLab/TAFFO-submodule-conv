@@ -27,6 +27,9 @@ machine_name  Base name for the test files:
               Build log: machine_name_build.log
 n_tries       Number of times the benchmarks are repeated. Default = 20
 
+If the NO32 environ. variable is set, no 32 bit tests are performed. Same for
+NO64 but for 64 bit tests.
+
 
 Options for the compile_* scripts (also for compile_everything.sh)
 ------------------------------------------------------------------
