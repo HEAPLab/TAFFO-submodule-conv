@@ -21,6 +21,7 @@ main() {
     ./compile_everything.sh 2> "${NAME}_build.log"
     echo Running 32 bit
     ./chkval_everything_better.py $TRIES > "${NAME}_std.txt"
+    rm -r -f raw-times-32
     mv raw-times raw-times-32;
   fi
   if [ "x$NO64" = 'x' ]; then
@@ -28,6 +29,7 @@ main() {
     ./compile_everything.sh 64bit 2>> "${NAME}_build.log"
     echo Running 64 bit
     ./chkval_everything_better.py $TRIES > "${NAME}_64.txt"
+    rm -r -f raw-times-64
     mv raw-times raw-times-64;
   fi
 }
