@@ -3,3 +3,9 @@ _tmp*
 *_out._not_opt
 *.output.csv
 *.dSYM
+*.log
+*_std.txt
+*_64.txt
+raw-times
+raw-times-64
+raw-times-32
