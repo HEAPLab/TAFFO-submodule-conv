@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <stdint.h>
 
 /* Include polybench common header. */
 #include <polybench.h>
@@ -16,6 +17,16 @@
 /* Include benchmark-specific header. */
 /* Default data type is double, default size is 10x1024x1024. */
 #include "adi.h"
+
+
+DATA_TYPE xorshift64star(void)
+{
+  static uint64_t x = UINT64_C(1970835257944453882);
+  x ^= x >> 12;
+  x ^= x << 25;
+  x ^= x >> 27;
+  return (uint32_t)(x * UINT64_C(2685821657736338717)) / (DATA_TYPE)4294967296.0;
+}
 
 
 /* Array initialization. */
@@ -27,13 +38,17 @@ void init_array (int n,
 {
   int i, j;
 
-  for (i = 0; i < n; i++)
+  for (i = 0; i < n; i++) {
     for (j = 0; j < n; j++)
       {
-	X[i][j] = ((DATA_TYPE) (i*(j+1) + 1)) / sqrt(n)*n/2;
-	A[i][j] = ((DATA_TYPE) (i*(j+2) + 2)) / sqrt(n)*n/2;
-	B[i][j] = ((DATA_TYPE) (i*(j+3) + 3)) / sqrt(n)*n/2;
+	X[i][j] = xorshift64star() * 0xFF;
+	A[i][j] = xorshift64star() * 0xFFFF;
+	B[i][j] = xorshift64star() * 0xFFFFFF;
       }
+    X[i][i] += n;
+    A[i][i] += n;
+    B[i][i] += n;
+  }
 }
 
 
