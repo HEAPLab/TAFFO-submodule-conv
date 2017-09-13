@@ -14,7 +14,7 @@ compile "gemver" $D_STANDARD_DATASET 28 32
 compile "gesummv" $D_STANDARD_DATASET 28 32
 compile "mvt" $D_STANDARD_DATASET 8 32
 compile "symm" $D_STANDARD_DATASET 29 32
-compile "syr2k" $D_STANDARD_DATASET 26 32
+compile "syr2k" $D_STANDARD_DATASET 29 32
 compile "syrk" $D_STANDARD_DATASET 25 32
 compile "trisolv" $D_STANDARD_DATASET 29 32
 compile "trmm" $D_STANDARD_DATASET 29 32
