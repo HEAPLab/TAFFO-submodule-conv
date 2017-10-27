@@ -1,54 +1,38 @@
 /**
- * adi.c: This file is part of the PolyBench 3.0 test suite.
+ * This version is stamped on May 10, 2016
  *
+ * Contact:
+ *   Louis-Noel Pouchet <pouchet.ohio-state.edu>
+ *   Tomofumi Yuki <tomofumi.yuki.fr>
  *
- * Contact: Louis-Noel Pouchet <pouchet@cse.ohio-state.edu>
  * Web address: http://polybench.sourceforge.net
  */
+/* adi.c: this file is part of PolyBench/C */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
-#include <stdint.h>
 
 /* Include polybench common header. */
 #include <polybench.h>
 
 /* Include benchmark-specific header. */
-/* Default data type is double, default size is 10x1024x1024. */
 #include "adi.h"
-
-
-DATA_TYPE xorshift64star(void)
-{
-  static uint64_t x = UINT64_C(1970835257944453882);
-  x ^= x >> 12;
-  x ^= x << 25;
-  x ^= x >> 27;
-  return (uint32_t)(x * UINT64_C(2685821657736338717)) / (DATA_TYPE)4294967296.0;
-}
 
 
 /* Array initialization. */
 static
 void init_array (int n,
-		 DATA_TYPE POLYBENCH_2D(X,N,N,n,n),
-		 DATA_TYPE POLYBENCH_2D(A,N,N,n,n),
-		 DATA_TYPE POLYBENCH_2D(B,N,N,n,n)) __attribute__((always_inline))
+		 DATA_TYPE POLYBENCH_2D(u,N,N,n,n)) __attribute__((always_inline))
 {
   int i, j;
 
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < n; i++)
     for (j = 0; j < n; j++)
       {
-	X[i][j] = xorshift64star() * 0xFF;
-	A[i][j] = xorshift64star() * 0xFFFF;
-	B[i][j] = xorshift64star() * 0xFFFFFF;
+	u[i][j] =  (DATA_TYPE)(i + n-j) / n;
       }
-    X[i][i] += n;
-    A[i][i] += n;
-    B[i][i] += n;
-  }
 }
 
 
@@ -56,63 +40,91 @@ void init_array (int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_2D(X,N,N,n,n)) __attribute__((always_inline))
+		 DATA_TYPE POLYBENCH_2D(u,N,N,n,n)) __attribute__((always_inline))
 
 {
   int i, j;
 
+  //POLYBENCH_DUMP_START;
+  //POLYBENCH_DUMP_BEGIN("u");
   for (i = 0; i < n; i++)
     for (j = 0; j < n; j++) {
-      fprintf(stderr, DATA_PRINTF_MODIFIER, X[i][j]);
-      if ((i * N + j) % 20 == 0) fprintf(stderr, "\n");
+      if ((i * n + j) % 20 == 0) fprintf(POLYBENCH_DUMP_TARGET, "\n");
+      fprintf (POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, u[i][j]);
     }
-  fprintf(stderr, "\n");
+  //POLYBENCH_DUMP_END("u");
+  //POLYBENCH_DUMP_FINISH;
 }
 
 
 /* Main computational kernel. The whole function will be timed,
    including the call and return. */
+/* Based on a Fortran code fragment from Figure 5 of
+ * "Automatic Data and Computation Decomposition on Distributed Memory Parallel Computers"
+ * by Peizong Lee and Zvi Meir Kedem, TOPLAS, 2002
+ */
 static
-void kernel_adi(int tsteps,
-		int n,
-		DATA_TYPE POLYBENCH_2D(X,N,N,n,n),
-		DATA_TYPE POLYBENCH_2D(A,N,N,n,n),
-		DATA_TYPE POLYBENCH_2D(B,N,N,n,n)) __attribute__((always_inline))
+void kernel_adi(int tsteps, int n,
+		DATA_TYPE POLYBENCH_2D(u,N,N,n,n),
+		DATA_TYPE POLYBENCH_2D(v,N,N,n,n),
+		DATA_TYPE POLYBENCH_2D(p,N,N,n,n),
+		DATA_TYPE POLYBENCH_2D(q,N,N,n,n)) __attribute__((always_inline))
 {
-  int t, i1, i2;
+  int t, i, j;
+  DATA_TYPE DX, DY, DT;
+  DATA_TYPE B1, B2;
+  DATA_TYPE mul1, mul2;
+  DATA_TYPE a, b, c, d, e, f;
 
 #pragma scop
-  for (t = 0; t < tsteps; t++)
-    {
-      for (i1 = 0; i1 < n; i1++)
-	for (i2 = 1; i2 < n; i2++)
-	  {
-	    X[i1][i2] = X[i1][i2] - X[i1][i2-1] * A[i1][i2] / B[i1][i2-1];
-	    B[i1][i2] = B[i1][i2] - A[i1][i2] * A[i1][i2] / B[i1][i2-1];
-	  }
 
-      for (i1 = 0; i1 < n; i1++)
-	X[i1][n-1] = X[i1][n-1] / B[i1][n-1];
+  DX = SCALAR_VAL(1.0)/(DATA_TYPE)_PB_N;
+  DY = SCALAR_VAL(1.0)/(DATA_TYPE)_PB_N;
+  DT = SCALAR_VAL(1.0)/(DATA_TYPE)_PB_TSTEPS;
+  B1 = SCALAR_VAL(2.0);
+  B2 = SCALAR_VAL(1.0);
+  mul1 = B1 * DT / (DX * DX);
+  mul2 = B2 * DT / (DY * DY);
 
-      for (i1 = 0; i1 < n; i1++)
-	for (i2 = 0; i2 < n-2; i2++)
-	  X[i1][n-i2-2] = (X[i1][n-2-i2] - X[i1][n-2-i2-1] * A[i1][n-i2-3]) / B[i1][n-3-i2];
+  a = -mul1 /  SCALAR_VAL(2.0);
+  b = SCALAR_VAL(1.0)+mul1;
+  c = a;
+  d = -mul2 / SCALAR_VAL(2.0);
+  e = SCALAR_VAL(1.0)+mul2;
+  f = d;
 
-      for (i1 = 1; i1 < n; i1++)
-	for (i2 = 0; i2 < n; i2++) {
-	  X[i1][i2] = X[i1][i2] - X[i1-1][i2] * A[i1][i2] / B[i1-1][i2];
-	  B[i1][i2] = B[i1][i2] - A[i1][i2] * A[i1][i2] / B[i1-1][i2];
-	}
+ for (t=1; t<=_PB_TSTEPS; t++) {
+    //Column Sweep
+    for (i=1; i<_PB_N-1; i++) {
+      v[0][i] = SCALAR_VAL(1.0);
+      p[i][0] = SCALAR_VAL(0.0);
+      q[i][0] = v[0][i];
+      for (j=1; j<_PB_N-1; j++) {
+        p[i][j] = -c / (a*p[i][j-1]+b);
+        q[i][j] = (-d*u[j][i-1]+(SCALAR_VAL(1.0)+SCALAR_VAL(2.0)*d)*u[j][i] - f*u[j][i+1]-a*q[i][j-1])/(a*p[i][j-1]+b);
+      }
 
-      for (i2 = 0; i2 < n; i2++)
-	X[n-1][i2] = X[n-1][i2] / B[n-1][i2];
-
-      for (i1 = 0; i1 < n-2; i1++)
-	for (i2 = 0; i2 < n; i2++)
-	  X[n-2-i1][i2] = (X[n-2-i1][i2] - X[n-i1-3][i2] * A[n-3-i1][i2]) / B[n-2-i1][i2];
+      v[_PB_N-1][i] = SCALAR_VAL(1.0);
+      for (j=_PB_N-2; j>=1; j--) {
+        v[j][i] = p[i][j] * v[j+1][i] + q[i][j];
+      }
     }
+    //Row Sweep
+    for (i=1; i<_PB_N-1; i++) {
+      u[i][0] = SCALAR_VAL(1.0);
+      p[i][0] = SCALAR_VAL(0.0);
+      q[i][0] = u[i][0];
+      for (j=1; j<_PB_N-1; j++) {
+        p[i][j] = -f / (d*p[i][j-1]+e);
+        q[i][j] = (-a*v[i-1][j]+(SCALAR_VAL(1.0)+SCALAR_VAL(2.0)*a)*v[i][j] - c*v[i+1][j]-d*q[i][j-1])/(d*p[i][j-1]+e);
+      }
+      u[i][_PB_N-1] = SCALAR_VAL(1.0);
+      for (j=_PB_N-2; j>=1; j--) {
+        u[i][j] = p[i][j] * u[i][j+1] + q[i][j];
+      }
+    }
+  }
 #pragma endscop
-
 }
 
 
@@ -123,20 +135,20 @@ int main(int argc, char** argv)
   int tsteps = TSTEPS;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_2D_ARRAY_DECL(X, DATA_TYPE, N, N, n, n);
-  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, N, N, n, n);
-  POLYBENCH_2D_ARRAY_DECL(B, DATA_TYPE, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(u, DATA_TYPE, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(v, DATA_TYPE, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(p, DATA_TYPE, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(q, DATA_TYPE, N, N, n, n);
 
 
   /* Initialize array(s). */
-  init_array (n, POLYBENCH_ARRAY(X), POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
+  init_array (n, POLYBENCH_ARRAY(u));
 
   /* Start timer. */
   polybench_start_instruments;
 
   /* Run kernel. */
-  kernel_adi (tsteps, n, POLYBENCH_ARRAY(X), 
-	      POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
+  kernel_adi (tsteps, n, POLYBENCH_ARRAY(u), POLYBENCH_ARRAY(v), POLYBENCH_ARRAY(p), POLYBENCH_ARRAY(q));
 
   /* Stop and print timer. */
   polybench_stop_instruments;
@@ -144,12 +156,13 @@ int main(int argc, char** argv)
 
   /* Prevent dead-code elimination. All live-out data must be printed
      by the function call in argument. */
-  polybench_prevent_dce(print_array(n, POLYBENCH_ARRAY(X)));
+  polybench_prevent_dce(print_array(n, POLYBENCH_ARRAY(u)));
 
   /* Be clean. */
-  POLYBENCH_FREE_ARRAY(X);
-  POLYBENCH_FREE_ARRAY(A);
-  POLYBENCH_FREE_ARRAY(B);
+  POLYBENCH_FREE_ARRAY(u);
+  POLYBENCH_FREE_ARRAY(v);
+  POLYBENCH_FREE_ARRAY(p);
+  POLYBENCH_FREE_ARRAY(q);
 
   return 0;
 }
