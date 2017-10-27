@@ -10,7 +10,6 @@ import resource
 
 
 def ReadValues(filename):
-  print(filename)
   with open(filename, 'r') as f:
     l = f.readline()
     while l != '':
@@ -27,17 +26,31 @@ def errorMetric(flo, fix):
   
   
 flovals = None
+em_cache = {}
 def buildExecuteAndGetErrorMetric(benchname, fracbsize):
   global flovals
-  os.system('./compile_everything.sh --only=%s --frac=%d --tot=32 2>> build.log' % (benchname, fracbsize))
+  global em_cache
+  
+  cachekey = 'bench='+benchname+';fbs='+str(fracbsize)
+  cached = em_cache.get(cachekey)
+  if not (cached is None):
+    print(cachekey, ' is cached')
+    return cached
+    
+  os.system('./compile_everything.sh --only=%s --frac=%d --tot=32 2>> build.log > /dev/null' % (benchname, fracbsize))
+  
   if flovals is None:
     fn = './output-data-32/%s_out_not_opt.output.csv' % benchname
-    os.system('./build/%s_out_not_opt 2> %s' % (benchname, fn))
+    os.system('./build/%s_out_not_opt 2> %s > /dev/null' % (benchname, fn))
     flovals = [float(v) for v in ReadValues(fn)]
+    
   fn = './output-data-32/%s_out.output.csv' % benchname
-  os.system('./build/%s_out 2> %s' % (benchname, fn))
+  os.system('./build/%s_out 2> %s > /dev/null' % (benchname, fn))
   fixvals = [float(v) for v in ReadValues(fn)]
-  return errorMetric(flovals, fixvals)
+  
+  cached = errorMetric(flovals, fixvals)
+  em_cache[cachekey] = cached
+  return cached
   
   
 def plotErrorMetric(benchname):
@@ -48,13 +61,61 @@ def plotErrorMetric(benchname):
     err += [buildExecuteAndGetErrorMetric(benchname, b)]
     print(err)
   plt.plot(fracbits, err)
+  plt.yscale('log')
   plt.show()
+  
+  
+def autotune(benchname):
+  steps = 0
+  
+  # 1: find initial lwall and rwall by sampling
+  print('## lwall & rwall search')
+  lwall, rwall = 0, 30
+  minimum = 1
+  
+  queue = [(0,30)]
+  while len(queue) > 0:
+    lwall, rwall = queue.pop(0)
+    center = int((lwall + rwall) / 2)
+    print('lwall, center, rwall = ', lwall, center, rwall)
+    if center == lwall and center == rwall:
+      print('empty interval')
+      continue
+    queue += [(lwall, center), (center, rwall)]
+    
+    minimum = buildExecuteAndGetErrorMetric(benchname, center)
+    print('minimum = ', minimum)
+    steps += 1
+    if minimum < 0.1:
+      print('ok!')
+      break
+  print('lwall = ', lwall, '; rwall = ', rwall)
+  
+  print('## min search')
+  while lwall < rwall:
+    center = int((lwall + rwall) / 2)
+    print('lwall, center, rwall = ', lwall, center, rwall)
+    sample = buildExecuteAndGetErrorMetric(benchname, center)
+    print('sample = ', sample)
+    steps += 1
+    if sample <= minimum:
+      lwall = center
+      minimum = sample
+      print('sample is new best')
+    elif sample > 0.1:
+      rwall = center - 1
+      print('sample is new rwall')
+    else:
+      print('spike at ', center, '? ignoring!')
+      
+  print('optimal frac bits = ', lwall, '; total # iterations = ', steps)
+  print('worst value error = ', minimum)  
+  return lwall
   
 
 bench_name = sys.argv[1]
-plotErrorMetric(bench_name)
-
-
+#plotErrorMetric(bench_name)
+autotune(bench_name)
 
 
 
