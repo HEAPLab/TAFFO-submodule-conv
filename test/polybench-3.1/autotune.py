@@ -70,7 +70,7 @@ def autotune(benchname):
   
   # 1: find initial lwall and rwall by sampling
   print('## lwall & rwall search')
-  lwall, rwall = 0, 31
+  lwall, rwall = -1, 32
   minimum = 1
   
   queue = [(lwall, rwall)]
