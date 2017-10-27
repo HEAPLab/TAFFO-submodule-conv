@@ -103,7 +103,7 @@ def autotune(benchname):
       minimum = sample
       print('sample is new best')
     elif sample > 0.1:
-      rwall = center - 1
+      rwall = center
       print('sample is new rwall')
     else:
       print('spike at ', center, '? ignoring!')
