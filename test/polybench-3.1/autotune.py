@@ -102,11 +102,11 @@ def autotune(benchname):
       lwall = center
       minimum = sample
       print('sample is new best')
-    elif sample > 0.1:
+    else:
       rwall = center
       print('sample is new rwall')
-    else:
-      print('spike at ', center, '? ignoring!')
+      if sample <= 0.1:
+        print('(spike at ', center, ')')
       
   print('optimal frac bits = ', lwall, '; total # iterations = ', steps)
   print('worst value error = ', minimum)  
@@ -114,8 +114,8 @@ def autotune(benchname):
   
 
 bench_name = sys.argv[1]
-#plotErrorMetric(bench_name)
-autotune(bench_name)
+plotErrorMetric(bench_name)
+#autotune(bench_name)
 
 
 
