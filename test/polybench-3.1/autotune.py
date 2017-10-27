@@ -21,7 +21,7 @@ def ReadValues(filename):
   
   
 def errorMetric(flo, fix):
-  maxflo = max(flo)
+  maxflo = max([abs(flov) for flov in flo])
   maxdiff = max([abs(fixv - flov) for (fixv, flov) in zip(flo, fix)])
   return maxdiff / maxflo
   
