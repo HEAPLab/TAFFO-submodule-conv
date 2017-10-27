@@ -54,7 +54,7 @@ def buildExecuteAndGetErrorMetric(benchname, fracbsize):
   
 def plotErrorMetric(benchname):
   import matplotlib.pyplot as plt
-  fracbits = range(0, 30)
+  fracbits = range(0, 31)
   err = []
   for b in fracbits:
     print(b)
@@ -70,10 +70,10 @@ def autotune(benchname):
   
   # 1: find initial lwall and rwall by sampling
   print('## lwall & rwall search')
-  lwall, rwall = 0, 30
+  lwall, rwall = 0, 31
   minimum = 1
   
-  queue = [(0,30)]
+  queue = [(lwall, rwall)]
   while len(queue) > 0:
     lwall, rwall = queue.pop(0)
     center = int((lwall + rwall) / 2)
