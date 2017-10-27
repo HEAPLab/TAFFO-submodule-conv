@@ -6,6 +6,7 @@ import math
 import os
 from decimal import *
 import resource
+import argparse
 
 
 def ReadValues(filename):
@@ -112,10 +113,20 @@ def autotune(benchname):
   print('worst value error = ', minimum)  
   return lwall
   
+  
+parser = argparse.ArgumentParser(description='autotune for polybench')
+parser.add_argument('benchnames', metavar='name', type=str, nargs='+',
+                    help='the benchmarks to tune')
+parser.add_argument('--plot', dest='plot', action='store_const',
+                    const=True, default=False,
+                    help='plot a frac bit / error graph instead')
+args = parser.parse_args()
 
-bench_name = sys.argv[1]
-#plotErrorMetric(bench_name)
-autotune(bench_name)
+for bench_name in args.benchnames:
+  if args.plot:
+    plotErrorMetric(bench_name)
+  else:
+    autotune(bench_name)
 
 
 
