@@ -114,8 +114,8 @@ def autotune(benchname):
   
 
 bench_name = sys.argv[1]
-plotErrorMetric(bench_name)
-#autotune(bench_name)
+#plotErrorMetric(bench_name)
+autotune(bench_name)
 
 
 
