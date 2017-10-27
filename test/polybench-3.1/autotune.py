@@ -5,7 +5,6 @@ import sys
 import math
 import os
 from decimal import *
-import matplotlib.pyplot as plt
 import resource
 
 
@@ -54,6 +53,7 @@ def buildExecuteAndGetErrorMetric(benchname, fracbsize):
   
   
 def plotErrorMetric(benchname):
+  import matplotlib.pyplot as plt
   fracbits = range(0, 30)
   err = []
   for b in fracbits:
@@ -78,7 +78,7 @@ def autotune(benchname):
     lwall, rwall = queue.pop(0)
     center = int((lwall + rwall) / 2)
     print('lwall, center, rwall = ', lwall, center, rwall)
-    if center == lwall and center == rwall:
+    if rwall - lwall <= 1:
       print('empty interval')
       continue
     queue += [(lwall, center), (center, rwall)]
@@ -92,7 +92,7 @@ def autotune(benchname):
   print('lwall = ', lwall, '; rwall = ', rwall)
   
   print('## min search')
-  while lwall < rwall:
+  while rwall - lwall > 1:
     center = int((lwall + rwall) / 2)
     print('lwall, center, rwall = ', lwall, center, rwall)
     sample = buildExecuteAndGetErrorMetric(benchname, center)
