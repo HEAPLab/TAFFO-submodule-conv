@@ -20,6 +20,8 @@ def ReadValues(filename):
   
   
 def errorMetric(flo, fix):
+  if len(fix) == 0:
+    return 2.0  # the process failed
   maxflo = max([abs(flov) for flov in flo])
   maxdiff = max([abs(fixv - flov) for (fixv, flov) in zip(flo, fix)])
   return maxdiff / maxflo
@@ -45,8 +47,11 @@ def buildExecuteAndGetErrorMetric(benchname, fracbsize):
     flovals = [float(v) for v in ReadValues(fn)]
     
   fn = './output-data-32/%s_out.output.csv' % benchname
-  os.system('./build/%s_out 2> %s > /dev/null' % (benchname, fn))
-  fixvals = [float(v) for v in ReadValues(fn)]
+  res = os.system('./build/%s_out 2> %s > /dev/null' % (benchname, fn))
+  if res == 0:
+    fixvals = [float(v) for v in ReadValues(fn)]
+  else:
+    fixvals = []
   
   cached = errorMetric(flovals, fixvals)
   em_cache[cachekey] = cached
