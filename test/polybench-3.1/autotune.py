@@ -116,6 +116,8 @@ def autotune(benchname, bitness=32, doubleflt=False):
     if minimum < 0.1:
       vprint('ok!')
       break
+      
+  lwall = center
   vprint('lwall = ', lwall, '; rwall = ', rwall)
   
   vprint('## min search')
