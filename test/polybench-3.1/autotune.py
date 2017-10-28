@@ -56,11 +56,13 @@ def buildExecuteAndGetErrorMetric(benchname, fracbsize, bitness, doubleflt=False
     vprint(cachekey, ' is cached')
     return cached
     
-  execute('./compile_everything.sh --only=%s --frac=%d --tot=%d %s 2>> ' \
-          'build.log > /dev/null' % (benchname, fracbsize, bitness, \
-          '64bit' if doubleflt else ''))
-  
   flovals = flovals_cache.get(benchname)
+  
+  execute('%s./compile_everything.sh --only=%s --frac=%d --tot=%d %s 2>> ' \
+          'build.log > /dev/null' % ( \
+          'export DONT_RECOMPILE_FLOAT=y;' if flovals else '', 
+          benchname, fracbsize, bitness, '64bit' if doubleflt else ''))
+  
   if flovals is None:
     fn = './output-data-32/%s_out_not_opt.output.csv' % benchname
     execute('./build/%s_out_not_opt 2> %s > /dev/null' % (benchname, fn))

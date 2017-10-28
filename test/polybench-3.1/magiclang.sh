@@ -47,5 +47,8 @@ $OPT -load="$PASSLIB" -S -flttofix -dce $DEBUGONLYFLAG "$OUTDIR/_tmp0.$5.ll" -o 
 $CLANG -S -o "$OUTDIR/_tmp2.$5.s" "$OUTDIR/_tmp1.$5.ll" $2 $3
 $CLANG -o "$OUTDIR/$OUTNAME" "$OUTDIR/_tmp2.$5.s" $2 $3 $6
 
+if [ 'x'$DONT_RECOMPILE_FLOAT != 'x' ]; then
+  exit 0
+fi
 $CLANG -S -o "$OUTDIR/_tmp2_not_opt.$5.s" "$OUTDIR/_tmp0.$5.ll" $2 $3
 $CLANG -o "$OUTDIR/$OUTNAME""_not_opt" "$OUTDIR/_tmp2_not_opt.$5.s" $2 $3 $6
