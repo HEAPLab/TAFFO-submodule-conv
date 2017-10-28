@@ -5,7 +5,7 @@ D_SMALL_DATASET="SMALL_DATASET"
 D_STANDARD_DATASET="STANDARD_DATASET"
 D_LARGE_DATASET="LARGE_DATASET"
 D_EXTRALARGE_DATASET="EXTRALARGE_DATASET"
-D_M=1
+D_M=0
 D_DATA_TYPE='__attribute__((annotate("no_float")))float'
 ONLY='*'
 FRAC=''
@@ -32,7 +32,7 @@ for arg; do
       FRAC="${arg#*=}"
       ;;
     --tot=*)
-      FIX="${arg#*=}"
+      TOT="${arg#*=}"
       ;;
     --dump-option-table)
       TBLDUMP=1
@@ -49,20 +49,27 @@ done
 #       $2=$D_XXX_DATASET
 #       $3=fixpfracbitsamt
 #       $4=fixpbitsamt
+#       $5=fixpfracbitsamt (64 bit)
+#       $6=fixpbitsamt (64 bit)
 compile() {
   if [[ "$1" == $ONLY ]]; then
-    fracx=$3
-    totx=$4
+    if [ 'x'$5 == 'x' ]; then
+      options=( $3 $4 $(($3 * $D_M)) $(($4 * $D_M)) )
+    else
+      options=( $3 $4 $5 $6 )
+    fi
     if [ 'x'$FRAC != 'x' ]; then
-      fracx=$FRAC;
+      options[0]=$FRAC
+      options[2]=$FRAC
     fi
     if [ 'x'$TOT != 'x' ]; then
-      totx=$TOT;
+      options[1]=$TOT
+      options[3]=$TOT
     fi
     if [ $TBLDUMP -eq 1 ]; then
       printf '%s & \\texttt{%s} & %s & %s & %s & %s \\\\\n' $1 \
         $(echo -n $2 | sed 's/\_/\\\_/g') \
-        $fracx $totx $(($fracx * 2)) $(($totx * 2))
+        ${options[0]} ${options[1]} ${options[2]} ${options[3]}
       return;
     fi;
     echo $1
@@ -73,7 +80,7 @@ compile() {
     fi
     ./magiclang.sh "$ROOT/$1/$1.c" "-O3" \
       "-I utilities -I $ROOT/$1 -DPOLYBENCH_TIME -D$2 -DDATA_TYPE=$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" \
-      "" "$1_out" "-lm utilities/polybench.c" "-fixpfracbitsamt=$(($fracx * $D_M)) -fixpbitsamt=$(($totx * $D_M))"; 
+      "" "$1_out" "-lm utilities/polybench.c" "-fixpfracbitsamt=${options[0 + D_M]} -fixpbitsamt=${options[1 + D_M]}"; 
   fi
 }
 
