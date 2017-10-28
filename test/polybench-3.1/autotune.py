@@ -7,6 +7,7 @@ import os
 from decimal import *
 import resource
 import argparse
+from multiprocessing import Pool
 
 
 def nothing(*args, **kwargs): pass
@@ -139,9 +140,19 @@ def autotune(benchname, bitness=32, doubleflt=False):
   return lwall, steps
   
   
+def processOne(bench_name, args):
+  vprint('#### ', bench_name)
+  if args.plot:
+    plotErrorMetric(bench_name, args.bitness, args.double)
+  else:
+    res, steps = autotune(bench_name, args.bitness, args.double)
+    nvprint(bench_name, res, steps)
+  vprint('\n')
+  
+  
 parser = argparse.ArgumentParser(description='autotune for polybench')
 parser.add_argument('benchnames', metavar='name', type=str, nargs='+',
-                    help='the benchmarks to tune')
+                    help='the benchmarks to tune. use ALL to tune all benchs')
 parser.add_argument('--plot', action='store_true',
                     help='plot a frac bit / error graph instead')
 parser.add_argument('--bit', dest='bitness', type=int,
@@ -152,19 +163,26 @@ parser.add_argument('--flt-double', dest='double', action='store_true',
                     'instead than with single-precision floats')
 parser.add_argument('--verbose', action='store_true',
                     help='be verbose')
+parser.add_argument('--serial', action='store_true',
+                    help='don\'t parallelize multiple jobs')
 args = parser.parse_args()
 
 if args.verbose:
   vprint = print
   nvprint = nothing
 
-for bench_name in args.benchnames:
-  vprint('#### ', bench_name)
-  if args.plot:
-    plotErrorMetric(bench_name, args.bitness, args.double)
-  else:
-    res, steps = autotune(bench_name, args.bitness, args.double)
-    nvprint(bench_name, res, steps)
-  vprint('\n')
+benchnames = args.benchnames if not ('ALL' in args.benchnames) else ['correlation', 
+  'covariance', '2mm', '3mm', 'atax', 'bicg', 'cholesky', 'doitgen', 'gemm', 
+  'gemver', 'gesummv', 'mvt', 'symm', 'syr2k', 'syrk', 'trisolv', 'trmm', 
+  'durbin', 'dynprog', 'gramschmidt', 'lu', 'ludcmp', 'floyd-warshall', 
+  'adi', 'fdtd-2d', 'fdtd-apml', 'jacobi-1d-imper', 'jacobi-2d-imper', 
+  'seidel-2d']
+
+if not args.serial:
+  p = Pool()
+  p.starmap(processOne, [(name, args) for name in benchnames])
+else:
+  for name in benchnames:
+    processOne(name, args)
 
 
