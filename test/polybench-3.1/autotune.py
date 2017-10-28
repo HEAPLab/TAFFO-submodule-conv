@@ -11,7 +11,9 @@ import argparse
 
 def execute(command):
   import subprocess
-  pr = subprocess.run(command, stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL, shell=True)
+  limit = '65532' if os.uname()[0] == 'Darwin' else 'unlimited'
+  rcmd = 'ulimit -s ' + limit + '; ' + command
+  pr = subprocess.run(rcmd, stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL, shell=True)
   if pr.returncode == -2:
     print('sigint! stopping')
     os.exit(0)
