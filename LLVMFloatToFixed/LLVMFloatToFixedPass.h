@@ -6,6 +6,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Support/CommandLine.h"
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
@@ -37,7 +38,7 @@ struct FloatToFixed : public llvm::ModulePass {
   static char ID;
   int fracBitsAmt;
   int bitsAmt;
-
+  
   FloatToFixed(): ModulePass(ID) { }
   bool runOnModule(llvm::Module &M) override;
 
@@ -65,7 +66,7 @@ struct FloatToFixed : public llvm::ModulePass {
 
   llvm::Value *translateOrMatchOperand(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Value *val, llvm::Instruction *ip = nullptr);
   llvm::Value *genConvertFloatToFix(llvm::Value *flt, llvm::Instruction *ip = nullptr);
-  llvm::Constant *convertFloatConstantToFixConstant(llvm::ConstantFP *flt);
+  llvm::Constant *convertFloatConstantToFixConstant(llvm::ConstantFP *flt, llvm::Instruction *);
   llvm::Value *genConvertFixToFloat(llvm::Value *fix, llvm::Type *destt);
 
   llvm::Type *getFixedPointTypeForFloatType(llvm::Type *srct);

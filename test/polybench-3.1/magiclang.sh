@@ -49,7 +49,7 @@ if [ 'x'$COLLECT_STATS_DIR != 'x' ]; then
   exit 0
 fi
 
-$OPT -load="$PASSLIB" -S -flttofix -dce $DEBUGONLYFLAG "$OUTDIR/_tmp0.$5.ll" -o "$OUTDIR/_tmp1.$5.ll" $7
+$OPT -load="$PASSLIB" -pass-remarks=flttofix -S -flttofix -dce $DEBUGONLYFLAG "$OUTDIR/_tmp0.$5.ll" -o "$OUTDIR/_tmp1.$5.ll" $7
 $CLANG -S -o "$OUTDIR/_tmp2.$5.s" "$OUTDIR/_tmp1.$5.ll" $2 $3
 $CLANG -o "$OUTDIR/$OUTNAME" "$OUTDIR/_tmp2.$5.s" $2 $3 $6
 

@@ -466,7 +466,7 @@ Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Val
 Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
 {
   if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
-    return convertFloatConstantToFixConstant(fpc);
+    return convertFloatConstantToFixConstant(fpc, ip);
   }
 
   FloatToFixCount++;
@@ -486,7 +486,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
 }
 
 
-Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc)
+Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc, Instruction *context)
 {
   bool precise = false;
   APFloat val = fpc->getValueAPF();
@@ -501,14 +501,14 @@ Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc)
   if (cvtres != APFloat::opStatus::opOK) {
     SmallVector<char, 64> valstr;
     val.toString(valstr);
-    Twine valstr2 = valstr;
-    // TODO: emit a proper warning! we don't do it now because it's such a hassle
+    std::string valstr2(valstr.begin(), valstr.end());
+    OptimizationRemarkEmitter ORE(context->getFunction());
     if (cvtres == APFloat::opStatus::opInexact) {
-      errs() << "fixed point conversion of constant " <<
-        valstr2 << " is not precise\n";
+      ORE.emit(OptimizationRemark(DEBUG_TYPE, "ImpreciseConstConversion", context) <<
+        "fixed point conversion of constant " << valstr2 << " is not precise\n");
     } else {
-      errs() << "impossible to convert constant " <<
-        valstr2 << " to fixed point\n";
+      ORE.emit(OptimizationRemark(DEBUG_TYPE, "ConstConversionFailed", context) <<
+        "impossible to convert constant " << valstr2 << " to fixed point\n");
       return nullptr;
     }
   }
