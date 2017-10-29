@@ -23,6 +23,7 @@ STATISTIC(FloatToFixCount, "Number of floating point to fixed point conversions"
 STATISTIC(FallbackCount, "Number of instructions not replaced by a "
                          "fixed-point-native equivalent");
 STATISTIC(ConversionCount, "Number of instructions affected by flttofix");
+STATISTIC(AnnotationCount, "Number of valid annotations found");
 
 
 /* flags in conversionPool */

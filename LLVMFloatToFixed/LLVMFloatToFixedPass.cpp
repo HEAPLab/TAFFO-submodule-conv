@@ -37,6 +37,8 @@ bool FloatToFixed::runOnModule(Module &m)
 
   auto roots = readAllLocalAnnotations(m);
   std::vector<Value*> rootsa(roots.begin(), roots.end());
+  AnnotationCount = rootsa.size();
+  
   std::vector<Value*> vals;
   DenseMap<Value*, SmallPtrSet<Value*, 5>> itemtoroot;
   buildConversionQueueForRootValues(rootsa, vals, itemtoroot);

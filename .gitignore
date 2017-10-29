@@ -21,3 +21,4 @@ test/inlinetest2
 test/enqueueexample
 .tmp
 difference-example
+test/polybench-3.1/stats
