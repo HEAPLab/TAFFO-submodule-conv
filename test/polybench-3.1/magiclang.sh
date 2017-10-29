@@ -43,6 +43,12 @@ if [ $ISDEBUG != '1' ]; then
 fi
 
 $CLANG -S -emit-llvm "$1" -o "$OUTDIR/_tmp0.$5.ll" $3 $4
+
+if [ 'x'$COLLECT_STATS_DIR != 'x' ]; then
+  $OPT -load="$PASSLIB" -S -flttofix -dce -stats "$OUTDIR/_tmp0.$5.ll" -o /dev/null $7 2> "$COLLECT_STATS_DIR/${OUTNAME}.txt"
+  exit 0
+fi
+
 $OPT -load="$PASSLIB" -S -flttofix -dce $DEBUGONLYFLAG "$OUTDIR/_tmp0.$5.ll" -o "$OUTDIR/_tmp1.$5.ll" $7
 $CLANG -S -o "$OUTDIR/_tmp2.$5.s" "$OUTDIR/_tmp1.$5.ll" $2 $3
 $CLANG -o "$OUTDIR/$OUTNAME" "$OUTDIR/_tmp2.$5.s" $2 $3 $6

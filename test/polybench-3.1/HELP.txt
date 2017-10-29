@@ -49,6 +49,8 @@ Options for the compile_* scripts (also for compile_everything.sh)
 --dump-option-table   Does not compile anything but it dumps a LaTeX tabular
                       table body with all the default options for compiling all
                       the benchmarks
+--stats-only  Instead of compiling, put the statistics for each compiled
+              benchmark in the stats directory.
             
 Example: ./compile_datamining.sh 64bit MINI_DATASET
          Compiles the benchmarks in the datamining folder using doubles/64-bit

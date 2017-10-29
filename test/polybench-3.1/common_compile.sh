@@ -37,6 +37,10 @@ for arg; do
     --dump-option-table)
       TBLDUMP=1
       ;;
+    --stats-only)
+      export COLLECT_STATS_DIR='./stats'
+      mkdir -p $COLLECT_STATS_DIR
+      ;;
     *)
       echo Unrecognized option $arg
       exit 1
