@@ -19,8 +19,10 @@
 #define DEBUG_TYPE "flttofix"
 #define DEBUG_ANNOTATION "annotation"
 
-STATISTIC(FixToFloatCount, "Number of fixed point to floating point conversions");
-STATISTIC(FloatToFixCount, "Number of floating point to fixed point conversions");
+STATISTIC(FixToFloatCount, "Number of generic fixed point to floating point "
+                           "value conversion operations inserted");
+STATISTIC(FloatToFixCount, "Number of generic floating point to fixed point "
+                           "value conversion operations inserted");
 STATISTIC(FallbackCount, "Number of instructions not replaced by a "
                          "fixed-point-native equivalent");
 STATISTIC(ConversionCount, "Number of instructions affected by flttofix");
