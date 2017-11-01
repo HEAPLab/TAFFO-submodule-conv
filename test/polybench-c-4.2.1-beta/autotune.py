@@ -62,14 +62,16 @@ def buildExecuteAndGetErrorMetric(benchname, fracbsize, bitness, doubleflt=False
           'build.log > /dev/null' % ( \
           'export DONT_RECOMPILE_FLOAT=y;' if flovals else '', 
           benchname, fracbsize, bitness, '64bit' if doubleflt else ''))
+  basedir = './output-data-%d/' % bitness
+  execute('mkdir -p ' + basedir)
   
   if flovals is None:
-    fn = './output-data-32/%s_out_not_opt.output.csv' % benchname
+    fn = basedir + '%s_out_not_opt.output.csv' % benchname
     execute('./build/%s_out_not_opt 2> %s > /dev/null' % (benchname, fn))
     flovals = [float(v) for v in ReadValues(fn)]
     flovals_cache[benchname] = flovals
     
-  fn = './output-data-32/%s_out.output.csv' % benchname
+  fn = basedir + '%s_out.output.csv' % benchname
   res = execute('./build/%s_out 2> %s > /dev/null' % (benchname, fn))
   if res == 0:
     fixvals = [float(v) for v in ReadValues(fn)]
