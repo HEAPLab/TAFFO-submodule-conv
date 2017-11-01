@@ -3,9 +3,9 @@
 source common_compile.sh
 
 ROOT='linear-algebra/kernels'
-compile "2mm" $D_STANDARD_DATASET       29 32 61 64
-compile "3mm" $D_STANDARD_DATASET       30 32 62 64
-compile "atax" $D_STANDARD_DATASET      31 32 63 64
-compile "bicg" $D_STANDARD_DATASET      31 32 63 64
-compile "doitgen" $D_STANDARD_DATASET   11 32 43 64
-compile "mvt" $D_STANDARD_DATASET        8 32 40 64
+compile "2mm" $D_STANDARD_DATASET       17 32 49 64
+compile "3mm" $D_STANDARD_DATASET       21 32 53 64
+compile "atax" $D_STANDARD_DATASET      19 32 55 64
+compile "bicg" $D_STANDARD_DATASET      23 32 55 64
+compile "doitgen" $D_STANDARD_DATASET   26 32 58 64
+compile "mvt" $D_STANDARD_DATASET       23 32 55 64
