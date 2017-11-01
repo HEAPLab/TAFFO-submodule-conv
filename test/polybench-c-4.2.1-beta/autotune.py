@@ -27,7 +27,7 @@ def execute(command, capture_stdout=False):
     vprint('sigint! stopping')
     os.exit(0)
   if capture_stdout:
-    return pr.stdout
+    return pr.stdout if pr.returncode == 0 else ''
   return pr.returncode
 
 
