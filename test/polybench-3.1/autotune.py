@@ -161,6 +161,7 @@ def processOne(bench_name, args):
     res, steps = autotune(bench_name, args.bitness, args.double)
     nvprint(bench_name, res, steps)
   vprint('\n')
+  sys.stdout.flush()
   
   
 parser = argparse.ArgumentParser(description='autotune for polybench')
