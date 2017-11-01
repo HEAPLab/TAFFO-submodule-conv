@@ -15,14 +15,20 @@ vprint = nothing
 nvprint = print
 
 
-def execute(command):
+def execute(command, capture_stdout=False):
   import subprocess
   limit = '65532' if os.uname()[0] == 'Darwin' else 'unlimited'
   rcmd = 'ulimit -s ' + limit + '; ' + command
-  pr = subprocess.run(rcmd, stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL, shell=True)
+  if capture_stdout:
+    outchan = subprocess.PIPE
+  else:
+    outchan = subprocess.DEVNULL
+  pr = subprocess.run(rcmd, stdout=outchan, stdin=subprocess.DEVNULL, shell=True, universal_newlines=True)
   if pr.returncode == -2:
     vprint('sigint! stopping')
     os.exit(0)
+  if capture_stdout:
+    return pr.stdout
   return pr.returncode
 
 
@@ -62,14 +68,16 @@ def buildExecuteAndGetErrorMetric(benchname, fracbsize, bitness, doubleflt=False
           'build.log > /dev/null' % ( \
           'export DONT_RECOMPILE_FLOAT=y;' if flovals else '', 
           benchname, fracbsize, bitness, '64bit' if doubleflt else ''))
+  basedir = './output-data-%d/' % bitness
+  execute('mkdir -p ' + basedir)
   
   if flovals is None:
-    fn = './output-data-32/%s_out_not_opt.output.csv' % benchname
+    fn = basedir + '%s_out_not_opt.output.csv' % benchname
     execute('./build/%s_out_not_opt 2> %s > /dev/null' % (benchname, fn))
     flovals = [float(v) for v in ReadValues(fn)]
     flovals_cache[benchname] = flovals
     
-  fn = './output-data-32/%s_out.output.csv' % benchname
+  fn = basedir + '%s_out.output.csv' % benchname
   res = execute('./build/%s_out 2> %s > /dev/null' % (benchname, fn))
   if res == 0:
     fixvals = [float(v) for v in ReadValues(fn)]
@@ -112,8 +120,9 @@ def autotune(benchname, bitness=32, doubleflt=False):
       continue
     queue += [(lwall, center), (center, rwall)]
     
-    minimum = buildExecuteAndGetErrorMetric(benchname, center, bitness, doubleflt)
-    vprint('minimum = ', minimum)
+    v = buildExecuteAndGetErrorMetric(benchname, center, bitness, doubleflt)
+    vprint('current sample = ', v)
+    minimum = min(v, minimum)
     steps += 1
     if minimum < 0.1:
       vprint('ok!')
@@ -175,12 +184,12 @@ if args.verbose:
   vprint = print
   nvprint = nothing
 
-benchnames = args.benchnames if not ('ALL' in args.benchnames) else ['correlation', 
-  'covariance', '2mm', '3mm', 'atax', 'bicg', 'cholesky', 'doitgen', 'gemm', 
-  'gemver', 'gesummv', 'mvt', 'symm', 'syr2k', 'syrk', 'trisolv', 'trmm', 
-  'durbin', 'dynprog', 'gramschmidt', 'lu', 'ludcmp', 'floyd-warshall', 
-  'adi', 'fdtd-2d', 'fdtd-apml', 'jacobi-1d-imper', 'jacobi-2d-imper', 
-  'seidel-2d']
+if 'ALL' in args.benchnames:
+  benchs = execute(command='./compile_everything.sh --dump-bench-list', capture_stdout=True)
+  benchnames = benchs.split('\n')
+  benchnames = benchnames[:-1]
+else:
+  benchnames = args.benchnames
 
 if not args.serial:
   p = Pool()
