@@ -58,6 +58,7 @@ def buildExecuteAndGetErrorMetric(benchname, fracbsize, bitness, doubleflt=False
     
   flovals = flovals_cache.get(benchname)
   
+  execute('rm -f ./build/%s_out' % benchname)
   execute('%s./compile_everything.sh --only=%s --frac=%d --tot=%d %s 2>> ' \
           'build.log > /dev/null' % ( \
           'export DONT_RECOMPILE_FLOAT=y;' if flovals else '', 
