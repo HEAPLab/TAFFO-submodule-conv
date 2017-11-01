@@ -4,7 +4,6 @@
 import sys
 import math
 import os
-from decimal import *
 import resource
 import argparse
 from multiprocessing import Pool
@@ -32,14 +31,9 @@ def execute(command, capture_stdout=False):
   return pr.returncode
 
 
-def ReadValues(filename):
-  with open(filename, 'r') as f:
-    l = f.readline()
-    while l != '':
-      for v in l.strip().split():
-        if v != '':
-          yield v
-      l = f.readline()
+def ReadValues(string):
+  import re
+  return re.findall('[0-9e\+\-.]+', string)
   
   
 def errorMetric(flo, fix):
@@ -73,15 +67,14 @@ def buildExecuteAndGetErrorMetric(benchname, fracbsize, bitness, doubleflt=False
   
   if flovals is None:
     fn = basedir + '%s_out_not_opt.output.csv' % benchname
-    execute('./build/%s_out_not_opt 2> %s > /dev/null' % (benchname, fn))
-    flovals = [float(v) for v in ReadValues(fn)]
+    valstr = execute('./build/%s_out_not_opt 2> /dev/stdout > /dev/null' % (benchname), capture_stdout=True)
+    flovals = [float(v) for v in ReadValues(valstr)]
     flovals_cache[benchname] = flovals
     
   fn = basedir + '%s_out.output.csv' % benchname
-  res = execute('./build/%s_out 2> %s > /dev/null' % (benchname, fn))
-  if res == 0:
-    fixvals = [float(v) for v in ReadValues(fn)]
-  else:
+  valstr = execute('./build/%s_out 2> /dev/stdout > /dev/null' % (benchname), capture_stdout=True)
+  fixvals = [float(v) for v in ReadValues(valstr)]
+  if len(flovals) != len(fixvals):
     fixvals = []
   
   cached = errorMetric(flovals, fixvals)
