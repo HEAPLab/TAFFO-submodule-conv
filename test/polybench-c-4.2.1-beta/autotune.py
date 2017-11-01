@@ -15,14 +15,20 @@ vprint = nothing
 nvprint = print
 
 
-def execute(command):
+def execute(command, capture_stdout=False):
   import subprocess
   limit = '65532' if os.uname()[0] == 'Darwin' else 'unlimited'
   rcmd = 'ulimit -s ' + limit + '; ' + command
-  pr = subprocess.run(rcmd, stdout=subprocess.DEVNULL, stdin=subprocess.DEVNULL, shell=True)
+  if capture_stdout:
+    outchan = subprocess.PIPE
+  else:
+    outchan = subprocess.DEVNULL
+  pr = subprocess.run(rcmd, stdout=outchan, stdin=subprocess.DEVNULL, shell=True, universal_newlines=True)
   if pr.returncode == -2:
     vprint('sigint! stopping')
     os.exit(0)
+  if capture_stdout:
+    return pr.stdout
   return pr.returncode
 
 
@@ -178,12 +184,12 @@ if args.verbose:
   vprint = print
   nvprint = nothing
 
-benchnames = args.benchnames if not ('ALL' in args.benchnames) else ['correlation', 
-  'covariance', 'gemm', 'gemver', 'gesummv', 'symm', 'syr2k', 'syrk', 'trmm', 
-  '2mm', '3mm', 'atax', 'bicg', 'doitgen', 'mvt', 'cholesky', 'durbin', 
-  'gramschmidt', 'lu', 'ludcmp', 'trisolv', 'deriche', 'floyd-warshall', 
-  'nussinov', 'adi', 'fdtd-2d', 'heat-3d', 'jacobi-1d', 'jacobi-2d', 
-  'seidel-2d']
+if 'ALL' in args.benchnames:
+  benchs = execute(command='./compile_everything.sh --dump-bench-list', capture_stdout=True)
+  benchnames = benchs.split('\n')
+  benchnames = benchnames[:-1]
+else:
+  benchnames = args.benchnames
 
 if not args.serial:
   p = Pool()

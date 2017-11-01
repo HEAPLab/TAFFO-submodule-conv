@@ -11,6 +11,7 @@ ONLY='*'
 FRAC=''
 TOT=''
 TBLDUMP=0
+LISTDUMP=0
 
 for arg; do
   case $arg in
@@ -36,6 +37,9 @@ for arg; do
       ;;
     --dump-option-table)
       TBLDUMP=1
+      ;;
+    --dump-bench-list)
+      LISTDUMP=1
       ;;
     --stats-only)
       export COLLECT_STATS_DIR='./stats'
@@ -74,6 +78,10 @@ compile() {
       printf '%s & \\texttt{%s} & %s & %s & %s & %s \\\\\n' $1 \
         $(echo -n $2 | sed 's/\_/\\\_/g') \
         ${options[0]} ${options[1]} ${options[2]} ${options[3]}
+      return;
+    fi;
+    if [ $LISTDUMP -eq 1 ]; then
+      printf '%s\n' $1
       return;
     fi;
     echo $1
