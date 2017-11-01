@@ -34,7 +34,7 @@ void init_array (int m,
 
   for (i = 0; i < N; i++)
     for (j = 0; j < M; j++)
-      data[i][j] = (DATA_TYPE)(i*j)/M + i;
+      data[i][j] = ((DATA_TYPE)(i*j)/M + i)/N;
 
 }
 

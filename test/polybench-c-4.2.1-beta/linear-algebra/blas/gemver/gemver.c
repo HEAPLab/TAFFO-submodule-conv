@@ -45,7 +45,7 @@ void init_array (int n,
 
   for (i = 0; i < n; i++)
     {
-      u1[i] = i;
+      u1[i] = i / fn;
       u2[i] = ((i+1)/fn)/2.0;
       v1[i] = ((i+1)/fn)/4.0;
       v2[i] = ((i+1)/fn)/6.0;
