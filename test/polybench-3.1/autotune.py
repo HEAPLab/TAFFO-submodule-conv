@@ -27,7 +27,7 @@ def execute(command, capture_stdout=False):
     vprint('sigint! stopping')
     os.exit(0)
   if capture_stdout:
-    return pr.stdout
+    return pr.stdout if pr.returncode == 0 else ''
   return pr.returncode
 
 
@@ -58,6 +58,7 @@ def buildExecuteAndGetErrorMetric(benchname, fracbsize, bitness, doubleflt=False
     
   flovals = flovals_cache.get(benchname)
   
+  execute('rm -f ./build/%s_out' % benchname)
   execute('%s./compile_everything.sh --only=%s --frac=%d --tot=%d %s 2>> ' \
           'build.log > /dev/null' % ( \
           'export DONT_RECOMPILE_FLOAT=y;' if flovals else '', 
