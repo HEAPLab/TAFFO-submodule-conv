@@ -3,7 +3,7 @@
 source common_compile.sh
 
 NOTCONCURRENT=''
-if [ $TBLDUMP -eq 1 ]; then
+if [[ $TBLDUMP -eq 1 || $LISTDUMP -eq 1 ]]; then
   NOTCONCURRENT='wait';
 fi
 

@@ -24,3 +24,4 @@ difference-example
 test/polybench-3.1/stats
 test/polybench-c-4.2.1-beta/output-data-32
 build.log
+test/polybench-c-4.2.1-beta/output-data-64
