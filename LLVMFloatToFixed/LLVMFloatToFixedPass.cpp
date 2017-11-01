@@ -80,7 +80,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
   size_t next = 0;
   while (next < queue.size()) {
     Value *v = queue.at(next);
-    SmallPtrSet<Value*, 5>& newroots = itemtoroot[v];
+    SmallPtrSet<Value*, 5> newroots = itemtoroot[v];
     
     for (auto *u: v->users()) {
       /* Insert u at the end of the queue.
