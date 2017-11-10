@@ -10,4 +10,4 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 
 add_subdirectory(LLVMFloatToFixed)
-
+add_subdirectory(tool)
