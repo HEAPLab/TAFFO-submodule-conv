@@ -31,8 +31,10 @@ CLANG=$LLVM_DIR/bin/clang
 OPT=$LLVM_DIR/bin/opt
 LLC=$LLVM_DIR/bin/llc
 PASSLIB="$ROOT/../../build/LLVMFloatToFixed/Debug/LLVMFloatToFixed.$SOEXT"
+INSTCNT="$ROOT/../../build/tool/Debug/istr_type"
 if [ ! -e "$PASSLIB" ]; then
   PASSLIB="$ROOT/../../build/LLVMFloatToFixed/LLVMFloatToFixed.$SOEXT";
+  INSTCNT="$ROOT/../../build/tool/istr_type"
 fi
 OUTNAME=$(echo "$5" | sed -E 's/\.[^\.]$//')
 
@@ -45,8 +47,10 @@ fi
 $CLANG -S -emit-llvm "$1" -o "$OUTDIR/_tmp0.$5.ll" $3 $4
 
 if [ 'x'$COLLECT_STATS_DIR != 'x' ]; then
-  $OPT -load="$PASSLIB" -S -flttofix -dce -stats "$OUTDIR/_tmp0.$5.ll" -o /dev/null $7 2> "$COLLECT_STATS_DIR/${OUTNAME}.txt"
+  $OPT -load="$PASSLIB" -S -flttofix -dce -stats "$OUTDIR/_tmp0.$5.ll" -o "$OUTDIR/_tmp1.$5.ll" $7 2> "$COLLECT_STATS_DIR/${OUTNAME}.txt"
   echo $(wc -l < "$1") 'LOC' >> "$COLLECT_STATS_DIR/${OUTNAME}.txt"
+  $INSTCNT "$OUTDIR/_tmp0.$5.ll" > "$COLLECT_STATS_DIR/${OUTNAME}_ic_float.txt"
+  $INSTCNT "$OUTDIR/_tmp1.$5.ll" > "$COLLECT_STATS_DIR/${OUTNAME}_ic_fix.txt"
   exit 0
 fi
 
