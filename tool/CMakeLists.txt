@@ -11,4 +11,7 @@ target_link_libraries(istr_type ${llvm_libs})
 
 set_property(TARGET istr_type PROPERTY CXX_STANDARD 11)
 set_property(TARGET istr_type PROPERTY CXX_STANDARD_REQUIRED ON)
+if (NOT LLVM_ENABLE_RTTI)
+  target_compile_options(istr_type PRIVATE -fno-rtti)
+endif()
 
