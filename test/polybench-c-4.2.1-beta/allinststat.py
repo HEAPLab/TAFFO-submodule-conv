@@ -64,10 +64,10 @@ def MaterializeTable(iterableofiterables):
     print('  '.join([item.rjust(size) for item, size in zip(row, sizes)]))
     
     
-def TableGenerator(stats, allinst, datafmt):
+def TableGenerator(stats, allinst, datafmt, labelmod=lambda x:x):
   instlist = sorted(list(allinst))
   firstrow = ['']
-  firstrow += instlist
+  firstrow += [labelmod(inst) for inst in instlist]
   yield firstrow
   benchs = sorted(stats.keys())
   for bench in benchs:
@@ -114,8 +114,9 @@ for bench in benchnames:
   allinst |= set(flo.keys())
 
 if not args.raw:
-  table = TableGenerator(stats, allinst & '*', \
-    lambda stat: '0.0' if stat is None else '%.1f'%(stat*100));
+  table = TableGenerator(stats, allinst - set(['*']), \
+    lambda stat: '0.0' if stat is None else '%.1f'%(stat*100),
+    labelmod=lambda lab:lab + ' [%]');
 else:
   table = TableGenerator(stats, allinst, \
     lambda stat: '0' if stat is None else '%d'%stat)
