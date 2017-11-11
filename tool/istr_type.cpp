@@ -81,6 +81,9 @@ int main(int argc, char *argv[])
         } else if (inst.isBinaryOp()) {
           stat["MathOp"]++;
         }
+        if (inst.isShift()) {
+          stat["Shift"]++;
+        }
       }
     }
   }
