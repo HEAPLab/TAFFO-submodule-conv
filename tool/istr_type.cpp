@@ -57,12 +57,18 @@ int main(int argc, char *argv[])
       for (auto iter3 = bb.begin(); iter3 != bb.end(); iter3++) {
         Instruction &inst = *iter3;
 
-        if(isa<CallInst>(inst)) {
-          Value *opnd = inst.getOperand(0);
+        CallInst *call = dyn_cast<CallInst>(&inst);
+        if(call) {
+          Function *opnd = call->getCalledFunction();
           if (opnd->getName() == "polybench_timer_start") {
             eval = true;
+            continue;
           } else if (opnd->getName() == "polybench_timer_stop") {
             eval = false;
+          } else if (opnd->getIntrinsicID() == Intrinsic::annotation ||
+                     opnd->getIntrinsicID() == Intrinsic::var_annotation ||
+                     opnd->getIntrinsicID() == Intrinsic::ptr_annotation) {
+            continue;
           }
         }
 
