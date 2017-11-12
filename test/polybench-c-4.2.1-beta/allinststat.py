@@ -6,6 +6,7 @@ import os
 import resource
 import argparse
 import itertools
+import re
 
 
 def execute(command, capture_stdout=False):
@@ -31,19 +32,46 @@ def ParseInstrStatFile(filename, raw=False):
     l = f.readline()
     while l != '':
       items = l.split()
-      if len(items) < 2:
-        continue
-      out[items[0]] = int(items[1])
+      if len(items) >= 2:
+        out[items[0]] = int(items[1])
       l = f.readline()
   
   if raw:
-    return out
+    return out, out['*']
     
   out2 = {}
   total = out['*']
   for k, v in out.items():
     out2[k] = out[k] / total
-  return out2
+  return out2, total
+  
+  
+def ParseLLVMStatsFile(filename, totalfl, totalfx, raw=False):
+  outfl, outfx = {}, {}
+  namekey = {
+    "Number of instructions not replaced by a fixed-point-native equivalent": (True, True, "Fallback")
+  }  
+  with open(filename, 'r') as f:
+    l = f.readline()
+    while l != '':
+      items = re.match(' *([0-9]+) +([a-z]+) *- (.*)', l)
+      if items:
+        orgname = items.group(3)
+        if orgname in namekey:
+          infl, infx, name = namekey.get(orgname)
+          if infl: outfl[name] = int(items.group(1))
+          if infx: outfx[name] = int(items.group(1))
+      l = f.readline()
+  
+  if raw:
+    return outfl, outfx
+    
+  outfl2, outfx2 = {}, {}
+  for k, v in outfl.items():
+    outfl2[k] = outfl[k] / totalfl
+  for k, v in outfx.items():
+    outfx2[k] = outfx[k] / totalfx
+  return outfl2, outfx2
   
   
 def MaterializeTable(iterableofiterables):
@@ -95,8 +123,11 @@ benchnames = benchs.split()
 stats = {}
 allinst = set()
 for bench in benchnames:
-  fix = ParseInstrStatFile('./stats/' + bench + '_out_ic_fix.txt', raw=args.raw)
-  flo = ParseInstrStatFile('./stats/' + bench + '_out_ic_float.txt', raw=args.raw)
+  fix, totfx = ParseInstrStatFile('./stats/' + bench + '_out_ic_fix.txt', raw=args.raw)
+  flo, totfl = ParseInstrStatFile('./stats/' + bench + '_out_ic_float.txt', raw=args.raw)
+  fl2, fx2 = ParseLLVMStatsFile('./stats/' + bench + '_out.txt', totfl, totfx, raw=args.raw)
+  flo.update(fl2)
+  fix.update(fx2)
   if not args.delta:
     if not args.floonly:
       stats[bench+'_fix'] = fix
