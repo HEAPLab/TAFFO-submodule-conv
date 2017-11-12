@@ -80,6 +80,12 @@ int main(int argc, char *argv[])
           stat["CastOp"]++;
         } else if (inst.isBinaryOp()) {
           stat["MathOp"]++;
+          if (inst.getType()->isFloatingPointTy()) {
+            stat["FloatingPointOp"]++;
+            if (inst.getOpcode() == Instruction::FMul || inst.getOpcode() == Instruction::FDiv)
+              stat["FloatMulDivOp"]++;
+          } else
+            stat["IntegerOp"]++;
         }
         if (inst.isShift()) {
           stat["Shift"]++;
