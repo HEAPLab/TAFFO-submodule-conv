@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <sstream>
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ErrorOr.h"
@@ -95,6 +96,12 @@ int main(int argc, char *argv[])
         }
         if (inst.isShift()) {
           stat["Shift"]++;
+        }
+        
+        if (call) {
+          std::stringstream stm;
+          stm << "call(" << call->getCalledFunction()->getName().str() << ")";
+          stat[stm.str()]++;
         }
       }
     }
