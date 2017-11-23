@@ -63,7 +63,10 @@ void FloatToFixed::performConversion(
 Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& operandPool, Value *val)
 {
   Value *res = Unsupported;
-  if (AllocaInst *alloca = dyn_cast<AllocaInst>(val)) {
+  
+  if (GlobalVariable *global = dyn_cast<GlobalVariable>(val)) {
+    res = convertGlobalVariable(global);
+  } else if (AllocaInst *alloca = dyn_cast<AllocaInst>(val)) {
     res = convertAlloca(alloca);
   } else if (LoadInst *load = dyn_cast<LoadInst>(val)) {
     res = convertLoad(operandPool, load);
@@ -86,10 +89,33 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
   }
 
   if (res==Unsupported) {
-    res = fallback(operandPool,dyn_cast<Instruction>(val));
+    if (Instruction *instr = dyn_cast<Instruction>(val)) {
+      res = fallback(operandPool,dyn_cast<Instruction>(val));
+    } else {
+      DEBUG(dbgs() << "can't fallback on something that's not an instruction\n\n");
+      return nullptr;
+    }
   }
 
   return res;
+}
+
+
+Value *FloatToFixed::convertGlobalVariable(GlobalVariable *glob)
+{
+  Type *prevt = glob->getType()->getPointerElementType();
+  Type *newt = getFixedPointTypeForFloatType(prevt);
+  if (!newt)
+    return nullptr;
+  
+  Constant *newinit = nullptr;
+  if (newt->isAggregateType()) // TODO
+    newinit = ConstantAggregateZero::get(newt);
+  else
+    newinit = ConstantInt::get(newt, 0);
+  
+  GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(), newinit);
+  return newglob;
 }
 
 
@@ -503,7 +529,7 @@ Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc, Instr
     val.toString(valstr);
     std::string valstr2(valstr.begin(), valstr.end());
     OptimizationRemarkEmitter ORE(context->getFunction());
-    if (cvtres == APFloat::opStatus::opInexact) {
+    if (cvtres == APFloat::opStatus::opInexact && context) {
       ORE.emit(OptimizationRemark(DEBUG_TYPE, "ImpreciseConstConversion", context) <<
         "fixed point conversion of constant " << valstr2 << " is not precise\n");
     } else {
@@ -538,19 +564,23 @@ Type *FloatToFixed::getFixedPointTypeForFloatType(Type *srct)
 {
   if (srct->isPointerTy()) {
     Type *enc = getFixedPointTypeForFloatType(srct->getPointerElementType());
-    return enc->getPointerTo();
+    if (enc)
+      return enc->getPointerTo();
+    return nullptr;
     
   } else if (srct->isArrayTy()) {
     int nel = srct->getArrayNumElements();
     Type *enc = getFixedPointTypeForFloatType(srct->getArrayElementType());
-    return ArrayType::get(enc, nel);
+    if (enc)
+      return ArrayType::get(enc, nel);
+    return nullptr;
     
   } else if (srct->isFloatingPointTy()) {
     return getFixedPointType(srct->getContext());
     
   }
   DEBUG(srct->dump());
-  assert(0 && "getFixedPointTypeForFloatType given a non-float type");
+  DEBUG(dbgs() << "getFixedPointTypeForFloatType given a non-float type\n");
   return nullptr;
 }
 

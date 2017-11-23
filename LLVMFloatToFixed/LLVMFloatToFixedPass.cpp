@@ -36,8 +36,10 @@ bool FloatToFixed::runOnModule(Module &m)
   fracBitsAmt = GlobalFracBitsAmt;
   bitsAmt = GlobalBitsAmt;
 
-  auto roots = readAllLocalAnnotations(m);
-  std::vector<Value*> rootsa(roots.begin(), roots.end());
+  auto local = readAllLocalAnnotations(m);
+  auto global = readGlobalAnnotations(m);
+  std::vector<Value*> rootsa(local.begin(), local.end());
+  rootsa.insert(rootsa.begin(), global.begin(), global.end());
   AnnotationCount = rootsa.size();
   
   std::vector<Value*> vals;

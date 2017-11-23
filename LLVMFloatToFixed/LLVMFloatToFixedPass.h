@@ -55,6 +55,7 @@ struct FloatToFixed : public llvm::ModulePass {
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q, llvm::DenseMap<llvm::Value *, llvm::Value *>& opPool);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Value *val);
 
+  llvm::Value *convertGlobalVariable(llvm::GlobalVariable *glob);
   llvm::Value *convertAlloca(llvm::AllocaInst *alloca);
   llvm::Value *convertLoad(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::LoadInst *load);
   llvm::Value *convertStore(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::StoreInst *load);
