@@ -1,4 +1,4 @@
-PROGRAM  = $(BINDIR)/$(BENCHMARK).$(CLASS)
+PROGRAM  = $(BINDIR)/$(BENCHMARK)_$(CLASS)
 FCOMPILE = $(F77) -c $(F_INC) $(FFLAGS)
 CCOMPILE = $(CC)  -c $(C_INC) $(CFLAGS)
 
@@ -61,5 +61,16 @@ npbparams.h: ../config/make.def
 # So that "make benchmark-name" works
 ${BENCHMARK}:  default
 ${BENCHMARKU}: default
+
+
+.c.o:
+	$(CC)  -c $(C_INC) -S -emit-llvm -o $@.1.ll $<
+	${LLVM_DIR}/bin/opt -load ../../../build/LLVMFloatToFixed/Debug/LLVMFloatToFixed.dylib -S -flttofix -dce -o $@.2.ll $@.1.ll
+	${CCOMPILE} -o $@ $@.2.ll
+
+
+
+
+
 
 
