@@ -13,7 +13,6 @@ ${PROGRAM}: config ${OBJS}
 	${CLINK} ${CLINKFLAGS} -o ${PROGRAM} ${OBJS} ${C_LIB}
 
 ft.o:             ft.c  global.h npbparams.h
-	${CCOMPILE} ft.c
 
 clean:
 	- rm -f *.o *~ mputil*

@@ -15,8 +15,6 @@ OBJS = is.o \
 ${PROGRAM}: config ${OBJS}
 	${CLINK} ${CLINKFLAGS} -o ${PROGRAM} ${OBJS} ${C_LIB}
 
-.c.o:
-	${CCOMPILE} $<
 
 is.o:             is.c  npbparams.h
 

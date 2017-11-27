@@ -13,8 +13,7 @@ ${PROGRAM}: config ${OBJS}
 	${CLINK} ${CLINKFLAGS} -o ${PROGRAM} ${OBJS} ${C_LIB}
 
 
-ep.o:		ep.c npbparams.h
-	${CCOMPILE} ep.c
+ep.o:	ep.c npbparams.h
 
 clean:
 	- rm -f *.o *~ 

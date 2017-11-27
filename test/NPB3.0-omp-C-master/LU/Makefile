@@ -23,8 +23,7 @@ include ../sys/make.common
 ${PROGRAM}: config ${OBJS}
 	${CLINK} ${CLINKFLAGS} -o ${PROGRAM} ${OBJS} ${C_LIB}
 
-lu.o:		lu.c applu.h npbparams.h
-	${CCOMPILE} lu.c
+lu.o:	lu.c applu.h npbparams.h
 
 clean:
 	- /bin/rm -f npbparams.h
