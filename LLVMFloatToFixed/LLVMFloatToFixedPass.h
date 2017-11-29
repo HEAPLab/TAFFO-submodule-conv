@@ -68,7 +68,8 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *fallback(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Instruction *unsupp);
 
   llvm::Value *translateOrMatchOperand(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Value *val, llvm::Instruction *ip = nullptr);
-  llvm::Value *genConvertFloatToFix(llvm::Value *flt, llvm::Instruction *ip = nullptr);
+  llvm::Constant *convertConstant(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Constant *flt, llvm::Type *newt);
+  llvm::Value *genConvertFloatToFix(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Value *flt, llvm::Instruction *ip = nullptr);
   llvm::Constant *convertFloatConstantToFixConstant(llvm::ConstantFP *flt, llvm::Instruction *);
   llvm::Value *genConvertFixToFloat(llvm::Value *fix, llvm::Type *destt);
 

@@ -50,8 +50,9 @@ void FloatToFixed::performConversion(
       DEBUG(dbgs() << "warning: ";
             v->print(dbgs());
             dbgs() << " not converted\n";);
-
-      convertedPool.insert({v, ConversionError});
+      
+      if (newv)
+        convertedPool.insert({v, newv});
     }
     
     i++;
@@ -97,7 +98,7 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
     }
   }
 
-  return res;
+  return res ? res : ConversionError;
 }
 
 
@@ -187,7 +188,7 @@ Value *FloatToFixed::convertGep(DenseMap<Value *, Value *>& op, GetElementPtrIns
     return nullptr;
 
   std::vector<Value*> vals;
-  for (auto a : gep->operand_values() ) {
+  for (auto a : gep->operand_values()) {
     vals.push_back(a);
   }
   vals.erase(vals.begin());
@@ -459,7 +460,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
   }
   DEBUG(dbgs() << "  mutated operands to:\n" << *unsupp << "\n");
   if (unsupp->getType()->isFloatingPointTy()) {
-    Value *fallbackv = genConvertFloatToFix(unsupp, unsupp);
+    Value *fallbackv = genConvertFloatToFix(op, unsupp, unsupp);
     if (unsupp->hasName())
       fallbackv->setName(unsupp->getName() + ".fallback");
     return fallbackv;
@@ -481,18 +482,18 @@ Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Val
       return nullptr;
   }
 
-  if (!val->getType()->isFloatingPointTy())
+  if (!val->getType()->isPointerTy() && !val->getType()->isFloatingPointTy())
     /* doesn't need to be converted; return as is */
     return val;
 
-  return genConvertFloatToFix(val, ip);
+  return genConvertFloatToFix(op, val, ip);
 }
 
 
-Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
+Value *FloatToFixed::genConvertFloatToFix(DenseMap<Value *, Value *>& op, Value *flt, Instruction *ip)
 {
-  if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
-    return convertFloatConstantToFixConstant(fpc, ip);
+  if (Constant *c = dyn_cast<Constant>(flt)) {
+    return convertConstant(op, c, nullptr);
   }
 
   FloatToFixCount++;
@@ -512,6 +513,32 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
 }
 
 
+Constant *FloatToFixed::convertConstant(DenseMap<Value *, Value *>& op, Constant *flt, Type *newt)
+{
+  if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
+    return convertFloatConstantToFixConstant(fpc, nullptr);
+  } else if (ConstantExpr *cexp = dyn_cast<ConstantExpr>(flt)) {
+    if (cexp->isGEPWithNoNotionalOverIndexing()) {
+      Value *newval = op[cexp->getOperand(0)];
+      if (!newval)
+        return nullptr;
+      Constant *newconst = dyn_cast<Constant>(newval);
+      if (!newconst)
+        return nullptr;
+      
+      std::vector<Constant *> vals;
+      for (int i=1; i<cexp->getNumOperands(); i++) {
+        vals.push_back(cexp->getOperand(i));
+      }
+
+      ArrayRef<Constant *> idxlist(vals);
+      return ConstantExpr::getInBoundsGetElementPtr(nullptr, newconst, idxlist);
+    }
+  }
+  return nullptr;
+}
+
+
 Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc, Instruction *context)
 {
   bool precise = false;
@@ -524,12 +551,12 @@ Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc, Instr
   integerPart fixval;
   APFloat::opStatus cvtres = val.convertToInteger(&fixval, bitsAmt, true,
     APFloat::rmTowardNegative, &precise);
-  if (cvtres != APFloat::opStatus::opOK) {
+  if (cvtres != APFloat::opStatus::opOK && context) {
     SmallVector<char, 64> valstr;
     val.toString(valstr);
     std::string valstr2(valstr.begin(), valstr.end());
     OptimizationRemarkEmitter ORE(context->getFunction());
-    if (cvtres == APFloat::opStatus::opInexact && context) {
+    if (cvtres == APFloat::opStatus::opInexact) {
       ORE.emit(OptimizationRemark(DEBUG_TYPE, "ImpreciseConstConversion", context) <<
         "fixed point conversion of constant " << valstr2 << " is not precise\n");
     } else {

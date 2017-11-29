@@ -144,7 +144,9 @@ void FloatToFixed::cleanup(
   
   for (Value *qi: q) {
     Value *cqi = convertedPool[qi];
-    assert(cqi && "every value should have been processed at this point!!");
+    assert(cqi || (!isa<Instruction>(qi)) && "every value should have been processed at this point!!");
+    if (!cqi)
+      continue;
     if (cqi == ConversionError) {
       if (!potentiallyUsesMemory(qi)) {
         continue;
