@@ -67,14 +67,14 @@ static int arow[NZ+1];		/* arow[1:NZ] */
 static int acol[NZ+1];		/* acol[1:NZ] */
 
 /* common /main_flt_mem/ */
-static double v[NA+1+1];	/* v[1:NA+1] */
-static double aelt[NZ+1];	/* aelt[1:NZ] */
-static double a[NZ+1];		/* a[1:NZ] */
-static double x[NA+2+1];	/* x[1:NA+2] */
-static double z[NA+2+1];	/* z[1:NA+2] */
-static double p[NA+2+1];	/* p[1:NA+2] */
-static double q[NA+2+1];	/* q[1:NA+2] */
-static double r[NA+2+1];	/* r[1:NA+2] */
+static double FIXP_ANN v[NA+1+1];	/* v[1:NA+1] */
+static double FIXP_ANN aelt[NZ+1];	/* aelt[1:NZ] */
+static double FIXP_ANN a[NZ+1];		/* a[1:NZ] */
+static double FIXP_ANN x[NA+2+1];	/* x[1:NA+2] */
+static double FIXP_ANN z[NA+2+1];	/* z[1:NA+2] */
+static double FIXP_ANN p[NA+2+1];	/* p[1:NA+2] */
+static double FIXP_ANN q[NA+2+1];	/* q[1:NA+2] */
+static double FIXP_ANN r[NA+2+1];	/* r[1:NA+2] */
 //static double w[NA+2+1];	/* w[1:NA+2] */
 
 /* common /urando/ */
@@ -82,22 +82,22 @@ static double amult;
 static double tran;
 
 /* function declarations */
-static void conj_grad (int colidx[], int rowstr[], double x[], double z[],
-		       double a[], double p[], double q[], double r[],
-		       //double w[],
-		       double *rnorm);
-static void makea(int n, int nz, double a[], int colidx[], int rowstr[],
+static void conj_grad (int colidx[], int rowstr[], double FIXP_ANN x[], double FIXP_ANN z[],
+		       double FIXP_ANN a[], double FIXP_ANN p[], double FIXP_ANN q[], double FIXP_ANN r[],
+		       //double FIXP_ANN w[],
+		       double FIXP_ANN *rnorm);
+static void makea(int n, int nz, double FIXP_ANN a[], int colidx[], int rowstr[],
 		  int nonzer, int firstrow, int lastrow, int firstcol,
-		  int lastcol, double rcond, int arow[], int acol[],
-		  double aelt[], double v[], int iv[], double shift );
-static void sparse(double a[], int colidx[], int rowstr[], int n,
-		   int arow[], int acol[], double aelt[],
+		  int lastcol, double FIXP_ANN rcond, int arow[], int acol[],
+		  double FIXP_ANN aelt[], double FIXP_ANN v[], int iv[], double FIXP_ANN shift );
+static void sparse(double FIXP_ANN a[], int colidx[], int rowstr[], int n,
+		   int arow[], int acol[], double FIXP_ANN aelt[],
 		   int firstrow, int lastrow,
-		   double x[], boolean mark[], int nzloc[], int nnza);
-static void sprnvc(int n, int nz, double v[], int iv[], int nzloc[],
+		   double FIXP_ANN x[], boolean mark[], int nzloc[], int nnza);
+static void sprnvc(int n, int nz, double FIXP_ANN v[], int iv[], int nzloc[],
 		   int mark[]);
-static int icnvrt(double x, int ipwr2);
-static void vecset(int n, double v[], int iv[], int *nzv, int i, double val);
+static int icnvrt(double FIXP_ANN x, int ipwr2);
+static void vecset(int n, double FIXP_ANN v[], int iv[], int *nzv, int i, double FIXP_ANN val);
 
 /*--------------------------------------------------------------------
       program cg
@@ -106,14 +106,14 @@ static void vecset(int n, double v[], int iv[], int *nzv, int i, double val);
 int main(int argc, char **argv) {
     int	i, j, k, it;
     int nthreads = 1;
-    double zeta;
-    double rnorm;
-    double norm_temp11;
-    double norm_temp12;
-    double t, mflops;
+    double FIXP_ANN zeta;
+    double FIXP_ANN rnorm;
+    double FIXP_ANN norm_temp11;
+    double FIXP_ANN norm_temp12;
+    double FIXP_ANN t, mflops;
     char class;
     boolean verified;
-    double zeta_verify_value, epsilon;
+    double FIXP_ANN zeta_verify_value, epsilon;
 
     firstrow = 1;
     lastrow  = NA;
@@ -242,7 +242,6 @@ c-------------------------------------------------------------------*/
     }  
     zeta  = 0.0;
 
-
     timer_clear( 1 );
     timer_start( 1 );
 
@@ -347,14 +346,14 @@ c-------------------------------------------------------------------*/
 static void conj_grad (
     int colidx[],	/* colidx[1:nzz] */
     int rowstr[],	/* rowstr[1:naa+1] */
-    double x[],		/* x[*] */
-    double z[],		/* z[*] */
-    double a[],		/* a[1:nzz] */
-    double p[],		/* p[*] */
-    double q[],		/* q[*] */
-    double r[],		/* r[*] */
-    //double w[],		/* w[*] */
-    double *rnorm )
+    double FIXP_ANN x[],		/* x[*] */
+    double FIXP_ANN z[],		/* z[*] */
+    double FIXP_ANN a[],		/* a[1:nzz] */
+    double FIXP_ANN p[],		/* p[*] */
+    double FIXP_ANN q[],		/* q[*] */
+    double FIXP_ANN r[],		/* r[*] */
+    //double FIXP_ANN w[],		/* w[*] */
+    double FIXP_ANN *rnorm ) __attribute__((always_inline))
 /*--------------------------------------------------------------------
 c-------------------------------------------------------------------*/
     
@@ -364,7 +363,7 @@ c  CG algorithm
 c---------------------------------------------------------------------*/
 {
     static int callcount = 0;
-    double d, sum, rho, rho0, alpha, beta;
+    double FIXP_ANN d, sum, rho, rho0, alpha, beta;
     int i, j, k;
     int cgit, cgitmax = 25;
 
@@ -599,7 +598,7 @@ c---------------------------------------------------------------------*/
 static void makea(
     int n,
     int nz,
-    double a[],		/* a[1:nz] */
+    double FIXP_ANN a[],		/* a[1:nz] */
     int colidx[],	/* colidx[1:nz] */
     int rowstr[],	/* rowstr[1:n+1] */
     int nonzer,
@@ -607,13 +606,13 @@ static void makea(
     int lastrow,
     int firstcol,
     int lastcol,
-    double rcond,
+    double FIXP_ANN rcond,
     int arow[],		/* arow[1:nz] */
     int acol[],		/* acol[1:nz] */
-    double aelt[],	/* aelt[1:nz] */
-    double v[],		/* v[1:n+1] */
+    double FIXP_ANN aelt[],	/* aelt[1:nz] */
+    double FIXP_ANN v[],		/* v[1:n+1] */
     int iv[],		/* iv[1:2*n+1] */
-    double shift )
+    double FIXP_ANN shift ) __attribute__((always_inline))
 {
     int i, nnza, iouter, ivelt, ivelt1, irow, nzv;
 
@@ -621,7 +620,7 @@ static void makea(
 c      nonzer is approximately  (int(sqrt(nnza /n)));
 c-------------------------------------------------------------------*/
 
-    double size, ratio, scale;
+    double FIXP_ANN size, ratio, scale;
     int jcol;
 
     size = 1.0;
@@ -698,19 +697,19 @@ c       generate a sparse matrix from a list of
 c       [col, row, element] tri
 c---------------------------------------------------*/
 static void sparse(
-    double a[],		/* a[1:*] */
+    double FIXP_ANN a[],		/* a[1:*] */
     int colidx[],	/* colidx[1:*] */
     int rowstr[],	/* rowstr[1:*] */
     int n,
     int arow[],		/* arow[1:*] */
     int acol[],		/* acol[1:*] */
-    double aelt[],	/* aelt[1:*] */
+    double FIXP_ANN aelt[],	/* aelt[1:*] */
     int firstrow,
     int lastrow,
-    double x[],		/* x[1:n] */
+    double FIXP_ANN x[],		/* x[1:n] */
     boolean mark[],	/* mark[1:n] */
     int nzloc[],	/* nzloc[1:n] */
-    int nnza)
+    int nnza) __attribute__((always_inline))
 /*---------------------------------------------------------------------
 c       rows range from firstrow to lastrow
 c       the rowstr pointers are defined for nrows = lastrow-firstrow+1 values
@@ -835,14 +834,14 @@ c       reinitialization of mark on every one of the n calls to sprnvc
 static void sprnvc(
     int n,
     int nz,
-    double v[],		/* v[1:*] */
+    double FIXP_ANN v[],		/* v[1:*] */
     int iv[],		/* iv[1:*] */
     int nzloc[],	/* nzloc[1:n] */
-    int mark[] ) 	/* mark[1:n] */
+    int mark[] ) 	__attribute__((always_inline)) /* mark[1:n] */
 {
     int nn1;
     int nzrow, nzv, ii, i;
-    double vecelt, vecloc;
+    double FIXP_ANN vecelt, vecloc;
 
     nzv = 0;
     nzrow = 0;
@@ -887,7 +886,7 @@ c-------------------------------------------------------------------*/
 /*---------------------------------------------------------------------
 * scale a double precision number x in (0,1) by a power of 2 and chop it
 *---------------------------------------------------------------------*/
-static int icnvrt(double x, int ipwr2) {
+static int icnvrt(double x, int ipwr2) __attribute__((always_inline)) {
     return ((int)(ipwr2 * x));
 }
 
@@ -897,11 +896,11 @@ c       nzv nonzeros to val
 c-------------------------------------------------------------------*/
 static void vecset(
     int n,
-    double v[],	/* v[1:*] */
+    double FIXP_ANN v[],	/* v[1:*] */
     int iv[],	/* iv[1:*] */
     int *nzv,
     int i,
-    double val)
+    double FIXP_ANN val) __attribute__((always_inline))
 {
     int k;
     boolean set;
