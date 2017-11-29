@@ -79,7 +79,7 @@ int ilog2(int i);
 
 enum benchmark_types {SP, BT, LU, MG, FT, IS, EP, CG};
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
   int type;
   char class, class_old;
@@ -171,6 +171,7 @@ void check_info(int type, char class)
 {
   int tmplog; 
 
+  class = toupper(class);
   /* check class */
   if (class != 'S' && 
       class != 'A' && 
@@ -261,7 +262,7 @@ void write_info(int type, char class)
   FILE *fp;
   fp = fopen(FILENAME, "w");
   if (fp == NULL) {
-    printf("setparams: Can't open file %d for writing\n", FILENAME);
+    printf("setparams: Can't open file %s for writing\n", FILENAME);
     exit(1);
   }
 
@@ -298,32 +299,38 @@ c  in this directory. Do not modify it by hand.\n\
                                                                          type);
           exit(1);
   }
+  
+  if (isupper(class)) {
+    fprintf(fp, "\n#define FIXP_ANN\n\n");
+  } else {
+    fprintf(fp, "\n#define FIXP_ANN __attribute((annotate(\"no_float\")))\n\n");
+  }
 
   /* Now do benchmark-specific stuff */
   switch(type) {
   case SP:
-    write_sp_info(fp, class);
+    write_sp_info(fp, toupper(class));
     break;	      
   case BT:	      
-    write_bt_info(fp, class);
+    write_bt_info(fp, toupper(class));
     break;	      
   case LU:	      
-    write_lu_info(fp, class);
+    write_lu_info(fp, toupper(class));
     break;	      
   case MG:	      
-    write_mg_info(fp, class);
+    write_mg_info(fp, toupper(class));
     break;	      
   case IS:	      
-    write_is_info(fp, class);  
+    write_is_info(fp, toupper(class));  
     break;	      
   case FT:	      
-    write_ft_info(fp, class);
+    write_ft_info(fp, toupper(class));
     break;	      
   case EP:	      
-    write_ep_info(fp, class);
+    write_ep_info(fp, toupper(class));
     break;	      
   case CG:	      
-    write_cg_info(fp, class);
+    write_cg_info(fp, toupper(class));
     break;
   default:
     printf("setparams: (Internal error): Unknown benchmark type %d\n", type);

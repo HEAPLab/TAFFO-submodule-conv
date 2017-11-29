@@ -65,7 +65,7 @@ ${BENCHMARKU}: default
 
 .c.o:
 	$(CC)  -c $(C_INC) -S -emit-llvm -o $@.1.ll $<
-	${LLVM_DIR}/bin/opt -load ../../../build/LLVMFloatToFixed/Debug/LLVMFloatToFixed.dylib -S -flttofix -dce -o $@.2.ll $@.1.ll
+	${LLVM_DIR}/bin/opt -load ../../../build/LLVMFloatToFixed/Debug/LLVMFloatToFixed.dylib -S -flttofix -dce -o $@.2.ll $@.1.ll -debug -fixpfracbitsamt=16 -fixpbitsamt=32
 	${CCOMPILE} -o $@ $@.2.ll
 
 
