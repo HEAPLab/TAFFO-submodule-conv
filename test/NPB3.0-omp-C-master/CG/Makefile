@@ -2,6 +2,8 @@ SHELL=/bin/sh
 BENCHMARK=cg
 BENCHMARKU=CG
 
+FIXPFLAGS=-fixpfracbitsamt=50 -fixpbitsamt=64
+
 include ../config/make.def
 
 OBJS = cg.o ${COMMON}/c_print_results.o  \
