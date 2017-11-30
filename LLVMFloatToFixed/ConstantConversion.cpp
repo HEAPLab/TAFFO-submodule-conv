@@ -18,12 +18,15 @@ using namespace llvm;
 using namespace flttofix;
 
 
-Value *FloatToFixed::convertConstant(DenseMap<Value *, Value *>& op, Constant *flt)
+Constant *FloatToFixed::convertConstant(DenseMap<Value *, Value *>& op, Constant *flt)
 {
   if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
-    return convertGlobalVariable(gvar);
+    return convertGlobalVariable(op, gvar);
   } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
     return convertLiteral(fpc, nullptr);
+  } else if (auto cag = dyn_cast<ConstantAggregateZero>(flt)) {
+    Type *newt = getFixedPointTypeForFloatType(flt->getType());
+    return ConstantAggregateZero::get(newt);
   } else if (ConstantExpr *cexp = dyn_cast<ConstantExpr>(flt)) {
     return convertConstantExpr(op, cexp);
   }
@@ -31,7 +34,7 @@ Value *FloatToFixed::convertConstant(DenseMap<Value *, Value *>& op, Constant *f
 }
 
 
-Value *FloatToFixed::convertConstantExpr(DenseMap<Value *, Value *>& op, ConstantExpr *cexp)
+Constant *FloatToFixed::convertConstantExpr(DenseMap<Value *, Value *>& op, ConstantExpr *cexp)
 {
   if (cexp->isGEPWithNoNotionalOverIndexing()) {
     Value *newval = op[cexp->getOperand(0)];
@@ -53,18 +56,17 @@ Value *FloatToFixed::convertConstantExpr(DenseMap<Value *, Value *>& op, Constan
 }
 
 
-Value *FloatToFixed::convertGlobalVariable(GlobalVariable *glob)
+Constant *FloatToFixed::convertGlobalVariable(DenseMap<Value *, Value *>& op, GlobalVariable *glob)
 {
   Type *prevt = glob->getType()->getPointerElementType();
   Type *newt = getFixedPointTypeForFloatType(prevt);
   if (!newt)
     return nullptr;
   
+  Constant *oldinit = glob->getInitializer();
   Constant *newinit = nullptr;
-  if (newt->isAggregateType()) // TODO
-    newinit = ConstantAggregateZero::get(newt);
-  else
-    newinit = ConstantInt::get(newt, 0);
+  if (oldinit)
+    newinit = convertConstant(op, oldinit);
   
   GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(), newinit);
   return newglob;
@@ -83,6 +85,7 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context)
   integerPart fixval;
   APFloat::opStatus cvtres = val.convertToInteger(&fixval, bitsAmt, true,
     APFloat::rmTowardNegative, &precise);
+  
   if (cvtres != APFloat::opStatus::opOK && context) {
     SmallVector<char, 64> valstr;
     val.toString(valstr);

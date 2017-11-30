@@ -55,9 +55,9 @@ struct FloatToFixed : public llvm::ModulePass {
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q, llvm::DenseMap<llvm::Value *, llvm::Value *>& opPool);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Value *val);
 
-  llvm::Value *convertConstant(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Constant *flt);
-  llvm::Value *convertGlobalVariable(llvm::GlobalVariable *glob);
-  llvm::Value *convertConstantExpr(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::ConstantExpr *cexp);
+  llvm::Constant *convertConstant(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Constant *flt);
+  llvm::Constant *convertGlobalVariable(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::GlobalVariable *glob);
+  llvm::Constant *convertConstantExpr(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::ConstantExpr *cexp);
   llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *);
   
   llvm::Value *convertInstruction(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Instruction *val);
