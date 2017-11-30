@@ -3,6 +3,8 @@ add_llvm_loadable_module(LLVMFloatToFixed
   LLVMFloatToFixedPass.h
   Annotations.cpp
   Conversion.cpp
+  ConstantConversion.cpp
+  InstructionConversion.cpp
   
   PLUGIN_TOOL
   opt
