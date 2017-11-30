@@ -18,21 +18,38 @@ using namespace llvm;
 using namespace flttofix;
 
 
-Value *FloatToFixed::convertGlobalVariable(GlobalVariable *glob)
+/* also inserts the new value in the basic blocks, alongside the old one */
+Value *FloatToFixed::convertInstruction(Module& m, DenseMap<Value *, Value *>& operandPool, Instruction *val)
 {
-  Type *prevt = glob->getType()->getPointerElementType();
-  Type *newt = getFixedPointTypeForFloatType(prevt);
-  if (!newt)
-    return nullptr;
+  Value *res = Unsupported;
   
-  Constant *newinit = nullptr;
-  if (newt->isAggregateType()) // TODO
-    newinit = ConstantAggregateZero::get(newt);
-  else
-    newinit = ConstantInt::get(newt, 0);
-  
-  GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(), newinit);
-  return newglob;
+  if (AllocaInst *alloca = dyn_cast<AllocaInst>(val)) {
+    res = convertAlloca(alloca);
+  } else if (LoadInst *load = dyn_cast<LoadInst>(val)) {
+    res = convertLoad(operandPool, load);
+  } else if (StoreInst *store = dyn_cast<StoreInst>(val)) {
+    res = convertStore(operandPool, store);
+  } else if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(val)) {
+    res = convertGep(operandPool, gep);
+  } else if (PHINode *phi = dyn_cast<PHINode>(val)) {
+    res = convertPhi(operandPool, phi);
+  } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
+    res = convertSelect(operandPool, select);
+  } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
+    if (instr->isBinaryOp()) {
+      res = convertBinOp(operandPool,instr);
+    } else if (CastInst *cast = dyn_cast<CastInst>(instr)){
+      res = convertCast(operandPool,cast);
+    } else if (FCmpInst *fcmp = dyn_cast<FCmpInst>(val)) {
+      res = convertCmp(operandPool,fcmp);
+    }
+  }
+
+  if (res==Unsupported) {
+    res = fallback(operandPool,dyn_cast<Instruction>(val));
+  }
+
+  return res ? res : ConversionError;
 }
 
 

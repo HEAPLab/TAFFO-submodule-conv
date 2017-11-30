@@ -63,39 +63,12 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
 {
   Value *res = Unsupported;
   
-  if (GlobalVariable *global = dyn_cast<GlobalVariable>(val)) {
-    res = convertGlobalVariable(global);
-  } else if (AllocaInst *alloca = dyn_cast<AllocaInst>(val)) {
-    res = convertAlloca(alloca);
-  } else if (LoadInst *load = dyn_cast<LoadInst>(val)) {
-    res = convertLoad(operandPool, load);
-  } else if (StoreInst *store = dyn_cast<StoreInst>(val)) {
-    res = convertStore(operandPool, store);
-  } else if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(val)) {
-    res = convertGep(operandPool, gep);
-  } else if (PHINode *phi = dyn_cast<PHINode>(val)) {
-    res = convertPhi(operandPool, phi);
-  } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
-    res = convertSelect(operandPool, select);
-  } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
-    if (instr->isBinaryOp()) {
-      res = convertBinOp(operandPool,instr);
-    } else if (CastInst *cast = dyn_cast<CastInst>(instr)){
-      res = convertCast(operandPool,cast);
-    } else if (FCmpInst *fcmp = dyn_cast<FCmpInst>(val)) {
-      res = convertCmp(operandPool,fcmp);
-    }
+  if (Constant *con = dyn_cast<Constant>(val)) {
+    res = convertConstant(operandPool, con);
+  } else if (Instruction *instr = dyn_cast<Instruction>(val)) {
+    res = convertInstruction(m, operandPool, instr);
   }
-
-  if (res==Unsupported) {
-    if (Instruction *instr = dyn_cast<Instruction>(val)) {
-      res = fallback(operandPool,dyn_cast<Instruction>(val));
-    } else {
-      DEBUG(dbgs() << "can't fallback on something that's not an instruction\n\n");
-      return nullptr;
-    }
-  }
-
+  
   return res ? res : ConversionError;
 }
 
@@ -124,7 +97,7 @@ Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Val
 Value *FloatToFixed::genConvertFloatToFix(DenseMap<Value *, Value *>& op, Value *flt, Instruction *ip)
 {
   if (Constant *c = dyn_cast<Constant>(flt)) {
-    return convertConstant(op, c, nullptr);
+    return convertConstant(op, c);
   }
 
   FloatToFixCount++;

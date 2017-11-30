@@ -114,6 +114,8 @@ void FloatToFixed::buildConversionQueueForRootValues(
 
 bool potentiallyUsesMemory(Value *val)
 {
+  if (!isa<Instruction>(val))
+    return false;
   if (isa<BitCastInst>(val))
     return false;
   if (CallInst *call = dyn_cast<CallInst>(val)) {

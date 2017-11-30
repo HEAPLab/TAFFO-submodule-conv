@@ -18,33 +18,60 @@ using namespace llvm;
 using namespace flttofix;
 
 
-Constant *FloatToFixed::convertConstant(DenseMap<Value *, Value *>& op, Constant *flt, Type *newt)
+Value *FloatToFixed::convertConstant(DenseMap<Value *, Value *>& op, Constant *flt)
 {
-  if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
-    return convertFloatConstantToFixConstant(fpc, nullptr);
+  if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
+    return convertGlobalVariable(gvar);
+  } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
+    return convertLiteral(fpc, nullptr);
   } else if (ConstantExpr *cexp = dyn_cast<ConstantExpr>(flt)) {
-    if (cexp->isGEPWithNoNotionalOverIndexing()) {
-      Value *newval = op[cexp->getOperand(0)];
-      if (!newval)
-        return nullptr;
-      Constant *newconst = dyn_cast<Constant>(newval);
-      if (!newconst)
-        return nullptr;
-      
-      std::vector<Constant *> vals;
-      for (int i=1; i<cexp->getNumOperands(); i++) {
-        vals.push_back(cexp->getOperand(i));
-      }
-
-      ArrayRef<Constant *> idxlist(vals);
-      return ConstantExpr::getInBoundsGetElementPtr(nullptr, newconst, idxlist);
-    }
+    return convertConstantExpr(op, cexp);
   }
   return nullptr;
 }
 
 
-Constant *FloatToFixed::convertFloatConstantToFixConstant(ConstantFP *fpc, Instruction *context)
+Value *FloatToFixed::convertConstantExpr(DenseMap<Value *, Value *>& op, ConstantExpr *cexp)
+{
+  if (cexp->isGEPWithNoNotionalOverIndexing()) {
+    Value *newval = op[cexp->getOperand(0)];
+    if (!newval)
+      return nullptr;
+    Constant *newconst = dyn_cast<Constant>(newval);
+    if (!newconst)
+      return nullptr;
+  
+    std::vector<Constant *> vals;
+    for (int i=1; i<cexp->getNumOperands(); i++) {
+      vals.push_back(cexp->getOperand(i));
+    }
+
+    ArrayRef<Constant *> idxlist(vals);
+    return ConstantExpr::getInBoundsGetElementPtr(nullptr, newconst, idxlist);
+  }
+  return nullptr;
+}
+
+
+Value *FloatToFixed::convertGlobalVariable(GlobalVariable *glob)
+{
+  Type *prevt = glob->getType()->getPointerElementType();
+  Type *newt = getFixedPointTypeForFloatType(prevt);
+  if (!newt)
+    return nullptr;
+  
+  Constant *newinit = nullptr;
+  if (newt->isAggregateType()) // TODO
+    newinit = ConstantAggregateZero::get(newt);
+  else
+    newinit = ConstantInt::get(newt, 0);
+  
+  GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(), newinit);
+  return newglob;
+}
+
+
+Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context)
 {
   bool precise = false;
   APFloat val = fpc->getValueAPF();
