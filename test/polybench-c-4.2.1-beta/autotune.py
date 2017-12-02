@@ -143,8 +143,8 @@ def autotune(benchname, bitness=32, doubleflt=False):
         vprint('(spike at ', center, ')')
       
   vprint('optimal frac bits = ', lwall, '; total # iterations = ', steps)
-  vprint('worst value error = ', minimum)  
-  return lwall, steps
+  vprint('best worst-value error = ', minimum)  
+  return lwall, steps, minimum
   
   
 def processOne(bench_name, args):
@@ -152,8 +152,8 @@ def processOne(bench_name, args):
   if args.plot:
     plotErrorMetric(bench_name, args.bitness, args.double)
   else:
-    res, steps = autotune(bench_name, args.bitness, args.double)
-    nvprint(bench_name, res, steps)
+    res, steps, bwve = autotune(bench_name, args.bitness, args.double)
+    nvprint(bench_name, res, steps, bwve)
   vprint('\n')
   sys.stdout.flush()
   
