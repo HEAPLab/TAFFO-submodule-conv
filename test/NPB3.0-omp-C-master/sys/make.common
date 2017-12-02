@@ -9,10 +9,10 @@ CCOMPILE = $(CC)  -c $(C_INC) $(CFLAGS)
 # from the setparams back to the make program, which isn't easy. 
 CLASS=U
 
-IS_DEBUG_LLVM:=$(shell ${LLVM_DIR}/bin/opt --version | grep DEBUG | wc -l)
-ifeq ($(IS_DEBUG_LLVM), 1)
+IS_DEBUG_LLVM:=$(strip $(shell ${LLVM_DIR}/bin/opt --version | grep DEBUG | wc -l))
+ifeq "$(IS_DEBUG_LLVM)" '1'
 FIXPFLAGS += -debug-only=flttofix
-endif 
+endif
 
 default:: ${PROGRAM}
 
