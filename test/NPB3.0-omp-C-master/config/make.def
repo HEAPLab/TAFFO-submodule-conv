@@ -77,14 +77,14 @@ FLINKFLAGS =
 #---------------------------------------------------------------------------
 # This is the C compiler used for OpenMP programs
 #---------------------------------------------------------------------------
-CC = cc
+CC = $(LLVM_DIR)/bin/clang
 # This links C programs; usually the same as ${CC}
-CLINK	= cc
+CLINK	= ${CC}
 
 #---------------------------------------------------------------------------
 # These macros are passed to the linker 
 #---------------------------------------------------------------------------
-C_LIB  =
+C_LIB  = -lm
 
 #---------------------------------------------------------------------------
 # These macros are passed to the compiler 
