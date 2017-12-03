@@ -69,6 +69,7 @@ Constant *FloatToFixed::convertGlobalVariable(DenseMap<Value *, Value *>& op, Gl
     newinit = convertConstant(op, oldinit);
   
   GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(), newinit);
+  newglob->setName(glob->getName() + ".fixp");
   return newglob;
 }
 
