@@ -45,7 +45,8 @@ bool FloatToFixed::runOnModule(Module &m)
   std::vector<Value*> vals;
   DenseMap<Value*, SmallPtrSet<Value*, 5>> itemtoroot;
   buildConversionQueueForRootValues(rootsa, vals, itemtoroot);
-
+  
+  if (vals.size() < 1000) {
   DEBUG(errs() << "conversion queue:\n";
         for (Value *val: vals) {
           errs() << "[";
@@ -58,6 +59,9 @@ bool FloatToFixed::runOnModule(Module &m)
           errs() << "\n";
         }
         errs() << "\n\n";);
+  } else {
+    DEBUG(errs() << "not printing the conversion queue because it exceeds 1000 items");
+  }
   ConversionCount = vals.size();
 
   DenseMap<Value*, Value*> operandPool;
