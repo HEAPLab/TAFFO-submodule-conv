@@ -17,7 +17,7 @@ c-------------------------------------------------------------------*/
 static int grid_points[3];
 
 /* common /constants/ */
-static double tx1, tx2, tx3, ty1, ty2, ty3, tz1, tz2, tz3, 
+static double FIXP_ANN tx1, tx2, tx3, ty1, ty2, ty3, tz1, tz2, tz3, 
               dx1, dx2, dx3, dx4, dx5, dy1, dy2, dy3, dy4, 
               dy5, dz1, dz2, dz3, dz4, dz5, dssp, dt, 
               ce[13][5], dxmax, dymax, dzmax, xxcon1, xxcon2, 
@@ -33,9 +33,9 @@ static double tx1, tx2, tx3, ty1, ty2, ty3, tz1, tz2, tz3,
               c3c4tx3, c3c4ty3, c3c4tz3, c2iv, con43, con16;
 
 
-#define	IMAX	PROBLEM_SIZE
-#define	JMAX	PROBLEM_SIZE
-#define	KMAX	PROBLEM_SIZE
+#define IMAX    PROBLEM_SIZE
+#define JMAX    PROBLEM_SIZE
+#define KMAX    PROBLEM_SIZE
 
 /*--------------------------------------------------------------------
 c   To improve cache performance, first two dimensions padded by 1 
@@ -43,21 +43,21 @@ c   for even number sizes only
 c-------------------------------------------------------------------*/
 
 /* common /fields/ */
-static double u       [5][IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
-	      us      [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
+static double FIXP_ANN u       [5][IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
+              us      [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
               vs      [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
               ws      [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
               qs      [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
               ainv    [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
               rho_i   [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
               speed   [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
-	      square  [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
+              square  [IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
               rhs     [5][IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
               forcing [5][IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1],
               lhs     [15][IMAX/2*2+1][JMAX/2*2+1][KMAX/2*2+1];
 
 /* common /work_1d/ */
-static double cv[PROBLEM_SIZE], rhon[PROBLEM_SIZE],
+static double FIXP_ANN cv[PROBLEM_SIZE], rhon[PROBLEM_SIZE],
               rhos[PROBLEM_SIZE], rhoq[PROBLEM_SIZE],
               cuf[PROBLEM_SIZE], q[PROBLEM_SIZE],
               ue[5][PROBLEM_SIZE], buf[5][PROBLEM_SIZE];

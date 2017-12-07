@@ -4,6 +4,7 @@ BENCHMARKU=SP
 
 include ../config/make.def
 
+FIXPFLAGS=-fixpfracbitsamt=32 -fixpbitsamt=64
 
 OBJS =	sp.o \
 	${COMMON}/c_print_results.o ${COMMON}/c_timers.o ${COMMON}/c_wtime.o
