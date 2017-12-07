@@ -1,3 +1,4 @@
+//TODO Find a better(possibly equivalent) random generator
 /*--------------------------------------------------------------------
   
   NAS Parallel Benchmarks 3.0 structured OpenMP C versions - EP
@@ -46,11 +47,14 @@
 #define	S		271828183.0
 #define	TIMERS_ENABLED	FALSE
 
+#define r23 (0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5)
+#define r46 (r23*r23)
+
 /* global variables */
 /* common /storage/ */
-static double x[2*NK];
+static double FIXP_ANN x[2*NK];
 #pragma omp threadprivate(x)
-static double q[NQ];
+static double FIXP_ANN q[NQ];
 
 /*--------------------------------------------------------------------
       program EMBAR
@@ -66,7 +70,8 @@ c   not affect the results.
 */
 int main(int argc, char **argv) {
 
-    double Mops, t1, t2, t3, t4, x1, x2, sx, sy, tm, an, tt, gc;
+    double Mops, t1, t2, t3, t4, x1, x2, tm, an, tt;
+    double FIXP_ANN sx,sy,gc;
     double dum[3] = { 1.0, 1.0, 1.0 };
     int np, ierr, node, no_nodes, i, ik, kk, l, k, nit, ierrcode,
 	no_large_nodes, np_add, k_offset, j;
@@ -117,15 +122,20 @@ c   sure these initializations cannot be eliminated as dead code.
     timer_clear(3);
     timer_start(1);
 
-    vranlc(0, &t1, A, x);
+    //--vranlc(0, &t1, A, x); n=0, non fa niente allora ... 
 
 /*   Compute AN = A ^ (2 * NK) (mod 2^46). */
 
     t1 = A;
-
+    
+    //
+    srand((unsigned int) t1);
     for ( i = 1; i <= MK+1; i++) {
-	t2 = randlc(&t1, t1);
+        t2 = ((float)rand())/RAND_MAX;
+        t1 = t2 / r46;
+        //--t2 = randlc(&t1, t1);
     }
+    //
 
     an = t1;
     tt = S;
@@ -148,7 +158,7 @@ c   have more numbers to generate than others
 {
     double t1, t2, t3, t4, x1, x2;
     int kk, i, ik, l;
-    double qq[NQ];		/* private copy of q[0:NQ-1] */
+    double FIXP_ANN qq[NQ];		/* private copy of q[0:NQ-1] */
 
     for (i = 0; i < NQ; i++) qq[i] = 0.0;
 
@@ -160,18 +170,30 @@ c   have more numbers to generate than others
 
 /*      Find starting seed t1 for this kk. */
 
-	for (i = 1; i <= 100; i++) {
+	/*for (i = 1; i <= 100; i++) {
             ik = kk / 2;
             if (2 * ik != kk) t3 = randlc(&t1, t2);
             if (ik == 0) break;
             t3 = randlc(&t2, t2);
             kk = ik;
-	}
+	}*/
+    
+    /*for (i = 1; i <= 100; i++) {
+        ik = kk / 2;
+        if (2 * ik != kk) t1 = ((float)rand())/RAND_MAX;
+        if (ik == 0) break;
+        srand((unsigned int) t2);
+        t2 = ((float)rand())/RAND_MAX;
+        kk = ik;
+    }*/
+
 
 /*      Compute uniform pseudorandom numbers. */
 
 	if (TIMERS_ENABLED == TRUE) timer_start(3);
-	vranlc(2*NK, &t1, A, x-1);
+	//--vranlc(2*NK, &t1, A, x-1);
+        srand((unsigned int) t1);
+        for (i = 0; i< 2*NK; i++) x[i] = ((float)rand())/RAND_MAX;
 	if (TIMERS_ENABLED == TRUE) timer_stop(3);
 
 /*
