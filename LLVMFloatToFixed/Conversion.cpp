@@ -105,6 +105,13 @@ Value *FloatToFixed::genConvertFloatToFix(DenseMap<Value *, Value *>& op, Value 
   if (Instruction *i = dyn_cast<Instruction>(flt))
     ip = i->getNextNode();
   assert(ip && "ip is mandatory if not passing an instruction/constant value");
+  
+  if (!flt->getType()->isFloatingPointTy()) {
+    DEBUG(errs() << "can't wrap-convert to fixp non float value ";
+          flt->print(errs());
+          errs() << "\n");
+    return nullptr;
+  }
 
   /* insert new instructions before ip */
   IRBuilder<> builder(ip);
@@ -123,6 +130,13 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
   if (!i)
     return nullptr;
   FixToFloatCount++;
+  
+  if (!fix->getType()->isIntegerTy()) {
+    DEBUG(errs() << "can't wrap-convert to flt non integer value ";
+          fix->print(errs());
+          errs() << "\n");
+    return nullptr;
+  }
 
   IRBuilder<> builder(i->getNextNode());
   double twoebits = pow(2.0, fracBitsAmt);
