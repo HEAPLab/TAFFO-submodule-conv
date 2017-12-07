@@ -7,6 +7,8 @@ include ../config/make.def
 OBJS = lu.o ${COMMON}/c_print_results.o \
        ${COMMON}/c_timers.o ${COMMON}/c_wtime.o
 
+FIXPFLAGS=-fixpfracbitsamt=32 -fixpbitsamt=64
+
 include ../sys/make.common
 
 

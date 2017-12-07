@@ -46,20 +46,20 @@ static int jst, jend;
 static int ii1, ii2;
 static int ji1, ji2;
 static int ki1, ki2;
-static double dxi, deta, dzeta;
-static double tx1, tx2, tx3;
-static double ty1, ty2, ty3;
-static double tz1, tz2, tz3;
+static double FIXP_ANN dxi, deta, dzeta;
+static double FIXP_ANN tx1, tx2, tx3;
+static double FIXP_ANN ty1, ty2, ty3;
+static double FIXP_ANN tz1, tz2, tz3;
 
 /*--------------------------------------------------------------------
 c   dissipation
 c-------------------------------------------------------------------*/
 
 /* common /disp/ */
-static double dx1, dx2, dx3, dx4, dx5;
-static double dy1, dy2, dy3, dy4, dy5;
-static double dz1, dz2, dz3, dz4, dz5;
-static double dssp;
+static double FIXP_ANN dx1, dx2, dx3, dx4, dx5;
+static double FIXP_ANN dy1, dy2, dy3, dy4, dy5;
+static double FIXP_ANN dz1, dz2, dz3, dz4, dz5;
+static double FIXP_ANN dssp;
 
 /*--------------------------------------------------------------------
 c   field variables and residuals
@@ -70,10 +70,10 @@ c   and l2norm are similarly padded
 c-------------------------------------------------------------------*/
 
 /* common /cvar/ */
-static double u[ISIZ1][ISIZ2/2*2+1][ISIZ3/2*2+1][5];
-static double rsd[ISIZ1][ISIZ2/2*2+1][ISIZ3/2*2+1][5];
-static double frct[ISIZ1][ISIZ2/2*2+1][ISIZ3/2*2+1][5];
-static double flux[ISIZ1][ISIZ2/2*2+1][ISIZ3/2*2+1][5];
+static double FIXP_ANN u[ISIZ1][ISIZ2/2*2+1][ISIZ3/2*2+1][5];
+static double FIXP_ANN rsd[ISIZ1][ISIZ2/2*2+1][ISIZ3/2*2+1][5];
+static double FIXP_ANN frct[ISIZ1][ISIZ2/2*2+1][ISIZ3/2*2+1][5];
+static double FIXP_ANN flux[ISIZ1][ISIZ2/2*2+1][ISIZ3/2*2+1][5];
 
 /*--------------------------------------------------------------------
 c   output control parameters
@@ -88,13 +88,13 @@ c-------------------------------------------------------------------*/
 
 /* common /ctscon/ */
 static int itmax, invert;
-static double dt, omega, tolrsd[5], rsdnm[5], errnm[5], frc, ttotal;
+static double FIXP_ANN dt, omega, tolrsd[5], rsdnm[5], errnm[5], frc, ttotal;
   
 /* common /cjac/ */
-static double a[ISIZ1][ISIZ2][5][5];
-static double b[ISIZ1][ISIZ2][5][5];
-static double c[ISIZ1][ISIZ2][5][5];
-static double d[ISIZ1][ISIZ2][5][5];
+static double FIXP_ANN a[ISIZ1][ISIZ2][5][5];
+static double FIXP_ANN b[ISIZ1][ISIZ2][5][5];
+static double FIXP_ANN c[ISIZ1][ISIZ2][5][5];
+static double FIXP_ANN d[ISIZ1][ISIZ2][5][5];
 
 /*--------------------------------------------------------------------
 c   coefficients of the exact solution
