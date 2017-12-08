@@ -6,7 +6,7 @@ mkdir -p bin
 make clean
 rm bin/*
 echo MAKE floating point
-make -j ${ncpus} bt cg ep lu sp CLASS=A > build.log 2>&1
+make bt cg ep lu sp CLASS=A > build.log 2>&1
 echo RUN  floating point
 ./bin/bt_A  > float_res.txt
 ./bin/cg_A >> float_res.txt
@@ -17,7 +17,7 @@ echo RUN  floating point
 make clean
 rm bin/*
 echo MAKE fixed point
-make -j ${ncpus} bt cg ep lu sp CLASS=a >> build.log 2>&1
+make bt cg ep lu sp CLASS=a >> build.log 2>&1
 echo RUN  fixed point
 ./bin/bt_a  > fix_res.txt
 ./bin/cg_a >> fix_res.txt
