@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <sstream>
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -23,6 +24,79 @@ cl::opt<std::string> InputFilename(cl::Positional, cl::Required,
   cl::desc("<input file>"));
 
 
+void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::map<std::string, int>& stat, int &eval, int &ninstr)
+{
+  if (funcs.find(f) != funcs.end()) {
+    if (Verbose)
+      std::cerr << "Recursion!" << std::endl;
+    return;
+  }
+  if (Verbose)
+    std::cerr << " Function: " << f->getName().str() << std::endl;
+  funcs.insert(f);
+  
+  for (auto iter2 = f->getBasicBlockList().begin();
+       iter2 != f->getBasicBlockList().end(); iter2++) {
+    BasicBlock &bb = *iter2;
+    
+    for (auto iter3 = bb.begin(); iter3 != bb.end(); iter3++) {
+      Instruction &inst = *iter3;
+
+      CallInst *call = dyn_cast<CallInst>(&inst);
+      if(call) {
+        Function *opnd = call->getCalledFunction();
+        if (opnd->getName() == "polybench_timer_start" ||
+            opnd->getName() == "timer_start") {
+          eval++;
+          continue;
+        } else if (opnd->getName() == "polybench_timer_stop" ||
+                   opnd->getName() == "timer_stop") {
+          eval--;
+        } else if (opnd->getIntrinsicID() == Intrinsic::annotation ||
+                   opnd->getIntrinsicID() == Intrinsic::var_annotation ||
+                   opnd->getIntrinsicID() == Intrinsic::ptr_annotation) {
+          continue;
+        }
+      }
+
+      if (!eval)
+        continue;
+      
+      ninstr++;
+      stat[inst.getOpcodeName()]++;
+
+      if (isa<AllocaInst>(inst) || isa<LoadInst>(inst) || isa<StoreInst>(inst) || isa<GetElementPtrInst>(inst) ) {
+        stat["MemOp"]++;
+      } else if (isa<PHINode>(inst) || isa<SelectInst>(inst) || isa<FCmpInst>(inst) || isa<CmpInst>(inst) ) {
+        stat["CmpOp"]++;
+      } else if (isa<CastInst>(inst)) {
+        stat["CastOp"]++;
+      } else if (inst.isBinaryOp()) {
+        stat["MathOp"]++;
+        if (inst.getType()->isFloatingPointTy()) {
+          stat["FloatingPointOp"]++;
+          if (inst.getOpcode() == Instruction::FMul || inst.getOpcode() == Instruction::FDiv)
+            stat["FloatMulDivOp"]++;
+        } else
+          stat["IntegerOp"]++;
+      }
+      if (inst.isShift()) {
+        stat["Shift"]++;
+      }
+      
+      if (call) {
+        analyze_function(call->getCalledFunction(), funcs, stat, eval, ninstr);
+        std::stringstream stm;
+        stm << "call(" << call->getCalledFunction()->getName().str() << ")";
+        stat[stm.str()]++;
+      }
+    }
+  }
+  
+  funcs.erase(f);
+}
+
+
 int main(int argc, char *argv[])
 {
   cl::ParseCommandLineOptions(argc, argv);
@@ -31,16 +105,23 @@ int main(int argc, char *argv[])
   SMDiagnostic Err;
   std::unique_ptr<Module> m = parseIRFile(InputFilename, Err, c);
 
-  std::map<std::string, int> stat;
-
   if (Verbose) {
     std::cerr << "Successfully read Module:" << std::endl;
     std::cerr << " Name: " << m.get()->getName().str() << std::endl;
     std::cerr << " Target triple: " << m->getTargetTriple() << std::endl;
   }
 
-  bool eval = false;
+  int eval = 0;
   int ninstr = 0;
+  std::map<std::string, int> stat;
+  std::unordered_set<Function *> funcs;
+  
+  Function *mainfunc = m->getFunction("main");
+  if (!mainfunc) {
+    std::cout << "No main function found!\n";
+  } else {
+    analyze_function(mainfunc, funcs, stat, eval, ninstr);
+  }
 
   for (auto iter1 = m->getFunctionList().begin();
        iter1 != m->getFunctionList().end(); iter1++) {
@@ -48,63 +129,7 @@ int main(int argc, char *argv[])
     
     if (f.getName() != "main")
       continue;
-    if (Verbose)
-      std::cerr << " Function: " << f.getName().str() << std::endl;
     
-    for (auto iter2 = f.getBasicBlockList().begin();
-         iter2 != f.getBasicBlockList().end(); iter2++) {
-      BasicBlock &bb = *iter2;
-      
-      for (auto iter3 = bb.begin(); iter3 != bb.end(); iter3++) {
-        Instruction &inst = *iter3;
-
-        CallInst *call = dyn_cast<CallInst>(&inst);
-        if(call) {
-          Function *opnd = call->getCalledFunction();
-          if (opnd->getName() == "polybench_timer_start") {
-            eval = true;
-            continue;
-          } else if (opnd->getName() == "polybench_timer_stop") {
-            eval = false;
-          } else if (opnd->getIntrinsicID() == Intrinsic::annotation ||
-                     opnd->getIntrinsicID() == Intrinsic::var_annotation ||
-                     opnd->getIntrinsicID() == Intrinsic::ptr_annotation) {
-            continue;
-          }
-        }
-
-        if (!eval)
-          continue;
-        
-        ninstr++;
-        stat[inst.getOpcodeName()]++;
-
-        if (isa<AllocaInst>(inst) || isa<LoadInst>(inst) || isa<StoreInst>(inst) || isa<GetElementPtrInst>(inst) ) {
-          stat["MemOp"]++;
-        } else if (isa<PHINode>(inst) || isa<SelectInst>(inst) || isa<FCmpInst>(inst) || isa<CmpInst>(inst) ) {
-          stat["CmpOp"]++;
-        } else if (isa<CastInst>(inst)) {
-          stat["CastOp"]++;
-        } else if (inst.isBinaryOp()) {
-          stat["MathOp"]++;
-          if (inst.getType()->isFloatingPointTy()) {
-            stat["FloatingPointOp"]++;
-            if (inst.getOpcode() == Instruction::FMul || inst.getOpcode() == Instruction::FDiv)
-              stat["FloatMulDivOp"]++;
-          } else
-            stat["IntegerOp"]++;
-        }
-        if (inst.isShift()) {
-          stat["Shift"]++;
-        }
-        
-        if (call) {
-          std::stringstream stm;
-          stm << "call(" << call->getCalledFunction()->getName().str() << ")";
-          stat[stm.str()]++;
-        }
-      }
-    }
   }
 
   std::cout << "* " << ninstr << std::endl;
