@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
     double FIXP_ANN rnorm;
     double FIXP_ANN norm_temp11;
     double FIXP_ANN norm_temp12;
-    double FIXP_ANN t, mflops;
+    double t, mflops;
     char class;
     boolean verified;
     double FIXP_ANN zeta_verify_value, epsilon;
