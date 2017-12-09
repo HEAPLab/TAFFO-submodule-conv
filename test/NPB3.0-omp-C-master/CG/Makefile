@@ -2,7 +2,7 @@ SHELL=/bin/sh
 BENCHMARK=cg
 BENCHMARKU=CG
 
-FIXPFLAGS=-fixpfracbitsamt=50 -fixpbitsamt=64
+FIXPFLAGS=-fixpfracbitsamt=32 -fixpbitsamt=64
 
 include ../config/make.def
 
