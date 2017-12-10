@@ -1,4 +1,4 @@
 *.ll
 *.s
 *_res.txt
-
+stats.txt
