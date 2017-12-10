@@ -79,7 +79,8 @@ ${BENCHMARKU}: default
 	  PASSLIB="../../../build/LLVMFloatToFixed/LLVMFloatToFixed.$$SOEXT"; \
 	fi; \
 	${LLVM_DIR}/bin/opt -load $$PASSLIB -S -flttofix -dce -o $@.2.ll $@.1.ll ${FIXPFLAGS}
-	${CCOMPILE} -o $@ $@.2.ll
+	${CCOMPILE} -S -o $@.s $@.2.ll
+	${CCOMPILE} -o $@ $@.s
 
 
 
