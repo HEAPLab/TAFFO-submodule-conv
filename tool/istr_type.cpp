@@ -56,6 +56,8 @@ void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::m
                    opnd->getIntrinsicID() == Intrinsic::var_annotation ||
                    opnd->getIntrinsicID() == Intrinsic::ptr_annotation) {
           continue;
+        } else {
+          analyze_function(opnd, funcs, stat, eval, ninstr);
         }
       }
 
@@ -85,7 +87,6 @@ void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::m
       }
       
       if (call) {
-        analyze_function(call->getCalledFunction(), funcs, stat, eval, ninstr);
         std::stringstream stm;
         stm << "call(" << call->getCalledFunction()->getName().str() << ")";
         stat[stm.str()]++;
