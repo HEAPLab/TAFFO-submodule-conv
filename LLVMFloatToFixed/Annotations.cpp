@@ -34,10 +34,7 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readGlobalAnnotations(Module &m , b
           {
             if (expr->getOpcode() == Instruction::BitCast && (functionAnnotation ^ !isa<Function>(expr->getOperand(0))) )
             {
-              if (isValidAnnotation(cast<ConstantExpr>(anno->getOperand(1))))
-              {
-                variables.insert(expr->getOperand(0));
-              }
+              parseAnnotation(variables, cast<ConstantExpr>(anno->getOperand(1)), expr->getOperand(0));
             }
           }
         }
@@ -60,10 +57,7 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readLocalAnnotations(Function &f)
       continue;
     
     if (call->getCalledFunction()->getName() == "llvm.var.annotation") {
-      if (isValidAnnotation(cast<ConstantExpr>(iIt->getOperand(1)))) {
-        Instruction *var = cast<Instruction>(iIt->getOperand(0));
-        variables.insert(var->getOperand(0));
-      }
+      parseAnnotation(variables, cast<ConstantExpr>(iIt->getOperand(1)), iIt->getOperand(0));
     }
   }
   return removeNoFloatTy(variables);
@@ -82,24 +76,34 @@ SmallPtrSet<Value*, N_ANNO_VAR> FloatToFixed::readAllLocalAnnotations(Module &m)
 }
 
 
-bool FloatToFixed::isValidAnnotation(ConstantExpr *annoPtrInst)
+bool FloatToFixed::parseAnnotation(SmallPtrSet<Value*,N_ANNO_VAR>& variables, ConstantExpr *annoPtrInst, Value *instr)
 {
-  if (annoPtrInst->getOpcode() == Instruction::GetElementPtr)
-  {
-    if (GlobalVariable *annoContent = dyn_cast<GlobalVariable>(annoPtrInst->getOperand(0)))
-    {
-      if (ConstantDataSequential *annoStr = dyn_cast<ConstantDataSequential>(annoContent->getInitializer()))
-      {
-        if (annoStr->isString())
-        {
-          std::string str = annoStr->getAsString();
-          return !str.compare(0,str.length()-1,NO_FLOAT_ANNO) ?  true :  false;
-        }
-      }
-    }
-  }
-  return false;
+  ValueInfo vi;
+  
+  if (!(annoPtrInst->getOpcode() == Instruction::GetElementPtr))
+    return false;
+  GlobalVariable *annoContent = dyn_cast<GlobalVariable>(annoPtrInst->getOperand(0));
+  if (!annoContent)
+    return false;
+  ConstantDataSequential *annoStr = dyn_cast<ConstantDataSequential>(annoContent->getInitializer());
+  if (!annoStr)
+    return false;
+  if (!(annoStr->isString()))
+    return false;
+  
+  std::string str = annoStr->getAsString();
+  if (str.compare(0, str.length() - 1, "no_float") == 0)
+    vi.isBacktrackingNode = false;
+  else if (str.compare(0, str.length() - 1, "force_no_float") == 0)
+    vi.isBacktrackingNode = true;
+  else
+    return false;
+  
+  variables.insert(instr);
+  info[instr] = vi;
+  return true;
 }
+
 
 SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::removeNoFloatTy(SmallPtrSet<Value*,N_ANNO_VAR> &res)
 {

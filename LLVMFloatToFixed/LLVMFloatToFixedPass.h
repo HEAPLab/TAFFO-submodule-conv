@@ -14,7 +14,6 @@
 
 
 #define N_ANNO_VAR 32
-#define NO_FLOAT_ANNO "no_float"
 
 #define DEBUG_TYPE "flttofix"
 #define DEBUG_ANNOTATION "annotation"
@@ -36,12 +35,17 @@ extern llvm::Value *Unsupported;
 
 namespace flttofix {
 
+struct ValueInfo {
+  bool isBacktrackingNode;
+};
+
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
   int fracBitsAmt;
   int bitsAmt;
   
   llvm::DenseMap<llvm::Value *, llvm::Value *> operandPool;
+  llvm::DenseMap<llvm::Value *, ValueInfo> info;
   
   FloatToFixed(): ModulePass(ID) { }
   bool runOnModule(llvm::Module &M) override;
@@ -49,7 +53,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readGlobalAnnotations(llvm::Module &m, bool functionAnnotation = false);
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readLocalAnnotations(llvm::Function &f);
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readAllLocalAnnotations(llvm::Module &m);
-  bool isValidAnnotation(llvm::ConstantExpr *expr);
+  bool parseAnnotation(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR>& variables, llvm::ConstantExpr *annoPtrInst, llvm::Value *instr);
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> &res);
   void printAnnotatedObj(llvm::Module &m);
 
