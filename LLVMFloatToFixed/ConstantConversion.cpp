@@ -18,26 +18,26 @@ using namespace llvm;
 using namespace flttofix;
 
 
-Constant *FloatToFixed::convertConstant(DenseMap<Value *, Value *>& op, Constant *flt)
+Constant *FloatToFixed::convertConstant(Constant *flt)
 {
   if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
-    return convertGlobalVariable(op, gvar);
+    return convertGlobalVariable(gvar);
   } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
     return convertLiteral(fpc, nullptr);
   } else if (auto cag = dyn_cast<ConstantAggregateZero>(flt)) {
     Type *newt = getFixedPointTypeForFloatType(flt->getType());
     return ConstantAggregateZero::get(newt);
   } else if (ConstantExpr *cexp = dyn_cast<ConstantExpr>(flt)) {
-    return convertConstantExpr(op, cexp);
+    return convertConstantExpr(cexp);
   }
   return nullptr;
 }
 
 
-Constant *FloatToFixed::convertConstantExpr(DenseMap<Value *, Value *>& op, ConstantExpr *cexp)
+Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp)
 {
   if (cexp->isGEPWithNoNotionalOverIndexing()) {
-    Value *newval = op[cexp->getOperand(0)];
+    Value *newval = operandPool[cexp->getOperand(0)];
     if (!newval)
       return nullptr;
     Constant *newconst = dyn_cast<Constant>(newval);
@@ -56,7 +56,7 @@ Constant *FloatToFixed::convertConstantExpr(DenseMap<Value *, Value *>& op, Cons
 }
 
 
-Constant *FloatToFixed::convertGlobalVariable(DenseMap<Value *, Value *>& op, GlobalVariable *glob)
+Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob)
 {
   Type *prevt = glob->getType()->getPointerElementType();
   Type *newt = getFixedPointTypeForFloatType(prevt);
@@ -66,7 +66,7 @@ Constant *FloatToFixed::convertGlobalVariable(DenseMap<Value *, Value *>& op, Gl
   Constant *oldinit = glob->getInitializer();
   Constant *newinit = nullptr;
   if (oldinit)
-    newinit = convertConstant(op, oldinit);
+    newinit = convertConstant(oldinit);
   
   GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(), newinit);
   newglob->setAlignment(glob->getAlignment());

@@ -64,10 +64,9 @@ bool FloatToFixed::runOnModule(Module &m)
   }
   ConversionCount = vals.size();
 
-  DenseMap<Value*, Value*> operandPool;
-  performConversion(m, vals, operandPool);
+  performConversion(m, vals);
   
-  cleanup(operandPool, vals, itemtoroot, rootsa);
+  cleanup(vals, itemtoroot, rootsa);
 
   return true;
 }
@@ -139,7 +138,6 @@ bool potentiallyUsesMemory(Value *val)
 
 
 void FloatToFixed::cleanup(
-  DenseMap<Value*, Value*> convertedPool,
   const std::vector<Value*>& q,
   const DenseMap<Value*, SmallPtrSet<Value*, 5>>& itemtoroot,
   const std::vector<Value*>& roots)
@@ -149,7 +147,7 @@ void FloatToFixed::cleanup(
     isrootok[root] = true;
   
   for (Value *qi: q) {
-    Value *cqi = convertedPool[qi];
+    Value *cqi = operandPool[qi];
     assert(cqi && "every value should have been processed at this point!!");
     if (cqi == ConversionError) {
       if (!potentiallyUsesMemory(qi)) {

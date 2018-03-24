@@ -19,34 +19,34 @@ using namespace flttofix;
 
 
 /* also inserts the new value in the basic blocks, alongside the old one */
-Value *FloatToFixed::convertInstruction(Module& m, DenseMap<Value *, Value *>& operandPool, Instruction *val)
+Value *FloatToFixed::convertInstruction(Module& m, Instruction *val)
 {
   Value *res = Unsupported;
   
   if (AllocaInst *alloca = dyn_cast<AllocaInst>(val)) {
     res = convertAlloca(alloca);
   } else if (LoadInst *load = dyn_cast<LoadInst>(val)) {
-    res = convertLoad(operandPool, load);
+    res = convertLoad(load);
   } else if (StoreInst *store = dyn_cast<StoreInst>(val)) {
-    res = convertStore(operandPool, store);
+    res = convertStore(store);
   } else if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(val)) {
-    res = convertGep(operandPool, gep);
+    res = convertGep(gep);
   } else if (PHINode *phi = dyn_cast<PHINode>(val)) {
-    res = convertPhi(operandPool, phi);
+    res = convertPhi(phi);
   } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
-    res = convertSelect(operandPool, select);
+    res = convertSelect(select);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
     if (instr->isBinaryOp()) {
-      res = convertBinOp(operandPool,instr);
+      res = convertBinOp(instr);
     } else if (CastInst *cast = dyn_cast<CastInst>(instr)){
-      res = convertCast(operandPool,cast);
+      res = convertCast(cast);
     } else if (FCmpInst *fcmp = dyn_cast<FCmpInst>(val)) {
-      res = convertCmp(operandPool,fcmp);
+      res = convertCmp(fcmp);
     }
   }
 
   if (res==Unsupported) {
-    res = fallback(operandPool,dyn_cast<Instruction>(val));
+    res = fallback(dyn_cast<Instruction>(val));
   }
 
   return res ? res : ConversionError;
@@ -69,10 +69,10 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 }
 
 
-Value *FloatToFixed::convertLoad(DenseMap<Value *, Value *>& op, LoadInst *load)
+Value *FloatToFixed::convertLoad(LoadInst *load)
 {
   Value *ptr = load->getPointerOperand();
-  Value *newptr = op[ptr];
+  Value *newptr = operandPool[ptr];
   if (newptr == ConversionError)
     return nullptr;
   assert(newptr && "a load can't be in the conversion queue just because");
@@ -84,17 +84,17 @@ Value *FloatToFixed::convertLoad(DenseMap<Value *, Value *>& op, LoadInst *load)
 }
 
 
-Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *store)
+Value *FloatToFixed::convertStore(StoreInst *store)
 {
   Value *ptr = store->getPointerOperand();
-  Value *newptr = op[ptr];
+  Value *newptr = operandPool[ptr];
   if (!newptr)
     newptr = ptr;
   else if (newptr == ConversionError)
     return nullptr;
 
   Value *val = store->getValueOperand();
-  Value *newval = translateOrMatchOperand(op, val, store);
+  Value *newval = translateOrMatchOperand(val, store);
   if (!newval)
     return nullptr;
 
@@ -113,10 +113,10 @@ Value *FloatToFixed::convertStore(DenseMap<Value *, Value *>& op, StoreInst *sto
 }
 
 
-Value *FloatToFixed::convertGep(DenseMap<Value *, Value *>& op, GetElementPtrInst *gep)
+Value *FloatToFixed::convertGep(GetElementPtrInst *gep)
 {
   IRBuilder <> builder (gep);
-  Value *newval = translateOrMatchOperand(op, gep->getPointerOperand(), gep);
+  Value *newval = translateOrMatchOperand(gep->getPointerOperand(), gep);
   if (!newval)
     return nullptr;
 
@@ -131,7 +131,7 @@ Value *FloatToFixed::convertGep(DenseMap<Value *, Value *>& op, GetElementPtrIns
 }
 
 
-Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
+Value *FloatToFixed::convertPhi(PHINode *load)
 {
   if (!load->getType()->isFloatingPointTy()) {
     /* in the conversion chain the floating point number was converted to
@@ -144,7 +144,7 @@ Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
 
     for (int i=0; i<load->getNumIncomingValues(); i++) {
       Value *thisval = load->getIncomingValue(i);
-      Value *newval = op[thisval];
+      Value *newval = operandPool[thisval];
       if (newval && newval != ConversionError) {
         load->setIncomingValue(i, newval);
         donesomething = true;
@@ -162,7 +162,7 @@ Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
   for (int i=0; i<load->getNumIncomingValues(); i++) {
     Value *thisval = load->getIncomingValue(i);
     BasicBlock *thisbb = load->getIncomingBlock(i);
-    Value *newval = translateOrMatchOperand(op, thisval, load);
+    Value *newval = translateOrMatchOperand(thisval, load);
     if (!newval) {
       delete newphi;
       return nullptr;
@@ -174,12 +174,12 @@ Value *FloatToFixed::convertPhi(DenseMap<Value *, Value *>& op, PHINode *load)
 }
 
 
-Value *FloatToFixed::convertSelect(DenseMap<Value *, Value *>& op, SelectInst *sel)
+Value *FloatToFixed::convertSelect(SelectInst *sel)
 {
   if (!sel->getType()->isFloatingPointTy()) {
-    Value *newcond = op[sel->getCondition()];
-    Value *newtruev = op[sel->getTrueValue()];
-    Value *newfalsev = op[sel->getFalseValue()];
+    Value *newcond = operandPool[sel->getCondition()];
+    Value *newtruev = operandPool[sel->getTrueValue()];
+    Value *newfalsev = operandPool[sel->getFalseValue()];
 
     /* like phi, upgrade in place */
     if (newcond && newcond != ConversionError)
@@ -192,9 +192,9 @@ Value *FloatToFixed::convertSelect(DenseMap<Value *, Value *>& op, SelectInst *s
   }
 
   /* otherwise create a new one */
-  Value *newtruev = translateOrMatchOperand(op, sel->getTrueValue(), sel);
-  Value *newfalsev = translateOrMatchOperand(op, sel->getFalseValue(), sel);
-  Value *newcond = translateOrMatchOperand(op, sel->getCondition(), sel);
+  Value *newtruev = translateOrMatchOperand(sel->getTrueValue(), sel);
+  Value *newfalsev = translateOrMatchOperand(sel->getFalseValue(), sel);
+  Value *newcond = translateOrMatchOperand(sel->getCondition(), sel);
   if (!newtruev || !newfalsev || !newcond)
     return nullptr;
 
@@ -204,7 +204,7 @@ Value *FloatToFixed::convertSelect(DenseMap<Value *, Value *>& op, SelectInst *s
 }
 
 
-Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *instr)
+Value *FloatToFixed::convertBinOp(Instruction *instr)
 {
   IRBuilder<> builder(instr->getNextNode());
   Instruction::BinaryOps ty;
@@ -213,8 +213,8 @@ Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *i
     [Add,Sub,Mul,SDiv,UDiv,SRem,URem,Shl,LShr,AShr,And,Or,Xor]
     vengono gestite dalla fallback e non in questa funzione */
 
-  Value *val1 = translateOrMatchOperand(op, instr->getOperand(0), instr);
-  Value *val2 = translateOrMatchOperand(op, instr->getOperand(1), instr);
+  Value *val1 = translateOrMatchOperand(instr->getOperand(0), instr);
+  Value *val2 = translateOrMatchOperand(instr->getOperand(1), instr);
   if (!val1 || !val2)
     return nullptr;
 
@@ -256,7 +256,7 @@ Value *FloatToFixed::convertBinOp(DenseMap<Value *, Value *>& op, Instruction *i
 }
 
 
-Value *FloatToFixed::convertCmp(DenseMap<Value *, Value *>& op, FCmpInst *fcmp)
+Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
 {
   IRBuilder<> builder (fcmp->getNextNode());
   CmpInst::Predicate ty;
@@ -301,8 +301,8 @@ Value *FloatToFixed::convertCmp(DenseMap<Value *, Value *>& op, FCmpInst *fcmp)
     ty = CmpInst::getInversePredicate(ty);
   }
 
-  Value *val1 = translateOrMatchOperand(op, fcmp->getOperand(0), fcmp);
-  Value *val2 = translateOrMatchOperand(op, fcmp->getOperand(1), fcmp);
+  Value *val1 = translateOrMatchOperand(fcmp->getOperand(0), fcmp);
+  Value *val2 = translateOrMatchOperand(fcmp->getOperand(1), fcmp);
 
   return val1 && val2
     ? builder.CreateICmp(ty,val1,val2)
@@ -310,7 +310,7 @@ Value *FloatToFixed::convertCmp(DenseMap<Value *, Value *>& op, FCmpInst *fcmp)
 }
 
 
-Value *FloatToFixed::convertCast(DenseMap<Value *, Value *>& op, CastInst *cast)
+Value *FloatToFixed::convertCast(CastInst *cast)
 {
   /* le istruzioni Instruction::
    * - [FPToSI,FPToUI,SIToFP,UIToFP] vengono gestite qui
@@ -318,7 +318,7 @@ Value *FloatToFixed::convertCast(DenseMap<Value *, Value *>& op, CastInst *cast)
    * - [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori */
 
   IRBuilder<> builder(cast->getNextNode());
-  Value *val = translateOrMatchOperand(op, cast->getOperand(0), cast);
+  Value *val = translateOrMatchOperand(cast->getOperand(0), cast);
 
   if (cast->getOpcode() == Instruction::FPToSI) {
     return builder.CreateSExtOrTrunc(
@@ -354,7 +354,7 @@ Value *FloatToFixed::convertCast(DenseMap<Value *, Value *>& op, CastInst *cast)
 }
 
 
-Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsupp)
+Value *FloatToFixed::fallback(Instruction *unsupp)
 {
   Value *fallval;
   Instruction *fixval;
@@ -366,7 +366,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
   for (int i=0,n=unsupp->getNumOperands();i<n;i++) {
     fallval = unsupp->getOperand(i);
 
-    Value *cvtfallval = op[fallval];
+    Value *cvtfallval = operandPool[fallval];
     if (cvtfallval == ConversionError || (cvtfallval && cvtfallval->getType()->isPointerTy())) {
       DEBUG(dbgs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
       return nullptr;
@@ -393,7 +393,7 @@ Value *FloatToFixed::fallback(DenseMap<Value *, Value *>& op, Instruction *unsup
   }
   DEBUG(dbgs() << "  mutated operands to:\n" << *unsupp << "\n");
   if (unsupp->getType()->isFloatingPointTy()) {
-    Value *fallbackv = genConvertFloatToFix(op, unsupp, unsupp);
+    Value *fallbackv = genConvertFloatToFix(unsupp, unsupp);
     if (unsupp->hasName())
       fallbackv->setName(unsupp->getName() + ".fallback");
     return fallbackv;

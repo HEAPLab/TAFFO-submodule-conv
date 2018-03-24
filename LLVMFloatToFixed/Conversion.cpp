@@ -24,8 +24,7 @@ Value *Unsupported = (Value *)(&Unsupported);
 
 void FloatToFixed::performConversion(
   Module& m,
-  std::vector<Value*>& q,
-  DenseMap<Value *, Value *>& convertedPool)
+  std::vector<Value*>& q)
 {
   
   for (auto i = q.begin(); i != q.end();) {
@@ -41,16 +40,16 @@ void FloatToFixed::performConversion(
       }
     }
     
-    Value *newv = convertSingleValue(m, convertedPool, v);
+    Value *newv = convertSingleValue(m, v);
     if (newv && newv != ConversionError) {
-      convertedPool.insert({v, newv});
+      operandPool.insert({v, newv});
     } else {
       DEBUG(dbgs() << "warning: ";
             v->print(dbgs());
             dbgs() << " not converted\n";);
       
       if (newv)
-        convertedPool.insert({v, newv});
+        operandPool.insert({v, newv});
     }
     
     i++;
@@ -59,14 +58,14 @@ void FloatToFixed::performConversion(
 
 
 /* also inserts the new value in the basic blocks, alongside the old one */
-Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& operandPool, Value *val)
+Value *FloatToFixed::convertSingleValue(Module& m, Value *val)
 {
   Value *res = Unsupported;
   
   if (Constant *con = dyn_cast<Constant>(val)) {
-    res = convertConstant(operandPool, con);
+    res = convertConstant(con);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) {
-    res = convertInstruction(m, operandPool, instr);
+    res = convertInstruction(m, instr);
   }
   
   return res ? res : ConversionError;
@@ -74,9 +73,9 @@ Value *FloatToFixed::convertSingleValue(Module& m, DenseMap<Value *, Value *>& o
 
 
 /* do not use on pointer operands */
-Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Value *val, Instruction *ip)
+Value *FloatToFixed::translateOrMatchOperand(Value *val, Instruction *ip)
 {
-  Value *res = op[val];
+  Value *res = operandPool[val];
   if (res) {
     if (res != ConversionError)
       /* the value has been successfully converted in a previous step */
@@ -90,14 +89,14 @@ Value *FloatToFixed::translateOrMatchOperand(DenseMap<Value *, Value *>& op, Val
     /* doesn't need to be converted; return as is */
     return val;
 
-  return genConvertFloatToFix(op, val, ip);
+  return genConvertFloatToFix(val, ip);
 }
 
 
-Value *FloatToFixed::genConvertFloatToFix(DenseMap<Value *, Value *>& op, Value *flt, Instruction *ip)
+Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
 {
   if (Constant *c = dyn_cast<Constant>(flt)) {
-    return convertConstant(op, c);
+    return convertConstant(c);
   }
 
   FloatToFixCount++;

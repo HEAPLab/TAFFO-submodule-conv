@@ -41,6 +41,8 @@ struct FloatToFixed : public llvm::ModulePass {
   int fracBitsAmt;
   int bitsAmt;
   
+  llvm::DenseMap<llvm::Value *, llvm::Value *> operandPool;
+  
   FloatToFixed(): ModulePass(ID) { }
   bool runOnModule(llvm::Module &M) override;
 
@@ -52,35 +54,35 @@ struct FloatToFixed : public llvm::ModulePass {
   void printAnnotatedObj(llvm::Module &m);
 
   void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res, llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot);
-  void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q, llvm::DenseMap<llvm::Value *, llvm::Value *>& opPool);
-  llvm::Value *convertSingleValue(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Value *val);
+  void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
+  llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val);
 
-  llvm::Constant *convertConstant(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Constant *flt);
-  llvm::Constant *convertGlobalVariable(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::GlobalVariable *glob);
-  llvm::Constant *convertConstantExpr(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::ConstantExpr *cexp);
+  llvm::Constant *convertConstant(llvm::Constant *flt);
+  llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob);
+  llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp);
   llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *);
   
-  llvm::Value *convertInstruction(llvm::Module& m, llvm::DenseMap<llvm::Value *, llvm::Value *>& operandPool, llvm::Instruction *val);
+  llvm::Value *convertInstruction(llvm::Module& m, llvm::Instruction *val);
   llvm::Value *convertAlloca(llvm::AllocaInst *alloca);
-  llvm::Value *convertLoad(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::LoadInst *load);
-  llvm::Value *convertStore(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::StoreInst *load);
-  llvm::Value *convertGep(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::GetElementPtrInst *gep);
-  llvm::Value *convertPhi(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::PHINode *load);
-  llvm::Value *convertSelect(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::SelectInst *sel);
-  llvm::Value *convertBinOp(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Instruction *instr);
-  llvm::Value *convertCmp(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::FCmpInst *fcmp);
-  llvm::Value *convertCast(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::CastInst *cast);
-  llvm::Value *fallback(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Instruction *unsupp);
+  llvm::Value *convertLoad(llvm::LoadInst *load);
+  llvm::Value *convertStore(llvm::StoreInst *load);
+  llvm::Value *convertGep(llvm::GetElementPtrInst *gep);
+  llvm::Value *convertPhi(llvm::PHINode *load);
+  llvm::Value *convertSelect(llvm::SelectInst *sel);
+  llvm::Value *convertBinOp(llvm::Instruction *instr);
+  llvm::Value *convertCmp(llvm::FCmpInst *fcmp);
+  llvm::Value *convertCast(llvm::CastInst *cast);
+  llvm::Value *fallback(llvm::Instruction *unsupp);
 
-  llvm::Value *translateOrMatchOperand(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Value *val, llvm::Instruction *ip = nullptr);
+  llvm::Value *translateOrMatchOperand(llvm::Value *val, llvm::Instruction *ip = nullptr);
   
-  llvm::Value *genConvertFloatToFix(llvm::DenseMap<llvm::Value *, llvm::Value *>& op, llvm::Value *flt, llvm::Instruction *ip = nullptr);
+  llvm::Value *genConvertFloatToFix(llvm::Value *flt, llvm::Instruction *ip = nullptr);
   llvm::Value *genConvertFixToFloat(llvm::Value *fix, llvm::Type *destt);
 
   llvm::Type *getFixedPointTypeForFloatType(llvm::Type *srct);
   llvm::Type *getFixedPointType(llvm::LLVMContext &ctxt);
   
-  void cleanup(llvm::DenseMap<llvm::Value*, llvm::Value*> cvtmap, const std::vector<llvm::Value*>& queue, const llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot, const std::vector<llvm::Value*>& roots);
+  void cleanup(const std::vector<llvm::Value*>& queue, const llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot, const std::vector<llvm::Value*>& roots);
 };
 
 }
