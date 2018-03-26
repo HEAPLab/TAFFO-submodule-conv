@@ -52,15 +52,15 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readLocalAnnotations(Function &f)
     CallInst *call = dyn_cast<CallInst>(&(*iIt));
     if (!call)
       continue;
-    
+
     if (!call->getCalledFunction())
       continue;
-    
+
     if (call->getCalledFunction()->getName() == "llvm.var.annotation") {
       parseAnnotation(variables, cast<ConstantExpr>(iIt->getOperand(1)), iIt->getOperand(0));
     }
   }
-  return removeNoFloatTy(variables);
+  return variables;//removeNoFloatTy(variables);
 }
 
 
@@ -79,7 +79,7 @@ SmallPtrSet<Value*, N_ANNO_VAR> FloatToFixed::readAllLocalAnnotations(Module &m)
 bool FloatToFixed::parseAnnotation(SmallPtrSet<Value*,N_ANNO_VAR>& variables, ConstantExpr *annoPtrInst, Value *instr)
 {
   ValueInfo vi;
-  
+
   if (!(annoPtrInst->getOpcode() == Instruction::GetElementPtr))
     return false;
   GlobalVariable *annoContent = dyn_cast<GlobalVariable>(annoPtrInst->getOperand(0));
@@ -90,7 +90,7 @@ bool FloatToFixed::parseAnnotation(SmallPtrSet<Value*,N_ANNO_VAR>& variables, Co
     return false;
   if (!(annoStr->isString()))
     return false;
-  
+
   std::string str = annoStr->getAsString();
   if (str.compare(0, str.length() - 1, "no_float") == 0)
     vi.isBacktrackingNode = false;
@@ -98,7 +98,7 @@ bool FloatToFixed::parseAnnotation(SmallPtrSet<Value*,N_ANNO_VAR>& variables, Co
     vi.isBacktrackingNode = true;
   else
     return false;
-  
+
   variables.insert(instr);
   info[instr] = vi;
   return true;
@@ -109,7 +109,7 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::removeNoFloatTy(SmallPtrSet<Value*,
 {
   for (auto it: res) {
     Type *ty;
-    
+
     AllocaInst *alloca;
     GlobalVariable *global;
     if ((alloca = dyn_cast<AllocaInst>(it))) {

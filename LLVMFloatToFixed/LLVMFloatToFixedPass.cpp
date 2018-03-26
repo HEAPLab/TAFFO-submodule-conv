@@ -41,11 +41,11 @@ bool FloatToFixed::runOnModule(Module &m)
   std::vector<Value*> rootsa(local.begin(), local.end());
   rootsa.insert(rootsa.begin(), global.begin(), global.end());
   AnnotationCount = rootsa.size();
-  
+
   std::vector<Value*> vals;
   DenseMap<Value*, SmallPtrSet<Value*, 5>> itemtoroot;
   buildConversionQueueForRootValues(rootsa, vals, itemtoroot);
-  
+
   if (vals.size() < 1000) {
   DEBUG(errs() << "conversion queue:\n";
         for (Value *val: vals) {
@@ -65,7 +65,7 @@ bool FloatToFixed::runOnModule(Module &m)
   ConversionCount = vals.size();
 
   performConversion(m, vals);
-  
+
   cleanup(vals, itemtoroot, rootsa);
 
   return true;
@@ -78,15 +78,19 @@ void FloatToFixed::buildConversionQueueForRootValues(
   DenseMap<Value*, SmallPtrSet<Value*, 5>>& itemtoroot)
 {
   queue.insert(queue.begin(), val.begin(), val.end());
+  std::vector<Value*> leafsa;
   for (auto i = queue.begin(); i != queue.end(); i++) {
     itemtoroot[*i] = {*i};
+    if (info[*i].isBacktrackingNode) {
+      leafsa.push_back(*i);
+    }
   }
 
   size_t next = 0;
   while (next < queue.size()) {
     Value *v = queue.at(next);
     SmallPtrSet<Value*, 5> newroots = itemtoroot[v];
-    
+
     for (auto *u: v->users()) {
       /* Insert u at the end of the queue.
        * If u exists already in the queue, *move* it to the end instead. */
@@ -100,7 +104,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
         }
       }
       queue.push_back(u);
-      
+
       auto oldrootsi = itemtoroot.find(u);
       if (oldrootsi == itemtoroot.end()) {
         itemtoroot[u] = newroots;
@@ -112,6 +116,32 @@ void FloatToFixed::buildConversionQueueForRootValues(
     }
     next++;
   }
+
+  bool skip;
+  auto delim = leafsa.end();
+  for (auto it = leafsa.begin(); it != leafsa.end(); it++) {
+    Value *v = *it;
+    if (Instruction *istr = dyn_cast<Instruction>(v)) {
+      if (!isa<GetElementPtrInst>(istr) && !isa<AllocaInst>(istr)) {
+        for (auto *op = istr->op_begin(); op != istr->op_end(); op++) {
+
+          skip = false;
+          for (int i=0; i<leafsa.size();) {
+            if (leafsa[i] == *op) {
+              skip = true;
+            }
+          }
+
+          if (!skip){
+            leafsa.push_back(*op);
+          }
+
+        }
+      }
+    }
+  }
+  queue.insert(queue.end(), delim, leafsa.end());
+
 }
 
 
@@ -145,7 +175,7 @@ void FloatToFixed::cleanup(
   DenseMap<Value*, bool> isrootok;
   for (Value *root: roots)
     isrootok[root] = true;
-  
+
   for (Value *qi: q) {
     Value *cqi = operandPool[qi];
     assert(cqi && "every value should have been processed at this point!!");
@@ -163,13 +193,13 @@ void FloatToFixed::cleanup(
       DEBUG(errs() << '\n');
     }
   }
-  
+
   for (Value *v: q) {
     StoreInst *i = dyn_cast<StoreInst>(v);
     if (!i)
       continue;
     const auto& roots = itemtoroot.find(v)->getSecond();
-    
+
     bool allok = true;
     for (Value *root: roots) {
       if (!isrootok[root]) {
