@@ -119,14 +119,14 @@ void FloatToFixed::buildConversionQueueForRootValues(
 
   bool skip;
   auto delim = leafsa.end();
-  for (auto it = leafsa.begin(); it != leafsa.end(); it++) {
-    Value *v = *it;
+  for (int it = 0; it < leafsa.size(); it++) {
+    Value *v = leafsa[it];
     if (Instruction *istr = dyn_cast<Instruction>(v)) {
       if (!isa<GetElementPtrInst>(istr) && !isa<AllocaInst>(istr)) {
         for (auto *op = istr->op_begin(); op != istr->op_end(); op++) {
 
           skip = false;
-          for (int i=0; i<leafsa.size();) {
+          for (int i=0; i<leafsa.size(); i++) {
             if (leafsa[i] == *op) {
               skip = true;
             }

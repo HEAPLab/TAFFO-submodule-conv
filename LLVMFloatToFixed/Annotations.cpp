@@ -99,8 +99,13 @@ bool FloatToFixed::parseAnnotation(SmallPtrSet<Value*,N_ANNO_VAR>& variables, Co
   else
     return false;
 
-  variables.insert(instr);
-  info[instr] = vi;
+  if (Instruction *toconv = dyn_cast<Instruction>(instr)) {
+    variables.insert(toconv->getOperand(0));
+    info[toconv->getOperand(0)] = vi;
+  } else {
+    return false;
+  }
+
   return true;
 }
 
