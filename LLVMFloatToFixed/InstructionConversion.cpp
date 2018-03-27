@@ -115,6 +115,17 @@ Value *FloatToFixed::convertStore(StoreInst *store)
 
 Value *FloatToFixed::convertGep(GetElementPtrInst *gep)
 {
+  if (info[gep].isRoot && info[gep].isBacktrackingNode) {
+    dbgs() << "*** UGLY HACK *** ";
+    /* till we can flag a structure for conversion we bitcast away the
+     * item pointer to a fixed point type and hope everything still works */
+    BitCastInst *bci = new BitCastInst(gep, getFixedPointTypeForFloatType(gep->getType()));
+    bci->setName(gep->getName() + ".haxfixp");
+    bci->insertAfter(gep);
+    bci->print(dbgs());
+    dbgs() << "\n";
+    return bci;
+  }
   IRBuilder <> builder (gep);
   Value *newval = translateOrMatchOperand(gep->getPointerOperand(), gep);
   if (!newval)
