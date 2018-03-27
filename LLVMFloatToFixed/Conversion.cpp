@@ -111,20 +111,35 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
           errs() << "\n");
     return nullptr;
   }
-
-  /* insert new instructions before ip */
+  
   IRBuilder<> builder(ip);
-  double twoebits = pow(2.0, fracBitsAmt);
-  return builder.CreateFPToSI(
-    builder.CreateFMul(
-      ConstantFP::get(flt->getType(), twoebits),
-      flt),
-    getFixedPointType(flt->getContext()));
+  
+  /* insert new instructions before ip */
+  if (SIToFPInst *instr = dyn_cast<SIToFPInst>(flt)) {
+    Value *intparam = instr->getOperand(0);
+    return builder.CreateShl(intparam, fracBitsAmt);
+  } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(flt)) {
+    Value *intparam = instr->getOperand(0);
+    return builder.CreateShl(intparam, fracBitsAmt);
+  } else {
+    double twoebits = pow(2.0, fracBitsAmt);
+    return builder.CreateFPToSI(
+      builder.CreateFMul(
+        ConstantFP::get(flt->getType(), twoebits),
+        flt),
+      getFixedPointType(flt->getContext()));
+  }
 }
 
 
 Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
 {
+  dbgs() << "******** trace: genConvertFixToFloat ";
+  fix->print(dbgs());
+  dbgs() << " ";
+  destt->print(dbgs());
+  dbgs() << "\n";
+  
   Instruction *i = dyn_cast<Instruction>(fix);
   if (!i)
     return nullptr;
