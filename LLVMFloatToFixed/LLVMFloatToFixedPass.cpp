@@ -43,14 +43,13 @@ bool FloatToFixed::runOnModule(Module &m)
   AnnotationCount = rootsa.size();
 
   std::vector<Value*> vals;
-  DenseMap<Value*, SmallPtrSet<Value*, 5>> itemtoroot;
-  buildConversionQueueForRootValues(rootsa, vals, itemtoroot);
+  buildConversionQueueForRootValues(rootsa, vals);
 
   if (vals.size() < 1000) {
   DEBUG(errs() << "conversion queue:\n";
         for (Value *val: vals) {
           errs() << "[";
-            for (Value *rootv: itemtoroot[val]) {
+            for (Value *rootv: info[val].roots) {
               rootv->print(errs());
               errs() << ' ';
             }
@@ -66,7 +65,7 @@ bool FloatToFixed::runOnModule(Module &m)
 
   performConversion(m, vals);
 
-  cleanup(vals, itemtoroot, rootsa);
+  cleanup(vals);
 
   return true;
 }
@@ -87,18 +86,16 @@ bool FloatToFixed::isFloatType(Type *srct)
 
 void FloatToFixed::buildConversionQueueForRootValues(
   const ArrayRef<Value*>& val,
-  std::vector<Value*>& queue,
-  DenseMap<Value*, SmallPtrSet<Value*, 5>>& itemtoroot)
+  std::vector<Value*>& queue)
 {
   queue.insert(queue.begin(), val.begin(), val.end());
   for (auto i = queue.begin(); i != queue.end(); i++) {
-    itemtoroot[*i] = {*i};
+    info[*i].isRoot = true;
   }
 
   size_t next = 0;
   while (next < queue.size()) {
     Value *v = queue.at(next);
-    SmallPtrSet<Value*, 5> newroots = itemtoroot[v];
 
     for (auto *u: v->users()) {
       /* Insert u at the end of the queue.
@@ -117,15 +114,6 @@ void FloatToFixed::buildConversionQueueForRootValues(
       if (info[v].isBacktrackingNode) {
         info[u].isBacktrackingNode = true;
       }
-
-      auto oldrootsi = itemtoroot.find(u);
-      if (oldrootsi == itemtoroot.end()) {
-        itemtoroot[u] = newroots;
-      } else {
-        SmallPtrSet<Value*, 5> merge(newroots);
-        merge.insert(oldrootsi->getSecond().begin(), oldrootsi->getSecond().end());
-        itemtoroot[u] = merge;
-      }
     }
     next++;
   }
@@ -136,22 +124,16 @@ void FloatToFixed::buildConversionQueueForRootValues(
     if (!(info[v].isBacktrackingNode))
       continue;
     
-    errs() << "*** next = " << next << " backtrack";
-    v->dump();
-    
     Instruction *inst = dyn_cast<Instruction>(v);
     if (!inst) {
-      errs() << "not an inst\n";
       continue;
     }
     
     for (Value *u: inst->operands()) {
-      u->dump();
       if (!isFloatType(u->getType())) {
-        errs() << "no\n";
         continue;
       }
-      errs() << "yes\n";
+      info[v].isRoot = false;
       
       info[u].isBacktrackingNode = true;
       
@@ -168,9 +150,28 @@ void FloatToFixed::buildConversionQueueForRootValues(
       }
       if (alreadyIn)
         break;
+      info[u].isRoot = true;
       
       queue.insert(queue.begin()+next-1, u);
       next++;
+    }
+  }
+  
+  for (Value *v: queue) {
+    if (info[v].isRoot) {
+      info[v].roots = {v};
+    }
+    
+    SmallPtrSet<Value*, 5> newroots = info[v].roots;
+    for (Value *u: v->users()) {
+      auto oldrootsi = info.find(u);
+      if (oldrootsi == info.end())
+        continue;
+      
+      auto oldroots = oldrootsi->getSecond().roots;
+      SmallPtrSet<Value*, 5> merge(newroots);
+      merge.insert(oldroots.begin(), oldroots.end());
+      info[u].roots = merge;
     }
   }
 }
@@ -198,11 +199,14 @@ bool potentiallyUsesMemory(Value *val)
 }
 
 
-void FloatToFixed::cleanup(
-  const std::vector<Value*>& q,
-  const DenseMap<Value*, SmallPtrSet<Value*, 5>>& itemtoroot,
-  const std::vector<Value*>& roots)
+void FloatToFixed::cleanup(const std::vector<Value*>& q)
 {
+  std::vector<Value*> roots;
+  for (Value *v: q) {
+    if (info[v].isRoot == true)
+      roots.push_back(v);
+  }
+  
   DenseMap<Value*, bool> isrootok;
   for (Value *root: roots)
     isrootok[root] = true;
@@ -216,7 +220,7 @@ void FloatToFixed::cleanup(
       }
       DEBUG(qi->print(errs());
             errs() << " not converted; invalidates roots ");
-      const auto& rootsaffected = itemtoroot.find(qi)->getSecond();
+      const auto& rootsaffected = info[qi].roots;
       for (Value *root: rootsaffected) {
         isrootok[root] = false;
         DEBUG(root->print(errs()));
@@ -229,7 +233,7 @@ void FloatToFixed::cleanup(
     StoreInst *i = dyn_cast<StoreInst>(v);
     if (!i)
       continue;
-    const auto& roots = itemtoroot.find(v)->getSecond();
+    const auto& roots = info[v].roots;
 
     bool allok = true;
     for (Value *root: roots) {

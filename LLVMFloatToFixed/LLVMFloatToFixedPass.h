@@ -37,6 +37,8 @@ namespace flttofix {
 
 struct ValueInfo {
   bool isBacktrackingNode;
+  bool isRoot;
+  llvm::SmallPtrSet<llvm::Value*, 5> roots;
 };
 
 struct FloatToFixed : public llvm::ModulePass {
@@ -59,7 +61,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> &res);
   void printAnnotatedObj(llvm::Module &m);
 
-  void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res, llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot);
+  void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res);
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val);
 
@@ -88,7 +90,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Type *getFixedPointTypeForFloatType(llvm::Type *srct);
   llvm::Type *getFixedPointType(llvm::LLVMContext &ctxt);
   
-  void cleanup(const std::vector<llvm::Value*>& queue, const llvm::DenseMap<llvm::Value*, llvm::SmallPtrSet<llvm::Value*, 5>>& itemtoroot, const std::vector<llvm::Value*>& roots);
+  void cleanup(const std::vector<llvm::Value*>& queue);
 };
 
 }
