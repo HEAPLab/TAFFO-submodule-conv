@@ -182,7 +182,7 @@ Type *FloatToFixed::getFixedPointTypeForFloatType(Type *srct)
   }
   DEBUG(srct->dump());
   DEBUG(dbgs() << "getFixedPointTypeForFloatType given a non-float type\n");
-  return nullptr;
+  return srct;
 }
 
 
