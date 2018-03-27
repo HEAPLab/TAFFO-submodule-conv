@@ -49,6 +49,8 @@ struct FloatToFixed : public llvm::ModulePass {
   
   FloatToFixed(): ModulePass(ID) { }
   bool runOnModule(llvm::Module &M) override;
+  
+  bool isFloatType(llvm::Type *srct);
 
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readGlobalAnnotations(llvm::Module &m, bool functionAnnotation = false);
   llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readLocalAnnotations(llvm::Function &f);

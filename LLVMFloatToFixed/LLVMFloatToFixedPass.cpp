@@ -72,18 +72,27 @@ bool FloatToFixed::runOnModule(Module &m)
 }
 
 
+bool FloatToFixed::isFloatType(Type *srct)
+{
+  if (srct->isPointerTy()) {
+    return isFloatType(srct->getPointerElementType());
+  } else if (srct->isArrayTy()) {
+    return isFloatType(srct->getArrayElementType());
+  } else if (srct->isFloatingPointTy()) {
+    return true;
+  }
+  return false;
+}
+
+
 void FloatToFixed::buildConversionQueueForRootValues(
   const ArrayRef<Value*>& val,
   std::vector<Value*>& queue,
   DenseMap<Value*, SmallPtrSet<Value*, 5>>& itemtoroot)
 {
   queue.insert(queue.begin(), val.begin(), val.end());
-  std::vector<Value*> leafsa;
   for (auto i = queue.begin(); i != queue.end(); i++) {
     itemtoroot[*i] = {*i};
-    if (info[*i].isBacktrackingNode) {
-      leafsa.push_back(*i);
-    }
   }
 
   size_t next = 0;
@@ -104,6 +113,10 @@ void FloatToFixed::buildConversionQueueForRootValues(
         }
       }
       queue.push_back(u);
+      
+      if (info[v].isBacktrackingNode) {
+        info[u].isBacktrackingNode = true;
+      }
 
       auto oldrootsi = itemtoroot.find(u);
       if (oldrootsi == itemtoroot.end()) {
@@ -116,32 +129,50 @@ void FloatToFixed::buildConversionQueueForRootValues(
     }
     next++;
   }
-
-  bool skip;
-  auto delim = leafsa.end();
-  for (int it = 0; it < leafsa.size(); it++) {
-    Value *v = leafsa[it];
-    if (Instruction *istr = dyn_cast<Instruction>(v)) {
-      if (!isa<GetElementPtrInst>(istr) && !isa<AllocaInst>(istr)) {
-        for (auto *op = istr->op_begin(); op != istr->op_end(); op++) {
-
-          skip = false;
-          for (int i=0; i<leafsa.size(); i++) {
-            if (leafsa[i] == *op) {
-              skip = true;
-            }
-          }
-
-          if (!skip){
-            leafsa.push_back(*op);
-          }
-
+  
+  next = queue.size();
+  for (next = queue.size(); next != 0; next--) {
+    Value *v = queue.at(next-1);
+    if (!(info[v].isBacktrackingNode))
+      continue;
+    
+    errs() << "*** next = " << next << " backtrack";
+    v->dump();
+    
+    Instruction *inst = dyn_cast<Instruction>(v);
+    if (!inst) {
+      errs() << "not an inst\n";
+      continue;
+    }
+    
+    for (Value *u: inst->operands()) {
+      u->dump();
+      if (!isFloatType(u->getType())) {
+        errs() << "no\n";
+        continue;
+      }
+      errs() << "yes\n";
+      
+      info[u].isBacktrackingNode = true;
+      
+      bool alreadyIn = false;
+      for (int i=0; i<queue.size() && !alreadyIn;) {
+        if (queue[i] == u) {
+          if (i < next)
+            alreadyIn = true;
+          else
+            queue.erase(queue.begin() + i);
+        } else {
+          i++;
         }
       }
+      if (alreadyIn)
+        break;
+      
+      queue.insert(queue.begin()+next-1, u);
+      next++;
     }
   }
-  queue.insert(queue.end(), delim, leafsa.end());
-
 }
 
 
