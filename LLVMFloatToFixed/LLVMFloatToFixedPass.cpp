@@ -10,6 +10,9 @@
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "LLVMFloatToFixedPass.h"
 
+//#define LOG_BACKTRACK
+
+
 using namespace llvm;
 using namespace flttofix;
 
@@ -51,6 +54,7 @@ bool FloatToFixed::runOnModule(Module &m)
   if (vals.size() < 1000) {
   DEBUG(errs() << "conversion queue:\n";
         for (Value *val: vals) {
+          errs() << "bt=" << info[val].isBacktrackingNode << " ";
           errs() << "[";
             for (Value *rootv: info[val].roots) {
               rootv->print(errs());
@@ -96,67 +100,93 @@ void FloatToFixed::buildConversionQueueForRootValues(
     info[*i].isRoot = true;
   }
 
-  size_t next = 0;
-  while (next < queue.size()) {
-    Value *v = queue.at(next);
+  size_t prevQueueSize = 0;
+  while (prevQueueSize < queue.size()) {
+    dbgs() << "***** buildConversionQueueForRootValues iter " << prevQueueSize << " < " << queue.size() << "\n";
+    prevQueueSize = queue.size();
 
-    for (auto *u: v->users()) {
-      /* Insert u at the end of the queue.
-       * If u exists already in the queue, *move* it to the end instead. */
-      for (int i=0; i<queue.size();) {
-        if (queue[i] == u) {
-          queue.erase(queue.begin() + i);
-          if (i < next)
-            next--;
-        } else {
-          i++;
-        }
-      }
-      queue.push_back(u);
-      
-      if (info[v].isBacktrackingNode) {
-        info[u].isBacktrackingNode = true;
-      }
-    }
-    next++;
-  }
-  
-  next = queue.size();
-  for (next = queue.size(); next != 0; next--) {
-    Value *v = queue.at(next-1);
-    if (!(info[v].isBacktrackingNode))
-      continue;
-    
-    Instruction *inst = dyn_cast<Instruction>(v);
-    if (!inst) {
-      continue;
-    }
-    
-    for (Value *u: inst->operands()) {
-      if (!isFloatType(u->getType())) {
-        continue;
-      }
-      info[v].isRoot = false;
-      
-      info[u].isBacktrackingNode = true;
-      
-      bool alreadyIn = false;
-      for (int i=0; i<queue.size() && !alreadyIn;) {
-        if (queue[i] == u) {
-          if (i < next)
-            alreadyIn = true;
-          else
+    size_t next = 0;
+    while (next < queue.size()) {
+      Value *v = queue.at(next);
+
+      for (auto *u: v->users()) {
+        /* Insert u at the end of the queue.
+         * If u exists already in the queue, *move* it to the end instead. */
+        for (int i=0; i<queue.size();) {
+          if (queue[i] == u) {
             queue.erase(queue.begin() + i);
-        } else {
-          i++;
+            if (i < next)
+              next--;
+          } else {
+            i++;
+          }
+        }
+        queue.push_back(u);
+        
+        if (info[v].isBacktrackingNode) {
+          info[u].isBacktrackingNode = true;
         }
       }
-      if (alreadyIn)
-        break;
-      info[u].isRoot = true;
-      
-      queue.insert(queue.begin()+next-1, u);
       next++;
+    }
+    
+    next = queue.size();
+    for (next = queue.size(); next != 0; next--) {
+      Value *v = queue.at(next-1);
+      if (!(info[v].isBacktrackingNode))
+        continue;
+      
+      Instruction *inst = dyn_cast<Instruction>(v);
+      if (!inst)
+        continue;
+      
+      #ifdef LOG_BACKTRACK
+      dbgs() << "BACKTRACK ";
+      v->print(dbgs());
+      dbgs() << "\n";
+      #endif
+      
+      for (Value *u: inst->operands()) {
+        #ifdef LOG_BACKTRACK
+        dbgs() << " - ";
+        u->print(dbgs());
+        #endif
+        
+        if (!isFloatType(u->getType())) {
+          #ifdef LOG_BACKTRACK
+          dbgs() << " not a float\n";
+          #endif
+          continue;
+        }
+        info[v].isRoot = false;
+        
+        info[u].isBacktrackingNode = true;
+        
+        bool alreadyIn = false;
+        for (int i=0; i<queue.size() && !alreadyIn;) {
+          if (queue[i] == u) {
+            if (i < next)
+              alreadyIn = true;
+            else
+              queue.erase(queue.begin() + i);
+          } else {
+            i++;
+          }
+        }
+        if (alreadyIn) {
+          #ifdef LOG_BACKTRACK
+          dbgs() << " already in\n";
+          #endif
+          continue;
+        }
+        info[u].isRoot = true;
+        
+        #ifdef LOG_BACKTRACK
+        dbgs() << "  enqueued\n";
+        #endif
+        queue.insert(queue.begin()+next-1, u);
+        next++;
+      }
     }
   }
   
