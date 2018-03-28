@@ -57,6 +57,8 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 {
   Type *prevt = alloca->getAllocatedType();
   Type *newt = getFixedPointTypeForFloatType(prevt);
+  if (newt == prevt)
+    return alloca;
 
   Value *as = alloca->getArraySize();
   AllocaInst *newinst = new AllocaInst(newt, as, alloca->getAlignment(),
