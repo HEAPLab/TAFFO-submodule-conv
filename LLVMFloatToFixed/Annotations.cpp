@@ -12,10 +12,8 @@ using namespace llvm;
 using namespace flttofix;
 
 
-SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readGlobalAnnotations(Module &m , bool functionAnnotation)
+void FloatToFixed::readGlobalAnnotations(Module &m, SmallPtrSetImpl<Value *>& variables, bool functionAnnotation)
 {
-  SmallPtrSet <Value*,N_ANNO_VAR> variables;
-
   GlobalVariable *globAnnos = m.getGlobalVariable("llvm.global.annotations");
 
   if (globAnnos != NULL)
@@ -41,13 +39,13 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readGlobalAnnotations(Module &m , b
       }
     }
   }
-  return functionAnnotation ? variables : removeNoFloatTy(variables);
+  if (functionAnnotation)
+    removeNoFloatTy(variables);
 }
 
 
-SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readLocalAnnotations(Function &f)
+void FloatToFixed::readLocalAnnotations(Function &f, SmallPtrSetImpl<Value *>& variables)
 {
-  SmallPtrSet <Value*,N_ANNO_VAR> variables;
   for (inst_iterator iIt = inst_begin(&f), iItEnd = inst_end(&f); iIt != iItEnd; iIt++) {
     CallInst *call = dyn_cast<CallInst>(&(*iIt));
     if (!call)
@@ -60,23 +58,20 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::readLocalAnnotations(Function &f)
       parseAnnotation(variables, cast<ConstantExpr>(iIt->getOperand(1)), iIt->getOperand(0));
     }
   }
-  return variables;//removeNoFloatTy(variables);
 }
 
 
-SmallPtrSet<Value*, N_ANNO_VAR> FloatToFixed::readAllLocalAnnotations(Module &m)
+void FloatToFixed::readAllLocalAnnotations(Module &m, SmallPtrSetImpl<Value *>& res)
 {
-  SmallPtrSet<Value*, N_ANNO_VAR> res;
-
   for (Function &f: m.functions()) {
-    SmallPtrSet<Value*, N_ANNO_VAR> t = readLocalAnnotations(f);
+    SmallPtrSet<Value*, 32> t;
+    readLocalAnnotations(f, t);
     res.insert(t.begin(), t.end());
   }
-  return res;
 }
 
 
-bool FloatToFixed::parseAnnotation(SmallPtrSet<Value*,N_ANNO_VAR>& variables, ConstantExpr *annoPtrInst, Value *instr)
+bool FloatToFixed::parseAnnotation(SmallPtrSetImpl<Value *>& variables, ConstantExpr *annoPtrInst, Value *instr)
 {
   ValueInfo vi;
 
@@ -110,7 +105,7 @@ bool FloatToFixed::parseAnnotation(SmallPtrSet<Value*,N_ANNO_VAR>& variables, Co
 }
 
 
-SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::removeNoFloatTy(SmallPtrSet<Value*,N_ANNO_VAR> &res)
+void FloatToFixed::removeNoFloatTy(SmallPtrSetImpl<Value *> &res)
 {
   for (auto it: res) {
     Type *ty;
@@ -140,14 +135,13 @@ SmallPtrSet<Value*,N_ANNO_VAR> FloatToFixed::removeNoFloatTy(SmallPtrSet<Value*,
       res.erase(it);
     }
   }
-  return res;
 }
 
 void FloatToFixed::printAnnotatedObj(Module &m)
 {
-  SmallPtrSet<Value*,N_ANNO_VAR> res;
+  SmallPtrSet<Value*, 32> res;
 
-  res = readGlobalAnnotations(m,true);
+  readGlobalAnnotations(m, res, true);
   errs() << "Annotated Function: \n";
   if(!res.empty())
   {
@@ -158,7 +152,8 @@ void FloatToFixed::printAnnotatedObj(Module &m)
     errs() << "\n";
   }
 
-  res = readGlobalAnnotations(m);
+  res.clear();
+  readGlobalAnnotations(m, res);
   errs() << "Global Set: \n";
   if(!res.empty())
   {
@@ -173,7 +168,8 @@ void FloatToFixed::printAnnotatedObj(Module &m)
   {
     Function &f = *fIt;
     errs().write_escaped(f.getName()) << " : ";
-    res = readLocalAnnotations(f);
+    res.clear();
+    readLocalAnnotations(f, res);
     if(!res.empty())
     {
       errs() << "\nLocal Set: \n";

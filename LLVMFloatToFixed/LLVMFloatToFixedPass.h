@@ -13,8 +13,6 @@
 #define __LLVM_FLOAT_TO_FIXED_PASS_H__
 
 
-#define N_ANNO_VAR 32
-
 #define DEBUG_TYPE "flttofix"
 #define DEBUG_ANNOTATION "annotation"
 
@@ -54,11 +52,11 @@ struct FloatToFixed : public llvm::ModulePass {
   
   bool isFloatType(llvm::Type *srct);
 
-  llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readGlobalAnnotations(llvm::Module &m, bool functionAnnotation = false);
-  llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readLocalAnnotations(llvm::Function &f);
-  llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> readAllLocalAnnotations(llvm::Module &m);
-  bool parseAnnotation(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR>& variables, llvm::ConstantExpr *annoPtrInst, llvm::Value *instr);
-  llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> removeNoFloatTy(llvm::SmallPtrSet<llvm::Value*, N_ANNO_VAR> &res);
+  void readGlobalAnnotations(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *>& res, bool functionAnnotation = false);
+  void readLocalAnnotations(llvm::Function &f, llvm::SmallPtrSetImpl<llvm::Value *>& res);
+  void readAllLocalAnnotations(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *>& res);
+  bool parseAnnotation(llvm::SmallPtrSetImpl<llvm::Value *>& variables, llvm::ConstantExpr *annoPtrInst, llvm::Value *instr);
+  void removeNoFloatTy(llvm::SmallPtrSetImpl<llvm::Value *>& res);
   void printAnnotatedObj(llvm::Module &m);
 
   void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res);
