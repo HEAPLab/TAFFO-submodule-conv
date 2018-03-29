@@ -17,24 +17,26 @@
 using namespace llvm;
 using namespace flttofix;
 
+#define defaultFixpType @SYNTAX_ERROR@
 
-Constant *FloatToFixed::convertConstant(Constant *flt)
+
+Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt)
 {
   if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
-    return convertGlobalVariable(gvar);
+    return convertGlobalVariable(gvar, fixpt);
   } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
-    return convertLiteral(fpc, nullptr);
+    return convertLiteral(fpc, nullptr, fixpt);
   } else if (auto cag = dyn_cast<ConstantAggregateZero>(flt)) {
-    Type *newt = getLLVMFixedPointTypeForFloatType(flt->getType(), defaultFixpType);
+    Type *newt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
     return ConstantAggregateZero::get(newt);
   } else if (ConstantExpr *cexp = dyn_cast<ConstantExpr>(flt)) {
-    return convertConstantExpr(cexp);
+    return convertConstantExpr(cexp, fixpt);
   }
   return nullptr;
 }
 
 
-Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp)
+Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType& fixpt)
 {
   if (cexp->isGEPWithNoNotionalOverIndexing()) {
     Value *newval = operandPool[cexp->getOperand(0)];
@@ -43,6 +45,8 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp)
     Constant *newconst = dyn_cast<Constant>(newval);
     if (!newconst)
       return nullptr;
+    
+    fixpt = fixPType(newval);
   
     std::vector<Constant *> vals;
     for (int i=1; i<cexp->getNumOperands(); i++) {
@@ -56,17 +60,17 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp)
 }
 
 
-Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob)
+Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointType& fixpt)
 {
   Type *prevt = glob->getType()->getPointerElementType();
-  Type *newt = getLLVMFixedPointTypeForFloatType(prevt, defaultFixpType);
+  Type *newt = getLLVMFixedPointTypeForFloatType(prevt, fixpt);
   if (!newt)
     return nullptr;
   
   Constant *oldinit = glob->getInitializer();
   Constant *newinit = nullptr;
   if (oldinit)
-    newinit = convertConstant(oldinit);
+    newinit = convertConstant(oldinit, fixpt);
   
   GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(), newinit);
   newglob->setAlignment(glob->getAlignment());
@@ -75,17 +79,17 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob)
 }
 
 
-Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context)
+Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, const FixedPointType& fixpt)
 {
   bool precise = false;
   APFloat val = fpc->getValueAPF();
 
-  APFloat exp(pow(2.0, defaultFixpType.fracBitsAmt));
+  APFloat exp(pow(2.0, fixpt.fracBitsAmt));
   exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
   val.multiply(exp, APFloat::rmTowardNegative);
 
   integerPart fixval;
-  APFloat::opStatus cvtres = val.convertToInteger(&fixval, defaultFixpType.bitsAmt, true,
+  APFloat::opStatus cvtres = val.convertToInteger(&fixval, fixpt.bitsAmt, true,
     APFloat::rmTowardNegative, &precise);
   
   if (cvtres != APFloat::opStatus::opOK && context) {
@@ -103,7 +107,7 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context)
     }
   }
 
-  Type *intty = defaultFixpType.toLLVMType(fpc->getContext());
+  Type *intty = fixpt.toLLVMType(fpc->getContext());
   return ConstantInt::get(intty, fixval, true);
 }
 

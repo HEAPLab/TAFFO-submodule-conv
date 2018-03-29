@@ -48,7 +48,7 @@ FixedPointType::FixedPointType(Type *llvmtype)
 }
 
 
-Type *FixedPointType::toLLVMType(LLVMContext& ctxt)
+Type *FixedPointType::toLLVMType(LLVMContext& ctxt) const
 {
   return Type::getIntNTy(ctxt, this->bitsAmt);
 }

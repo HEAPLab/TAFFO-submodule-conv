@@ -25,9 +25,9 @@ struct FixedPointType {
   
   FixedPointType();
   FixedPointType(llvm::Type *llvmtype);
-  llvm::Type *toLLVMType(llvm::LLVMContext& ctxt);
+  llvm::Type *toLLVMType(llvm::LLVMContext& ctxt) const;
   
-  bool operator==(const FixedPointType& rhs) {
+  bool operator==(const FixedPointType& rhs) const {
     return this->isSigned == rhs.isSigned &&
       this->fracBitsAmt == rhs.fracBitsAmt &&
       this->bitsAmt == rhs.bitsAmt;

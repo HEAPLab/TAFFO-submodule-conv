@@ -40,7 +40,7 @@ void FloatToFixed::performConversion(
       }
     }
     
-    Value *newv = convertSingleValue(m, v);
+    Value *newv = convertSingleValue(m, v, info[v].fixpType);
     if (newv && newv != ConversionError) {
       operandPool.insert({v, newv});
       info[newv] = info[v];
@@ -59,13 +59,14 @@ void FloatToFixed::performConversion(
 
 
 /* also inserts the new value in the basic blocks, alongside the old one */
-Value *FloatToFixed::convertSingleValue(Module& m, Value *val)
+Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& fixpt)
 {
   Value *res = Unsupported;
   
   if (Constant *con = dyn_cast<Constant>(val)) {
-    res = convertConstant(con);
+    res = convertConstant(con, fixpt);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) {
+    fixpt = defaultFixpType;
     res = convertInstruction(m, instr);
   }
   
@@ -92,11 +93,13 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
 }
 
 
-Value *FloatToFixed::genConvertFloatToFix(Value *flt, FixedPointType& fixpt, Instruction *ip)
+Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixpt, Instruction *ip)
 {
   if (Constant *c = dyn_cast<Constant>(flt)) {
-    assert(fixpt == defaultFixpType);
-    return convertConstant(c);
+    FixedPointType fixptcopy = fixpt;
+    Value *res = convertConstant(c, fixptcopy);
+    assert(fixptcopy == fixpt && "why is there a pointer here?");
+    return res;
   }
 
   if (Instruction *i = dyn_cast<Instruction>(flt))
@@ -140,7 +143,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, FixedPointType& fixpt, Ins
 }
 
 
-Value *FloatToFixed::genConvertFixedToFixed(Value *fix, FixedPointType& srct, FixedPointType& destt, Instruction *ip)
+Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& srct, const FixedPointType& destt, Instruction *ip)
 {
   Type *llvmsrct = fix->getType();
   assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");
@@ -180,7 +183,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, FixedPointType& srct, Fi
 }
 
 
-Value *FloatToFixed::genConvertFixToFloat(Value *fix, FixedPointType& fixpt, Type *destt)
+Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixpt, Type *destt)
 {
   dbgs() << "******** trace: genConvertFixToFloat ";
   fix->print(dbgs());
@@ -209,7 +212,7 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, FixedPointType& fixpt, Typ
 }
 
 
-Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, FixedPointType& baset)
+Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPointType& baset)
 {
   if (srct->isPointerTy()) {
     Type *enc = getLLVMFixedPointTypeForFloatType(srct->getPointerElementType(), baset);

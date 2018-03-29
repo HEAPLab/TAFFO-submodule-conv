@@ -42,7 +42,7 @@ struct ValueInfo {
   bool isBacktrackingNode;
   bool isRoot;
   llvm::SmallPtrSet<llvm::Value*, 5> roots;
-  FixedPointType fixpType;
+  FixedPointType fixpType;  // significant iff origType is a float or a pointer to a float
   llvm::Type *origType;
 };
 
@@ -66,12 +66,12 @@ struct FloatToFixed : public llvm::ModulePass {
 
   void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res);
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
-  llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val);
+  llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, FixedPointType& fixpt);
 
-  llvm::Constant *convertConstant(llvm::Constant *flt);
-  llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob);
-  llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp);
-  llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *);
+  llvm::Constant *convertConstant(llvm::Constant *flt, FixedPointType& fixpt);
+  llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob, FixedPointType& fixpt);
+  llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, FixedPointType& fixpt);
+  llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *, const FixedPointType& fixpt);
   
   llvm::Value *convertInstruction(llvm::Module& m, llvm::Instruction *val);
   llvm::Value *convertAlloca(llvm::AllocaInst *alloca);
@@ -90,17 +90,17 @@ struct FloatToFixed : public llvm::ModulePass {
     return res == ConversionError ? nullptr : (res ? res : val);
   };
   llvm::Value *translateOrMatchOperand(llvm::Value *val, FixedPointType& iofixpt, llvm::Instruction *ip = nullptr);
-  llvm::Value *translateOrMatchOperandAndType(llvm::Value *val, FixedPointType& fixpt, llvm::Instruction *ip = nullptr) {
+  llvm::Value *translateOrMatchOperandAndType(llvm::Value *val, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr) {
     FixedPointType iofixpt = fixpt;
     llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip);
     return genConvertFixedToFixed(tmp, iofixpt, fixpt, ip);
   };
   
-  llvm::Value *genConvertFloatToFix(llvm::Value *flt, FixedPointType& fixpt, llvm::Instruction *ip = nullptr);
-  llvm::Value *genConvertFixToFloat(llvm::Value *fix, FixedPointType& fixpt, llvm::Type *destt);
-  llvm::Value *genConvertFixedToFixed(llvm::Value *fix, FixedPointType& srct, FixedPointType& destt, llvm::Instruction *ip = nullptr);
+  llvm::Value *genConvertFloatToFix(llvm::Value *flt, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr);
+  llvm::Value *genConvertFixToFloat(llvm::Value *fix, const FixedPointType& fixpt, llvm::Type *destt);
+  llvm::Value *genConvertFixedToFixed(llvm::Value *fix, const FixedPointType& srct, const FixedPointType& destt, llvm::Instruction *ip = nullptr);
 
-  llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, FixedPointType& baset);
+  llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, const FixedPointType& baset);
   llvm::Type *getLLVMFixedPointTypeForFloatValue(llvm::Value *val);
   FixedPointType& fixPType(llvm::Value *val) {
     auto vi = info.find(val);
