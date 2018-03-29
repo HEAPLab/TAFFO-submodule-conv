@@ -8,6 +8,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Support/CommandLine.h"
+#include "FixedPointType.h"
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
 #define __LLVM_FLOAT_TO_FIXED_PASS_H__
@@ -43,6 +44,7 @@ struct FloatToFixed : public llvm::ModulePass {
   static char ID;
   int fracBitsAmt;
   int bitsAmt;
+  FixedPointType defaultFixpType;
   
   llvm::DenseMap<llvm::Value *, llvm::Value *> operandPool;
   llvm::DenseMap<llvm::Value *, ValueInfo> info;
