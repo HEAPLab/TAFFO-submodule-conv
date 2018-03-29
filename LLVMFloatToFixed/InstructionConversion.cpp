@@ -232,7 +232,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr)
     return nullptr;
 
   Type *fxt = getFixedPointType(instr->getContext());
-  Type *dbfxt = Type::getIntNTy(instr->getContext(), bitsAmt*2);
+  Type *dbfxt = Type::getIntNTy(instr->getContext(), defaultFixpType.bitsAmt*2);
 
   if (opc == Instruction::FAdd) {
     ty = Instruction::Add;
@@ -245,14 +245,14 @@ Value *FloatToFixed::convertBinOp(Instruction *instr)
 
     Value *fixop = builder.CreateMul(ext1,ext2);
     return builder.CreateTrunc(
-      builder.CreateAShr(fixop,ConstantInt::get(dbfxt,fracBitsAmt)),
+      builder.CreateAShr(fixop,ConstantInt::get(dbfxt, defaultFixpType.fracBitsAmt)),
       fxt);
 
   } else if (opc == Instruction::FDiv) {
 
     Value *ext1 = builder.CreateShl(
       builder.CreateSExt(val1,dbfxt),
-      ConstantInt::get(dbfxt,fracBitsAmt)
+      ConstantInt::get(dbfxt, defaultFixpType.fracBitsAmt)
       );
     Value *ext2 = builder.CreateSExt(val2,dbfxt);
 
@@ -335,26 +335,26 @@ Value *FloatToFixed::convertCast(CastInst *cast)
 
   if (cast->getOpcode() == Instruction::FPToSI) {
     return builder.CreateSExtOrTrunc(
-      builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()),fracBitsAmt)),
+      builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()), defaultFixpType.fracBitsAmt)),
       cast->getType()
     );
 
   } else if (cast->getOpcode() == Instruction::FPToUI) {
     return builder.CreateZExtOrTrunc(
-      builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()),fracBitsAmt)),
+      builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()), defaultFixpType.fracBitsAmt)),
       cast->getType()
     );
 
   } else if (cast->getOpcode() == Instruction::SIToFP) {
     return builder.CreateShl(
       builder.CreateSExtOrTrunc(val,getFixedPointType(val->getContext())),
-      ConstantInt::get(getFixedPointType(val->getContext()) ,fracBitsAmt)
+      ConstantInt::get(getFixedPointType(val->getContext()), defaultFixpType.fracBitsAmt)
     );
 
   } else if (cast->getOpcode() == Instruction::UIToFP) {
     return builder.CreateShl(
       builder.CreateZExtOrTrunc(val,getFixedPointType(val->getContext())),
-      ConstantInt::get(getFixedPointType(val->getContext()) ,fracBitsAmt)
+      ConstantInt::get(getFixedPointType(val->getContext()), defaultFixpType.fracBitsAmt)
     );
 
   } else if (cast->getOpcode() == Instruction::FPTrunc ||

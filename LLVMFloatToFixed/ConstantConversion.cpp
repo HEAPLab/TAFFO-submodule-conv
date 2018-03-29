@@ -80,12 +80,12 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context)
   bool precise = false;
   APFloat val = fpc->getValueAPF();
 
-  APFloat exp(pow(2.0, fracBitsAmt));
+  APFloat exp(pow(2.0, defaultFixpType.fracBitsAmt));
   exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
   val.multiply(exp, APFloat::rmTowardNegative);
 
   integerPart fixval;
-  APFloat::opStatus cvtres = val.convertToInteger(&fixval, bitsAmt, true,
+  APFloat::opStatus cvtres = val.convertToInteger(&fixval, defaultFixpType.bitsAmt, true,
     APFloat::rmTowardNegative, &precise);
   
   if (cvtres != APFloat::opStatus::opOK && context) {

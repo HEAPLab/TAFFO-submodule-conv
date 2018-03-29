@@ -29,8 +29,6 @@ static RegisterPass<FloatToFixed> X(
 bool FloatToFixed::runOnModule(Module &m)
 {
   DEBUG_WITH_TYPE(DEBUG_ANNOTATION, printAnnotatedObj(m));
-  fracBitsAmt = defaultFixpType.fracBitsAmt;
-  bitsAmt = defaultFixpType.bitsAmt;
 
   llvm::SmallPtrSet<llvm::Value *, 32> local;
   llvm::SmallPtrSet<llvm::Value *, 32> global;

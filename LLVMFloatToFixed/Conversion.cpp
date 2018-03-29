@@ -117,12 +117,12 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
   /* insert new instructions before ip */
   if (SIToFPInst *instr = dyn_cast<SIToFPInst>(flt)) {
     Value *intparam = instr->getOperand(0);
-    return builder.CreateShl(intparam, fracBitsAmt);
+    return builder.CreateShl(intparam, defaultFixpType.fracBitsAmt);
   } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(flt)) {
     Value *intparam = instr->getOperand(0);
-    return builder.CreateShl(intparam, fracBitsAmt);
+    return builder.CreateShl(intparam, defaultFixpType.fracBitsAmt);
   } else {
-    double twoebits = pow(2.0, fracBitsAmt);
+    double twoebits = pow(2.0, defaultFixpType.fracBitsAmt);
     return builder.CreateFPToSI(
       builder.CreateFMul(
         ConstantFP::get(flt->getType(), twoebits),
@@ -153,7 +153,7 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
   }
 
   IRBuilder<> builder(i->getNextNode());
-  double twoebits = pow(2.0, fracBitsAmt);
+  double twoebits = pow(2.0, defaultFixpType.fracBitsAmt);
   return builder.CreateFDiv(
     builder.CreateSIToFP(
       fix, destt),
@@ -188,6 +188,6 @@ Type *FloatToFixed::getFixedPointTypeForFloatType(Type *srct)
 
 Type *FloatToFixed::getFixedPointType(LLVMContext &ctxt)
 {
-  return Type::getIntNTy(ctxt, bitsAmt);
+  return Type::getIntNTy(ctxt, defaultFixpType.bitsAmt);
 }
 

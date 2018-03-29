@@ -42,8 +42,6 @@ struct ValueInfo {
 
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
-  int fracBitsAmt;
-  int bitsAmt;
   FixedPointType defaultFixpType;
   
   llvm::DenseMap<llvm::Value *, llvm::Value *> operandPool;
