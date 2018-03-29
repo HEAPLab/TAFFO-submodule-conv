@@ -89,14 +89,17 @@ Value *FloatToFixed::convertLoad(LoadInst *load)
 Value *FloatToFixed::convertStore(StoreInst *store)
 {
   Value *ptr = store->getPointerOperand();
-  Value *newptr = operandPool[ptr];
+  Value *newptr = matchOp(ptr);
   if (!newptr)
-    newptr = ptr;
-  else if (newptr == ConversionError)
     return nullptr;
 
   Value *val = store->getValueOperand();
-  Value *newval = translateOrMatchOperand(val, store);
+  Value *newval;
+  if (val->getType()->isFloatingPointTy()) {
+    newval = translateOrMatchOperandAndType(val, defaultFixpType, store);
+  } else {
+    newval = matchOp(val);
+  }
   if (!newval)
     return nullptr;
 
@@ -129,7 +132,7 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep)
     return bci;
   }
   IRBuilder <> builder (gep);
-  Value *newval = translateOrMatchOperand(gep->getPointerOperand(), gep);
+  Value *newval = matchOp(gep->getPointerOperand());
   if (!newval)
     return nullptr;
 
@@ -175,7 +178,7 @@ Value *FloatToFixed::convertPhi(PHINode *load)
   for (int i=0; i<load->getNumIncomingValues(); i++) {
     Value *thisval = load->getIncomingValue(i);
     BasicBlock *thisbb = load->getIncomingBlock(i);
-    Value *newval = translateOrMatchOperand(thisval, load);
+    Value *newval = translateOrMatchOperandAndType(thisval, defaultFixpType, load);
     if (!newval) {
       delete newphi;
       return nullptr;
@@ -189,25 +192,26 @@ Value *FloatToFixed::convertPhi(PHINode *load)
 
 Value *FloatToFixed::convertSelect(SelectInst *sel)
 {
+  /* the condition is always a bool (i1) or a vector of bools */
+  Value *newcond = matchOp(sel->getCondition());
+  
   if (!sel->getType()->isFloatingPointTy()) {
-    Value *newcond = operandPool[sel->getCondition()];
-    Value *newtruev = operandPool[sel->getTrueValue()];
-    Value *newfalsev = operandPool[sel->getFalseValue()];
+    Value *newtruev = matchOp(sel->getTrueValue());
+    Value *newfalsev = matchOp(sel->getFalseValue());
 
     /* like phi, upgrade in place */
-    if (newcond && newcond != ConversionError)
+    if (newcond)
       sel->setCondition(newcond);
-    if (newtruev && newtruev != ConversionError)
+    if (newtruev)
       sel->setTrueValue(newtruev);
-    if (newfalsev && newfalsev != ConversionError)
+    if (newfalsev)
       sel->setFalseValue(newfalsev);
     return sel;
   }
 
   /* otherwise create a new one */
-  Value *newtruev = translateOrMatchOperand(sel->getTrueValue(), sel);
-  Value *newfalsev = translateOrMatchOperand(sel->getFalseValue(), sel);
-  Value *newcond = translateOrMatchOperand(sel->getCondition(), sel);
+  Value *newtruev = translateOrMatchOperandAndType(sel->getTrueValue(), defaultFixpType, sel);
+  Value *newfalsev = translateOrMatchOperandAndType(sel->getFalseValue(), defaultFixpType, sel);
   if (!newtruev || !newfalsev || !newcond)
     return nullptr;
 
@@ -219,15 +223,18 @@ Value *FloatToFixed::convertSelect(SelectInst *sel)
 
 Value *FloatToFixed::convertBinOp(Instruction *instr)
 {
-  IRBuilder<> builder(instr->getNextNode());
-  Instruction::BinaryOps ty;
-  int opc = instr->getOpcode();
   /*le istruzioni Instruction::
     [Add,Sub,Mul,SDiv,UDiv,SRem,URem,Shl,LShr,AShr,And,Or,Xor]
     vengono gestite dalla fallback e non in questa funzione */
+  if (!instr->getType()->isFloatingPointTy())
+    return Unsupported;
+  
+  IRBuilder<> builder(instr->getNextNode());
+  Instruction::BinaryOps ty;
+  int opc = instr->getOpcode();
 
-  Value *val1 = translateOrMatchOperand(instr->getOperand(0), instr);
-  Value *val2 = translateOrMatchOperand(instr->getOperand(1), instr);
+  Value *val1 = translateOrMatchOperandAndType(instr->getOperand(0), defaultFixpType, instr);
+  Value *val2 = translateOrMatchOperandAndType(instr->getOperand(1), defaultFixpType, instr);
   if (!val1 || !val2)
     return nullptr;
 
@@ -309,13 +316,12 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
       ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0));
   }
 
-
   if (swapped) {
     ty = CmpInst::getInversePredicate(ty);
   }
 
-  Value *val1 = translateOrMatchOperand(fcmp->getOperand(0), fcmp);
-  Value *val2 = translateOrMatchOperand(fcmp->getOperand(1), fcmp);
+  Value *val1 = translateOrMatchOperandAndType(fcmp->getOperand(0), defaultFixpType, fcmp);
+  Value *val2 = translateOrMatchOperandAndType(fcmp->getOperand(1), defaultFixpType, fcmp);
 
   return val1 && val2
     ? builder.CreateICmp(ty,val1,val2)
@@ -331,36 +337,45 @@ Value *FloatToFixed::convertCast(CastInst *cast)
    * - [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori */
 
   IRBuilder<> builder(cast->getNextNode());
-  Value *val = translateOrMatchOperand(cast->getOperand(0), cast);
+  Value *operand = cast->getOperand(0);
+  
+  if (cast->getType()->isIntegerTy() && operand->getType()->isFloatingPointTy()) {
+    /* fptosi, fptoui, fptrunc, fpext */
+    Value *val = translateOrMatchOperandAndType(operand, defaultFixpType, cast);
+    
+    if (cast->getOpcode() == Instruction::FPToSI) {
+      return builder.CreateSExtOrTrunc(
+        builder.CreateAShr(val,ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)),
+        cast->getType()
+      );
 
-  if (cast->getOpcode() == Instruction::FPToSI) {
-    return builder.CreateSExtOrTrunc(
-      builder.CreateAShr(val,ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)),
-      cast->getType()
-    );
+    } else if (cast->getOpcode() == Instruction::FPToUI) {
+      return builder.CreateZExtOrTrunc(
+        builder.CreateAShr(val,ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)),
+        cast->getType()
+      );
 
-  } else if (cast->getOpcode() == Instruction::FPToUI) {
-    return builder.CreateZExtOrTrunc(
-      builder.CreateAShr(val,ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)),
-      cast->getType()
-    );
+    } else if (cast->getOpcode() == Instruction::FPTrunc ||
+               cast->getOpcode() == Instruction::FPExt) {
+      /* there is just one type of fixed point type; nothing to convert */
+      return val;
+    }
+  } else {
+    /* sitofp, uitofp */
+    Value *val = matchOp(operand);
+    
+    if (cast->getOpcode() == Instruction::SIToFP) {
+      return builder.CreateShl(
+        builder.CreateSExtOrTrunc(val, defaultFixpType.toLLVMType(val->getContext())),
+        ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)
+      );
 
-  } else if (cast->getOpcode() == Instruction::SIToFP) {
-    return builder.CreateShl(
-      builder.CreateSExtOrTrunc(val, defaultFixpType.toLLVMType(val->getContext())),
-      ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)
-    );
-
-  } else if (cast->getOpcode() == Instruction::UIToFP) {
-    return builder.CreateShl(
-      builder.CreateZExtOrTrunc(val, defaultFixpType.toLLVMType(val->getContext())),
-      ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)
-    );
-
-  } else if (cast->getOpcode() == Instruction::FPTrunc ||
-             cast->getOpcode() == Instruction::FPExt) {
-    /* there is just one type of fixed point type; nothing to convert */
-    return val;
+    } else if (cast->getOpcode() == Instruction::UIToFP) {
+      return builder.CreateShl(
+        builder.CreateZExtOrTrunc(val, defaultFixpType.toLLVMType(val->getContext())),
+        ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)
+      );
+    }
   }
 
   return Unsupported;

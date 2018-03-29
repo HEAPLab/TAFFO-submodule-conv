@@ -43,6 +43,7 @@ void FloatToFixed::performConversion(
     Value *newv = convertSingleValue(m, v);
     if (newv && newv != ConversionError) {
       operandPool.insert({v, newv});
+      info[newv] = info[v];
     } else {
       DEBUG(dbgs() << "warning: ";
             v->print(dbgs());
@@ -73,23 +74,21 @@ Value *FloatToFixed::convertSingleValue(Module& m, Value *val)
 
 
 /* do not use on pointer operands */
-Value *FloatToFixed::translateOrMatchOperand(Value *val, Instruction *ip)
+Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt, Instruction *ip)
 {
   Value *res = operandPool[val];
   if (res) {
-    if (res != ConversionError)
+    if (res != ConversionError) {
       /* the value has been successfully converted in a previous step */
+      iofixpt = fixPType(res);
       return res;
-    else
+    } else
       /* the value should have been converted but it hasn't; bail out */
       return nullptr;
   }
 
-  if (!val->getType()->isPointerTy() && !val->getType()->isFloatingPointTy())
-    /* doesn't need to be converted; return as is */
-    return val;
-
-  return genConvertFloatToFix(val, defaultFixpType, ip);
+  assert(val->getType()->isPointerTy() || val->getType()->isFloatingPointTy());
+  return genConvertFloatToFix(val, iofixpt, ip);
 }
 
 
@@ -99,8 +98,6 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, FixedPointType& fixpt, Ins
     assert(fixpt == defaultFixpType);
     return convertConstant(c);
   }
-
-  FloatToFixCount++;
 
   if (Instruction *i = dyn_cast<Instruction>(flt))
     ip = i->getNextNode();
@@ -112,6 +109,8 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, FixedPointType& fixpt, Ins
           errs() << "\n");
     return nullptr;
   }
+  
+  FloatToFixCount++;
   
   IRBuilder<> builder(ip);
   Type *destt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
@@ -147,7 +146,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, FixedPointType& srct, Fi
   assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");
   assert(llvmsrct->isIntegerTy() && "cannot change fixed point format of a float");
   
-  Type *llvmdestt = getLLVMFixedPointTypeForFloatType(llvmsrct, destt);
+  Type *llvmdestt = destt.toLLVMType(fix->getContext());
   
   Instruction *fixinst = dyn_cast<Instruction>(fix);
   if (!ip && fixinst) {
@@ -229,8 +228,11 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, FixedPointType
     return baset.toLLVMType(srct->getContext());
     
   }
-  DEBUG(srct->dump());
-  DEBUG(dbgs() << "getFixedPointTypeForFloatType given a non-float type\n");
+  DEBUG(
+    dbgs() << "getLLVMFixedPointTypeForFloatType given non-float type ";
+    srct->print(dbgs());
+    dbgs() << "\n";
+  );
   return srct;
 }
 
