@@ -9,6 +9,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "FixedPointType.h"
+#include "LLVMFloatToFixedPass.h"
 
 
 using namespace llvm;
@@ -30,9 +31,37 @@ FixedPointType::FixedPointType()
 }
 
 
+FixedPointType::FixedPointType(Type *llvmtype)
+{
+  this->isSigned = true;
+  if (isFloatType(llvmtype)) {
+    this->fracBitsAmt = GlobalFracBitsAmt;
+    this->bitsAmt = GlobalBitsAmt;
+    return;
+  } else if (llvmtype->isIntegerTy()) {
+    this->fracBitsAmt = 0;
+    this->bitsAmt = llvmtype->getIntegerBitWidth();
+  } else {
+    this->fracBitsAmt = 0;
+    this->bitsAmt = 0;
+  }
+}
+
+
 Type *FixedPointType::toLLVMType(LLVMContext& ctxt)
 {
   return Type::getIntNTy(ctxt, this->bitsAmt);
 }
+
+
+raw_ostream& operator<<(raw_ostream& stm, const FixedPointType& f)
+{
+  if (f.isSigned)
+    stm << "s";
+  else
+    stm << "u";
+  stm << "fix" << f.bitsAmt - f.fracBitsAmt << ":" << f.fracBitsAmt;
+  return stm;
+};
 
 

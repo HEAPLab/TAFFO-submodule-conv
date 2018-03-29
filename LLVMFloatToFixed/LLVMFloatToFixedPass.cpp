@@ -46,6 +46,7 @@ bool FloatToFixed::runOnModule(Module &m)
   DEBUG(errs() << "conversion queue:\n";
         for (Value *val: vals) {
           errs() << "bt=" << info[val].isBacktrackingNode << " ";
+          errs() << info[val].fixpType << " ";
           errs() << "[";
             for (Value *rootv: info[val].roots) {
               rootv->print(errs());
@@ -69,7 +70,7 @@ bool FloatToFixed::runOnModule(Module &m)
 }
 
 
-bool FloatToFixed::isFloatType(Type *srct)
+bool flttofix::isFloatType(Type *srct)
 {
   if (srct->isPointerTy()) {
     return isFloatType(srct->getPointerElementType());
@@ -117,6 +118,8 @@ void FloatToFixed::buildConversionQueueForRootValues(
         if (info[v].isBacktrackingNode) {
           info[u].isBacktrackingNode = true;
         }
+        info[u].origType = u->getType();
+        info[u].fixpType = FixedPointType(u->getType());
       }
       next++;
     }
@@ -176,6 +179,8 @@ void FloatToFixed::buildConversionQueueForRootValues(
         dbgs() << "  enqueued\n";
         #endif
         queue.insert(queue.begin()+next-1, u);
+        info[u].origType = u->getType();
+        info[u].fixpType = FixedPointType(u->getType());
         next++;
       }
     }

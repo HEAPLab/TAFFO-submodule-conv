@@ -34,11 +34,18 @@ extern llvm::Value *Unsupported;
 
 namespace flttofix {
 
+
+bool isFloatType(llvm::Type *srct);
+
+
 struct ValueInfo {
   bool isBacktrackingNode;
   bool isRoot;
   llvm::SmallPtrSet<llvm::Value*, 5> roots;
+  FixedPointType fixpType;
+  llvm::Type *origType;
 };
+
 
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
@@ -49,8 +56,6 @@ struct FloatToFixed : public llvm::ModulePass {
   
   FloatToFixed(): ModulePass(ID) { }
   bool runOnModule(llvm::Module &M) override;
-  
-  bool isFloatType(llvm::Type *srct);
 
   void readGlobalAnnotations(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *>& res, bool functionAnnotation = false);
   void readLocalAnnotations(llvm::Function &f, llvm::SmallPtrSetImpl<llvm::Value *>& res);
@@ -90,6 +95,7 @@ struct FloatToFixed : public llvm::ModulePass {
   
   void cleanup(const std::vector<llvm::Value*>& queue);
 };
+
 
 }
 

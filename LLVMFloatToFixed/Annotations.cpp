@@ -96,6 +96,7 @@ bool FloatToFixed::parseAnnotation(SmallPtrSetImpl<Value *>& variables, Constant
 
   if (Instruction *toconv = dyn_cast<Instruction>(instr)) {
     variables.insert(toconv->getOperand(0));
+    
     info[toconv->getOperand(0)] = vi;
   } else {
     return false;

@@ -1,3 +1,4 @@
+#include <fstream>
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Constants.h"
@@ -23,6 +24,7 @@ struct FixedPointType {
   int bitsAmt;
   
   FixedPointType();
+  FixedPointType(llvm::Type *llvmtype);
   llvm::Type *toLLVMType(llvm::LLVMContext& ctxt);
   
   bool operator==(const FixedPointType& rhs) {
@@ -34,6 +36,9 @@ struct FixedPointType {
 
 
 }
+
+
+llvm::raw_ostream& operator<<(llvm::raw_ostream& stm, const flttofix::FixedPointType& f);
 
 
 #endif
