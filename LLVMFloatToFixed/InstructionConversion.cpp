@@ -56,7 +56,7 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val)
 Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 {
   Type *prevt = alloca->getAllocatedType();
-  Type *newt = getFixedPointTypeForFloatType(prevt);
+  Type *newt = getLLVMFixedPointTypeForFloatType(prevt, defaultFixpType);
   if (newt == prevt)
     return alloca;
 
@@ -106,7 +106,7 @@ Value *FloatToFixed::convertStore(StoreInst *store)
      * we can't do that if the source is a pointer though; in that case bail out */
     if (newval->getType()->isPointerTy())
       return nullptr;
-    newval = genConvertFixToFloat(newval,cast<PointerType>(newptr->getType())->getElementType());
+    newval = genConvertFixToFloat(newval, defaultFixpType, cast<PointerType>(newptr->getType())->getElementType());
   }
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
     store->getAlignment(), store->getOrdering(), store->getSynchScope());
@@ -121,7 +121,7 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep)
     dbgs() << "*** UGLY HACK *** ";
     /* till we can flag a structure for conversion we bitcast away the
      * item pointer to a fixed point type and hope everything still works */
-    BitCastInst *bci = new BitCastInst(gep, getFixedPointTypeForFloatType(gep->getType()));
+    BitCastInst *bci = new BitCastInst(gep, getLLVMFixedPointTypeForFloatType(gep->getType(), defaultFixpType));
     bci->setName(gep->getName() + ".haxfixp");
     bci->insertAfter(gep);
     bci->print(dbgs());
@@ -169,7 +169,7 @@ Value *FloatToFixed::convertPhi(PHINode *load)
   /* if we have to do a type change, create a new phi node. The new type is for
    * sure that of a fixed point value; because the original type was a float
    * and thus all of its incoming values were floats */
-  PHINode *newphi = PHINode::Create(getFixedPointType(load->getContext()),
+  PHINode *newphi = PHINode::Create(defaultFixpType.toLLVMType(load->getContext()),
     load->getNumIncomingValues());
 
   for (int i=0; i<load->getNumIncomingValues(); i++) {
@@ -231,7 +231,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr)
   if (!val1 || !val2)
     return nullptr;
 
-  Type *fxt = getFixedPointType(instr->getContext());
+  Type *fxt = defaultFixpType.toLLVMType(instr->getContext());
   Type *dbfxt = Type::getIntNTy(instr->getContext(), defaultFixpType.bitsAmt*2);
 
   if (opc == Instruction::FAdd) {
@@ -335,26 +335,26 @@ Value *FloatToFixed::convertCast(CastInst *cast)
 
   if (cast->getOpcode() == Instruction::FPToSI) {
     return builder.CreateSExtOrTrunc(
-      builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()), defaultFixpType.fracBitsAmt)),
+      builder.CreateAShr(val,ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)),
       cast->getType()
     );
 
   } else if (cast->getOpcode() == Instruction::FPToUI) {
     return builder.CreateZExtOrTrunc(
-      builder.CreateAShr(val,ConstantInt::get(getFixedPointType(val->getContext()), defaultFixpType.fracBitsAmt)),
+      builder.CreateAShr(val,ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)),
       cast->getType()
     );
 
   } else if (cast->getOpcode() == Instruction::SIToFP) {
     return builder.CreateShl(
-      builder.CreateSExtOrTrunc(val,getFixedPointType(val->getContext())),
-      ConstantInt::get(getFixedPointType(val->getContext()), defaultFixpType.fracBitsAmt)
+      builder.CreateSExtOrTrunc(val, defaultFixpType.toLLVMType(val->getContext())),
+      ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)
     );
 
   } else if (cast->getOpcode() == Instruction::UIToFP) {
     return builder.CreateShl(
-      builder.CreateZExtOrTrunc(val,getFixedPointType(val->getContext())),
-      ConstantInt::get(getFixedPointType(val->getContext()), defaultFixpType.fracBitsAmt)
+      builder.CreateZExtOrTrunc(val, defaultFixpType.toLLVMType(val->getContext())),
+      ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)
     );
 
   } else if (cast->getOpcode() == Instruction::FPTrunc ||
@@ -391,7 +391,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp)
         il rispettivo value è un fix che deve essere convertito in float per retrocompatibilità.
         Se la chiave non è un float allora uso il rispettivo value associato così com'è.*/
       fixval = fallval->getType()->isFloatingPointTy()
-        ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval,fallval->getType()))
+        ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval, defaultFixpType, fallval->getType()))
         : dyn_cast<Instruction>(cvtfallval);
 
       DEBUG(dbgs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
@@ -406,7 +406,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp)
   }
   DEBUG(dbgs() << "  mutated operands to:\n" << *unsupp << "\n");
   if (unsupp->getType()->isFloatingPointTy()) {
-    Value *fallbackv = genConvertFloatToFix(unsupp, unsupp);
+    Value *fallbackv = genConvertFloatToFix(unsupp, defaultFixpType, unsupp);
     if (unsupp->hasName())
       fallbackv->setName(unsupp->getName() + ".fallback");
     return fallbackv;

@@ -25,7 +25,7 @@ Constant *FloatToFixed::convertConstant(Constant *flt)
   } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
     return convertLiteral(fpc, nullptr);
   } else if (auto cag = dyn_cast<ConstantAggregateZero>(flt)) {
-    Type *newt = getFixedPointTypeForFloatType(flt->getType());
+    Type *newt = getLLVMFixedPointTypeForFloatType(flt->getType(), defaultFixpType);
     return ConstantAggregateZero::get(newt);
   } else if (ConstantExpr *cexp = dyn_cast<ConstantExpr>(flt)) {
     return convertConstantExpr(cexp);
@@ -59,7 +59,7 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp)
 Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob)
 {
   Type *prevt = glob->getType()->getPointerElementType();
-  Type *newt = getFixedPointTypeForFloatType(prevt);
+  Type *newt = getLLVMFixedPointTypeForFloatType(prevt, defaultFixpType);
   if (!newt)
     return nullptr;
   
@@ -103,7 +103,7 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context)
     }
   }
 
-  Type *intty = getFixedPointType(fpc->getType()->getContext());
+  Type *intty = defaultFixpType.toLLVMType(fpc->getContext());
   return ConstantInt::get(intty, fixval, true);
 }
 

@@ -89,13 +89,14 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, Instruction *ip)
     /* doesn't need to be converted; return as is */
     return val;
 
-  return genConvertFloatToFix(val, ip);
+  return genConvertFloatToFix(val, defaultFixpType, ip);
 }
 
 
-Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
+Value *FloatToFixed::genConvertFloatToFix(Value *flt, FixedPointType& fixpt, Instruction *ip)
 {
   if (Constant *c = dyn_cast<Constant>(flt)) {
+    assert(fixpt == defaultFixpType);
     return convertConstant(c);
   }
 
@@ -113,26 +114,74 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, Instruction *ip)
   }
   
   IRBuilder<> builder(ip);
+  Type *destt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
   
   /* insert new instructions before ip */
   if (SIToFPInst *instr = dyn_cast<SIToFPInst>(flt)) {
     Value *intparam = instr->getOperand(0);
-    return builder.CreateShl(intparam, defaultFixpType.fracBitsAmt);
+    return builder.CreateShl(
+              builder.CreateIntCast(intparam, destt, true),
+            fixpt.fracBitsAmt);
   } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(flt)) {
     Value *intparam = instr->getOperand(0);
-    return builder.CreateShl(intparam, defaultFixpType.fracBitsAmt);
+    return builder.CreateShl(
+              builder.CreateIntCast(intparam, destt, false),
+            fixpt.fracBitsAmt);
   } else {
-    double twoebits = pow(2.0, defaultFixpType.fracBitsAmt);
-    return builder.CreateFPToSI(
-      builder.CreateFMul(
-        ConstantFP::get(flt->getType(), twoebits),
-        flt),
-      getFixedPointType(flt->getContext()));
+    double twoebits = pow(2.0, fixpt.fracBitsAmt);
+    Value *interm = builder.CreateFMul(
+          ConstantFP::get(flt->getType(), twoebits),
+        flt);
+    if (fixpt.isSigned) {
+      return builder.CreateFPToSI(interm, destt);
+    } else {
+      return builder.CreateFPToUI(interm, destt);
+    }
   }
 }
 
 
-Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
+Value *FloatToFixed::genConvertFixedToFixed(Value *fix, FixedPointType& srct, FixedPointType& destt, Instruction *ip)
+{
+  Type *llvmsrct = fix->getType();
+  assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");
+  assert(llvmsrct->isIntegerTy() && "cannot change fixed point format of a float");
+  
+  Type *llvmdestt = getLLVMFixedPointTypeForFloatType(llvmsrct, destt);
+  
+  Instruction *fixinst = dyn_cast<Instruction>(fix);
+  if (!ip && fixinst) {
+    ip = fixinst->getNextNode();
+  } else if (!ip) {
+    assert("ip required when converted value not an instruction");
+  }
+  IRBuilder<> builder(ip);
+
+  /* extend/truncate to new width */
+  Value *cvt;
+  if (destt.isSigned) {
+    cvt = builder.CreateSExtOrTrunc(fix, llvmdestt);
+  } else {
+    cvt = builder.CreateZExtOrTrunc(fix, llvmdestt);
+  }
+  fix = cvt;
+  
+  /* move the point */
+  int deltab = destt.fracBitsAmt - srct.fracBitsAmt;
+  if (deltab > 0) {
+    fix = builder.CreateShl(fix, deltab);
+  } else if (deltab < 0) {
+    if (srct.isSigned) {
+      fix = builder.CreateAShr(fix, -deltab);
+    } else {
+      fix = builder.CreateLShr(fix, -deltab);
+    }
+  }
+  return fix;
+}
+
+
+Value *FloatToFixed::genConvertFixToFloat(Value *fix, FixedPointType& fixpt, Type *destt)
 {
   dbgs() << "******** trace: genConvertFixToFloat ";
   fix->print(dbgs());
@@ -153,7 +202,7 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
   }
 
   IRBuilder<> builder(i->getNextNode());
-  double twoebits = pow(2.0, defaultFixpType.fracBitsAmt);
+  double twoebits = pow(2.0, fixpt.fracBitsAmt);
   return builder.CreateFDiv(
     builder.CreateSIToFP(
       fix, destt),
@@ -161,23 +210,23 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, Type *destt)
 }
 
 
-Type *FloatToFixed::getFixedPointTypeForFloatType(Type *srct)
+Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, FixedPointType& baset)
 {
   if (srct->isPointerTy()) {
-    Type *enc = getFixedPointTypeForFloatType(srct->getPointerElementType());
+    Type *enc = getLLVMFixedPointTypeForFloatType(srct->getPointerElementType(), baset);
     if (enc)
       return enc->getPointerTo();
     return nullptr;
     
   } else if (srct->isArrayTy()) {
     int nel = srct->getArrayNumElements();
-    Type *enc = getFixedPointTypeForFloatType(srct->getArrayElementType());
+    Type *enc = getLLVMFixedPointTypeForFloatType(srct->getArrayElementType(), baset);
     if (enc)
       return ArrayType::get(enc, nel);
     return nullptr;
     
   } else if (srct->isFloatingPointTy()) {
-    return getFixedPointType(srct->getContext());
+    return baset.toLLVMType(srct->getContext());
     
   }
   DEBUG(srct->dump());
@@ -186,8 +235,11 @@ Type *FloatToFixed::getFixedPointTypeForFloatType(Type *srct)
 }
 
 
-Type *FloatToFixed::getFixedPointType(LLVMContext &ctxt)
+Type *FloatToFixed::getLLVMFixedPointTypeForFloatValue(Value *val)
 {
-  return Type::getIntNTy(ctxt, defaultFixpType.bitsAmt);
+  FixedPointType& fpt = fixPType(val);
+  return getLLVMFixedPointTypeForFloatType(val->getType(), fpt);
 }
+
+
 

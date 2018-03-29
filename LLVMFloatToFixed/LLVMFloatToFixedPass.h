@@ -87,11 +87,17 @@ struct FloatToFixed : public llvm::ModulePass {
 
   llvm::Value *translateOrMatchOperand(llvm::Value *val, llvm::Instruction *ip = nullptr);
   
-  llvm::Value *genConvertFloatToFix(llvm::Value *flt, llvm::Instruction *ip = nullptr);
-  llvm::Value *genConvertFixToFloat(llvm::Value *fix, llvm::Type *destt);
+  llvm::Value *genConvertFloatToFix(llvm::Value *flt, FixedPointType& fixpt, llvm::Instruction *ip = nullptr);
+  llvm::Value *genConvertFixToFloat(llvm::Value *fix, FixedPointType& fixpt, llvm::Type *destt);
+  llvm::Value *genConvertFixedToFixed(llvm::Value *fix, FixedPointType& srct, FixedPointType& destt, llvm::Instruction *ip = nullptr);
 
-  llvm::Type *getFixedPointTypeForFloatType(llvm::Type *srct);
-  llvm::Type *getFixedPointType(llvm::LLVMContext &ctxt);
+  llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, FixedPointType& baset);
+  llvm::Type *getLLVMFixedPointTypeForFloatValue(llvm::Value *val);
+  FixedPointType& fixPType(llvm::Value *val) {
+    auto vi = info.find(val);
+    assert((vi != info.end()) && "value with no info");
+    return vi->getSecond().fixpType;
+  };
   
   void cleanup(const std::vector<llvm::Value*>& queue);
 };
