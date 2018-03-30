@@ -41,6 +41,7 @@ bool FloatToFixed::runOnModule(Module &m)
 
   std::vector<Value*> vals;
   buildConversionQueueForRootValues(rootsa, vals);
+  optimizeFixedPointTypes(vals);
 
   if (vals.size() < 1000) {
   DEBUG(errs() << "conversion queue:\n";
@@ -80,6 +81,17 @@ bool flttofix::isFloatType(Type *srct)
     return true;
   }
   return false;
+}
+
+
+void FloatToFixed::optimizeFixedPointTypes(std::vector<Value*>& queue)
+{
+  for (Value *v: queue) {
+    if (StoreInst *store = dyn_cast<StoreInst>(v)) {
+      if (hasInfo(store->getPointerOperand()) && hasInfo(store->getValueOperand()))
+        fixPType(store->getValueOperand()) = fixPType(store->getPointerOperand());
+    }
+  }
 }
 
 
