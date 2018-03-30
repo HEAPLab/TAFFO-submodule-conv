@@ -92,34 +92,32 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
 Value *FloatToFixed::convertStore(StoreInst *store)
 {
   Value *ptr = store->getPointerOperand();
+  Value *val = store->getValueOperand();
+  
   Value *newptr = matchOp(ptr);
   if (!newptr)
     return nullptr;
-  const FixedPointType& desttype = fixPType(newptr);
-
-  Value *val = store->getValueOperand();
+  
   Value *newval;
-  FixedPointType valtype = desttype;
   if (val->getType()->isFloatingPointTy()) {
-    newval = translateOrMatchOperand(val, valtype, store);
+    FixedPointType valtype;
+    Type *peltype = newptr->getType()->getPointerElementType();
+    
+    if (peltype->isFloatingPointTy()) {
+      newval = translateOrMatchOperand(val, valtype, store);
+      newval = genConvertFixToFloat(newval, valtype, peltype);
+      
+    } else if (peltype->isIntegerTy()) {
+      valtype = fixPType(newptr);
+      newval = translateOrMatchOperandAndType(val, valtype, store);
+      
+    } else
+      return nullptr;
   } else {
     newval = matchOp(val);
   }
   if (!newval)
     return nullptr;
-
-  if (newval->getType() != cast<PointerType>(newptr->getType())->getElementType()) {
-    /* if the destination is to a floating point value and the source is not,
-     * convert back to a float and store the converted value
-     * we can't do that if the source is a pointer though; in that case bail out */
-    if (newval->getType()->isPointerTy())
-      return nullptr;
-    newval = genConvertFixToFloat(newval, valtype, cast<PointerType>(newptr->getType())->getElementType());
-  }
-  
-  if (val->getType()->isFloatingPointTy()) {
-    newval = genConvertFixedToFixed(newval, valtype, desttype, store);
-  }
   
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
     store->getAlignment(), store->getOrdering(), store->getSynchScope());
