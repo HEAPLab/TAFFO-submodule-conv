@@ -1,3 +1,5 @@
+#include <sstream>
+#include <iostream>
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
@@ -86,13 +88,32 @@ bool FloatToFixed::parseAnnotation(SmallPtrSetImpl<Value *>& variables, Constant
   if (!(annoStr->isString()))
     return false;
 
-  std::string str = annoStr->getAsString();
-  if (str.compare(0, str.length() - 1, "no_float") == 0)
+  StringRef annstr = annoStr->getAsString();
+  std::istringstream strstm(annstr.substr(0, annstr.size()-1));
+  
+  std::string head;
+  strstm >> head;
+  if (head == "no_float")
     vi.isBacktrackingNode = false;
-  else if (str.compare(0, str.length() - 1, "force_no_float") == 0)
+  else if (head == "force_no_float")
     vi.isBacktrackingNode = true;
   else
     return false;
+  
+  int intbits, fracbits;
+  strstm >> intbits >> fracbits;
+  if (!strstm.fail()) {
+    vi.fixpType.bitsAmt = intbits + fracbits;
+    vi.fixpType.fracBitsAmt = fracbits;
+  }
+  
+  std::string signedflg;
+  strstm >> signedflg;
+  if (!strstm.fail() && signedflg == "unsigned") {
+    vi.fixpType.isSigned = false;
+  } else {
+    vi.fixpType.isSigned = true;
+  }
 
   if (Instruction *toconv = dyn_cast<Instruction>(instr)) {
     variables.insert(toconv->getOperand(0));
