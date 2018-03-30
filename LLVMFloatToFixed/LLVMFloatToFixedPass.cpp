@@ -91,6 +91,16 @@ void FloatToFixed::buildConversionQueueForRootValues(
   for (auto i = queue.begin(); i != queue.end(); i++) {
     info[*i].isRoot = true;
   }
+  
+  auto completeInfo = [this](Value *v, Value *u) {
+    ValueInfo &vinfo = info[v];
+    ValueInfo &uinfo = info[u];
+    uinfo.origType = u->getType();
+    if (uinfo.fixpTypeRootDistance > std::max(vinfo.fixpTypeRootDistance, vinfo.fixpTypeRootDistance+1)) {
+      uinfo.fixpType = vinfo.fixpType;
+      uinfo.fixpTypeRootDistance = std::max(vinfo.fixpTypeRootDistance, vinfo.fixpTypeRootDistance+1);
+    }
+  };
 
   size_t prevQueueSize = 0;
   while (prevQueueSize < queue.size()) {
@@ -118,8 +128,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
         if (info[v].isBacktrackingNode) {
           info[u].isBacktrackingNode = true;
         }
-        info[u].origType = u->getType();
-        info[u].fixpType = FixedPointType(u->getType());
+        completeInfo(v, u);
       }
       next++;
     }
@@ -179,8 +188,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
         dbgs() << "  enqueued\n";
         #endif
         queue.insert(queue.begin()+next-1, u);
-        info[u].origType = u->getType();
-        info[u].fixpType = FixedPointType(u->getType());
+        completeInfo(v, u);
         next++;
       }
     }

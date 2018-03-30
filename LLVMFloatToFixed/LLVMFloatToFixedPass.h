@@ -43,6 +43,7 @@ struct ValueInfo {
   bool isRoot;
   llvm::SmallPtrSet<llvm::Value*, 5> roots;
   FixedPointType fixpType;  // significant iff origType is a float or a pointer to a float
+  int fixpTypeRootDistance = INT_MAX;
   llvm::Type *origType;
 };
 

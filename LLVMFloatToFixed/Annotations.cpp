@@ -103,18 +103,19 @@ bool FloatToFixed::parseAnnotation(SmallPtrSetImpl<Value *>& variables, Constant
   int intbits, fracbits;
   strstm >> intbits >> fracbits;
   if (!strstm.fail()) {
+    vi.fixpTypeRootDistance = 0;
     vi.fixpType.bitsAmt = intbits + fracbits;
     vi.fixpType.fracBitsAmt = fracbits;
+    
+    std::string signedflg;
+    strstm >> signedflg;
+    if (!strstm.fail() && signedflg == "unsigned") {
+      vi.fixpType.isSigned = false;
+    } else {
+      vi.fixpType.isSigned = true;
+    }
   }
   
-  std::string signedflg;
-  strstm >> signedflg;
-  if (!strstm.fail() && signedflg == "unsigned") {
-    vi.fixpType.isSigned = false;
-  } else {
-    vi.fixpType.isSigned = true;
-  }
-
   if (Instruction *toconv = dyn_cast<Instruction>(instr)) {
     variables.insert(toconv->getOperand(0));
     info[toconv->getOperand(0)] = vi;
