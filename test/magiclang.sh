@@ -35,10 +35,10 @@ if [ $ISDEBUG != '1' ]; then
   DEBUGONLYFLAG='';
 fi
 
-$CLANG -S -emit-llvm -fopenmp "$1" -o "_tmp0.$1.ll" $3
+$CLANG -S -emit-llvm "$1" -o "_tmp0.$1.ll" $3
 $OPT -load="$PASSLIB" -S -flttofix -dce $DEBUGONLYFLAG "_tmp0.$1.ll" -o "_tmp1.$1.ll"
-$CLANG -S -fopenmp -o "_tmp2.$1.s" "_tmp1.$1.ll" $2 $3
-$CLANG -fopenmp -o "$OUTNAME" "_tmp2.$1.s" $2 $3
+$CLANG -S -o "_tmp2.$1.s" "_tmp1.$1.ll" $2 $3
+$CLANG -o "$OUTNAME" "_tmp2.$1.s" $2 $3
 
-$CLANG -S -fopenmp -o "_tmp2_not_opt.$1.s" "_tmp0.$1.ll" $2 $3
-$CLANG -fopenmp -o "$OUTNAME._not_opt" "_tmp2_not_opt.$1.s" $2 $3
+$CLANG -S -o "_tmp2_not_opt.$1.s" "_tmp0.$1.ll" $2 $3
+$CLANG -o "$OUTNAME._not_opt" "_tmp2_not_opt.$1.s" $2 $3
