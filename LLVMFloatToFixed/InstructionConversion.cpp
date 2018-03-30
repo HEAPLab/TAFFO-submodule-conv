@@ -291,7 +291,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
         intype1.bitsAmt + intype2.bitsAmt);
       Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype);
       Value *ext2 = intype1.isSigned ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
-      Value *fixop = builder.CreateSDiv(ext1, ext2);
+      Value *fixop = fixpt.isSigned ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
       return genConvertFixedToFixed(fixop, fixoptype, fixpt);
     }
   }
