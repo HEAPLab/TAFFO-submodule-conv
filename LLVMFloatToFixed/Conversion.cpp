@@ -207,11 +207,10 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
   }
 
   IRBuilder<> builder(i->getNextNode());
+  
+  Value *floattmp = fixpt.isSigned ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
   double twoebits = pow(2.0, fixpt.fracBitsAmt);
-  return builder.CreateFDiv(
-    builder.CreateSIToFP(
-      fix, destt),
-    ConstantFP::get(destt, twoebits));
+  return builder.CreateFDiv(floattmp, ConstantFP::get(destt, twoebits));
 }
 
 
