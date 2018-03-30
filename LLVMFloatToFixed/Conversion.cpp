@@ -158,27 +158,31 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
 
   IRBuilder<> builder(ip);
 
-  /* extend/truncate to new width */
-  Value *cvt;
-  if (destt.isSigned) {
-    cvt = builder.CreateSExtOrTrunc(fix, llvmdestt);
-  } else {
-    cvt = builder.CreateZExtOrTrunc(fix, llvmdestt);
-  }
-  fix = cvt;
-  
-  /* move the point */
-  int deltab = destt.fracBitsAmt - srct.fracBitsAmt;
-  if (deltab > 0) {
-    fix = builder.CreateShl(fix, deltab);
-  } else if (deltab < 0) {
-    if (srct.isSigned) {
-      fix = builder.CreateAShr(fix, -deltab);
+  auto genSizeChange = [&](Value *fix) -> Value* {
+    if (destt.isSigned) {
+      return builder.CreateSExtOrTrunc(fix, llvmdestt);
     } else {
-      fix = builder.CreateLShr(fix, -deltab);
+      return builder.CreateZExtOrTrunc(fix, llvmdestt);
     }
-  }
-  return fix;
+  };
+  
+  auto genPointMovement = [&](Value *fix) -> Value* {
+    int deltab = destt.fracBitsAmt - srct.fracBitsAmt;
+    if (deltab > 0) {
+      return builder.CreateShl(fix, deltab);
+    } else if (deltab < 0) {
+      if (srct.isSigned) {
+        return builder.CreateAShr(fix, -deltab);
+      } else {
+        return builder.CreateLShr(fix, -deltab);
+      }
+    }
+    return fix;
+  };
+  
+  if (destt.bitsAmt > srct.bitsAmt)
+    return genPointMovement(genSizeChange(fix));
+  return genSizeChange(genPointMovement(fix));
 }
 
 

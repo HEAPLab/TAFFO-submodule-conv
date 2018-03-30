@@ -274,8 +274,8 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
   } else if (opc == Instruction::FMul || opc == Instruction::FDiv) {
     FixedPointType intermtype(
       fixpt.isSigned,
-      intype1.bitsAmt + intype2.bitsAmt,
-      intype1.fracBitsAmt + intype2.fracBitsAmt);
+      intype1.fracBitsAmt + intype2.fracBitsAmt,
+      intype1.bitsAmt + intype2.bitsAmt);
     Type *dbfxt = intermtype.toLLVMType(instr->getContext());
   
     if (opc == Instruction::FMul) {
@@ -287,8 +287,8 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
     } else {
       FixedPointType fixoptype(
         fixpt.isSigned,
-        intype1.bitsAmt + intype2.bitsAmt,
-        intype1.fracBitsAmt);
+        intype1.fracBitsAmt,
+        intype1.bitsAmt + intype2.bitsAmt);
       Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype);
       Value *ext2 = intype1.isSigned ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
       Value *fixop = builder.CreateSDiv(ext1, ext2);
