@@ -73,17 +73,17 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, FixedPointType& fixpt);
   llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *, const FixedPointType& fixpt);
   
-  llvm::Value *convertInstruction(llvm::Module& m, llvm::Instruction *val);
-  llvm::Value *convertAlloca(llvm::AllocaInst *alloca);
-  llvm::Value *convertLoad(llvm::LoadInst *load);
+  llvm::Value *convertInstruction(llvm::Module& m, llvm::Instruction *val, FixedPointType& fixpt);
+  llvm::Value *convertAlloca(llvm::AllocaInst *alloca, const FixedPointType& fixpt);
+  llvm::Value *convertLoad(llvm::LoadInst *load, FixedPointType& fixpt);
   llvm::Value *convertStore(llvm::StoreInst *load);
-  llvm::Value *convertGep(llvm::GetElementPtrInst *gep);
-  llvm::Value *convertPhi(llvm::PHINode *load);
-  llvm::Value *convertSelect(llvm::SelectInst *sel);
-  llvm::Value *convertBinOp(llvm::Instruction *instr);
+  llvm::Value *convertGep(llvm::GetElementPtrInst *gep, FixedPointType& fixpt);
+  llvm::Value *convertPhi(llvm::PHINode *load, FixedPointType& fixpt);
+  llvm::Value *convertSelect(llvm::SelectInst *sel, FixedPointType& fixpt);
+  llvm::Value *convertBinOp(llvm::Instruction *instr, const FixedPointType& fixpt);
   llvm::Value *convertCmp(llvm::FCmpInst *fcmp);
-  llvm::Value *convertCast(llvm::CastInst *cast);
-  llvm::Value *fallback(llvm::Instruction *unsupp);
+  llvm::Value *convertCast(llvm::CastInst *cast, const FixedPointType& fixpt);
+  llvm::Value *fallback(llvm::Instruction *unsupp, FixedPointType& fixpt);
 
   llvm::Value *matchOp(llvm::Value *val) {
     llvm::Value *res = operandPool[val];
@@ -107,6 +107,9 @@ struct FloatToFixed : public llvm::ModulePass {
     assert((vi != info.end()) && "value with no info");
     return vi->getSecond().fixpType;
   };
+  bool hasInfo(llvm::Value *val) {
+    return info.find(val) != info.end();
+  }
   
   void cleanup(const std::vector<llvm::Value*>& queue);
 };

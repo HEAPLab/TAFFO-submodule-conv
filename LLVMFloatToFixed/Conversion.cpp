@@ -66,8 +66,7 @@ Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& f
   if (Constant *con = dyn_cast<Constant>(val)) {
     res = convertConstant(con, fixpt);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) {
-    fixpt = defaultFixpType;
-    res = convertInstruction(m, instr);
+    res = convertInstruction(m, instr, fixpt);
   }
   
   return res ? res : ConversionError;
@@ -154,9 +153,9 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   Instruction *fixinst = dyn_cast<Instruction>(fix);
   if (!ip && fixinst) {
     ip = fixinst->getNextNode();
-  } else if (!ip) {
-    assert("ip required when converted value not an instruction");
   }
+  assert(ip && "ip required when converted value not an instruction");
+
   IRBuilder<> builder(ip);
 
   /* extend/truncate to new width */

@@ -31,9 +31,9 @@ FixedPointType::FixedPointType()
 }
 
 
-FixedPointType::FixedPointType(Type *llvmtype)
+FixedPointType::FixedPointType(Type *llvmtype, bool signd)
 {
-  this->isSigned = true;
+  this->isSigned = signd;
   if (isFloatType(llvmtype)) {
     this->fracBitsAmt = GlobalFracBitsAmt;
     this->bitsAmt = GlobalBitsAmt;

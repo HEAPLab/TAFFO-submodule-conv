@@ -17,46 +17,48 @@
 using namespace llvm;
 using namespace flttofix;
 
+#define defaultFixpType @SYNTAX_ERROR@
+
 
 /* also inserts the new value in the basic blocks, alongside the old one */
-Value *FloatToFixed::convertInstruction(Module& m, Instruction *val)
+Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointType& fixpt)
 {
   Value *res = Unsupported;
   
   if (AllocaInst *alloca = dyn_cast<AllocaInst>(val)) {
-    res = convertAlloca(alloca);
+    res = convertAlloca(alloca, fixpt);
   } else if (LoadInst *load = dyn_cast<LoadInst>(val)) {
-    res = convertLoad(load);
+    res = convertLoad(load, fixpt);
   } else if (StoreInst *store = dyn_cast<StoreInst>(val)) {
     res = convertStore(store);
   } else if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(val)) {
-    res = convertGep(gep);
+    res = convertGep(gep, fixpt);
   } else if (PHINode *phi = dyn_cast<PHINode>(val)) {
-    res = convertPhi(phi);
+    res = convertPhi(phi, fixpt);
   } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
-    res = convertSelect(select);
+    res = convertSelect(select, fixpt);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
     if (instr->isBinaryOp()) {
-      res = convertBinOp(instr);
+      res = convertBinOp(instr, fixpt);
     } else if (CastInst *cast = dyn_cast<CastInst>(instr)){
-      res = convertCast(cast);
+      res = convertCast(cast, fixpt);
     } else if (FCmpInst *fcmp = dyn_cast<FCmpInst>(val)) {
       res = convertCmp(fcmp);
     }
   }
 
   if (res==Unsupported) {
-    res = fallback(dyn_cast<Instruction>(val));
+    res = fallback(dyn_cast<Instruction>(val), fixpt);
   }
 
   return res ? res : ConversionError;
 }
 
 
-Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
+Value *FloatToFixed::convertAlloca(AllocaInst *alloca, const FixedPointType& fixpt)
 {
   Type *prevt = alloca->getAllocatedType();
-  Type *newt = getLLVMFixedPointTypeForFloatType(prevt, defaultFixpType);
+  Type *newt = getLLVMFixedPointTypeForFloatType(prevt, fixpt);
   if (newt == prevt)
     return alloca;
 
@@ -71,13 +73,14 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca)
 }
 
 
-Value *FloatToFixed::convertLoad(LoadInst *load)
+Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
 {
   Value *ptr = load->getPointerOperand();
   Value *newptr = operandPool[ptr];
   if (newptr == ConversionError)
     return nullptr;
   assert(newptr && "a load can't be in the conversion queue just because");
+  fixpt = fixPType(newptr);
 
   LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
     load->getAlignment(), load->getOrdering(), load->getSynchScope());
@@ -92,11 +95,13 @@ Value *FloatToFixed::convertStore(StoreInst *store)
   Value *newptr = matchOp(ptr);
   if (!newptr)
     return nullptr;
+  const FixedPointType& desttype = fixPType(newptr);
 
   Value *val = store->getValueOperand();
   Value *newval;
+  FixedPointType valtype = desttype;
   if (val->getType()->isFloatingPointTy()) {
-    newval = translateOrMatchOperandAndType(val, defaultFixpType, store);
+    newval = translateOrMatchOperand(val, valtype, store);
   } else {
     newval = matchOp(val);
   }
@@ -109,8 +114,13 @@ Value *FloatToFixed::convertStore(StoreInst *store)
      * we can't do that if the source is a pointer though; in that case bail out */
     if (newval->getType()->isPointerTy())
       return nullptr;
-    newval = genConvertFixToFloat(newval, defaultFixpType, cast<PointerType>(newptr->getType())->getElementType());
+    newval = genConvertFixToFloat(newval, valtype, cast<PointerType>(newptr->getType())->getElementType());
   }
+  
+  if (val->getType()->isFloatingPointTy()) {
+    newval = genConvertFixedToFixed(newval, valtype, desttype, store);
+  }
+  
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
     store->getAlignment(), store->getOrdering(), store->getSynchScope());
   newinst->insertAfter(store);
@@ -118,13 +128,13 @@ Value *FloatToFixed::convertStore(StoreInst *store)
 }
 
 
-Value *FloatToFixed::convertGep(GetElementPtrInst *gep)
+Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
 {
   if (info[gep].isRoot && info[gep].isBacktrackingNode) {
     dbgs() << "*** UGLY HACK *** ";
     /* till we can flag a structure for conversion we bitcast away the
      * item pointer to a fixed point type and hope everything still works */
-    BitCastInst *bci = new BitCastInst(gep, getLLVMFixedPointTypeForFloatType(gep->getType(), defaultFixpType));
+    BitCastInst *bci = new BitCastInst(gep, getLLVMFixedPointTypeForFloatType(gep->getType(), fixpt));
     bci->setName(gep->getName() + ".haxfixp");
     bci->insertAfter(gep);
     bci->print(dbgs());
@@ -135,6 +145,7 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep)
   Value *newval = matchOp(gep->getPointerOperand());
   if (!newval)
     return nullptr;
+  fixpt = fixPType(newval);
 
   std::vector<Value*> vals;
   for (auto a : gep->operand_values()) {
@@ -147,7 +158,7 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep)
 }
 
 
-Value *FloatToFixed::convertPhi(PHINode *load)
+Value *FloatToFixed::convertPhi(PHINode *load, FixedPointType& fixpt)
 {
   if (!load->getType()->isFloatingPointTy()) {
     /* in the conversion chain the floating point number was converted to
@@ -157,6 +168,10 @@ Value *FloatToFixed::convertPhi(PHINode *load)
      * that information across the phi. If at least one of them was converted
      * the phi is converted as well; otherwise it is not. */
     bool donesomething = false;
+    
+    if (isFloatType(load->getType())) {
+      dbgs() << "warning: pointer phi + multiple fixed point types are tricky";
+    }
 
     for (int i=0; i<load->getNumIncomingValues(); i++) {
       Value *thisval = load->getIncomingValue(i);
@@ -172,13 +187,13 @@ Value *FloatToFixed::convertPhi(PHINode *load)
   /* if we have to do a type change, create a new phi node. The new type is for
    * sure that of a fixed point value; because the original type was a float
    * and thus all of its incoming values were floats */
-  PHINode *newphi = PHINode::Create(defaultFixpType.toLLVMType(load->getContext()),
+  PHINode *newphi = PHINode::Create(fixpt.toLLVMType(load->getContext()),
     load->getNumIncomingValues());
 
   for (int i=0; i<load->getNumIncomingValues(); i++) {
     Value *thisval = load->getIncomingValue(i);
     BasicBlock *thisbb = load->getIncomingBlock(i);
-    Value *newval = translateOrMatchOperandAndType(thisval, defaultFixpType, load);
+    Value *newval = translateOrMatchOperandAndType(thisval, fixpt, load);
     if (!newval) {
       delete newphi;
       return nullptr;
@@ -190,12 +205,15 @@ Value *FloatToFixed::convertPhi(PHINode *load)
 }
 
 
-Value *FloatToFixed::convertSelect(SelectInst *sel)
+Value *FloatToFixed::convertSelect(SelectInst *sel, FixedPointType& fixpt)
 {
   /* the condition is always a bool (i1) or a vector of bools */
   Value *newcond = matchOp(sel->getCondition());
   
   if (!sel->getType()->isFloatingPointTy()) {
+    if (isFloatType(sel->getType())) {
+      dbgs() << "warning: select + multiple fixed point types are tricky";
+    }
     Value *newtruev = matchOp(sel->getTrueValue());
     Value *newfalsev = matchOp(sel->getFalseValue());
 
@@ -210,8 +228,8 @@ Value *FloatToFixed::convertSelect(SelectInst *sel)
   }
 
   /* otherwise create a new one */
-  Value *newtruev = translateOrMatchOperandAndType(sel->getTrueValue(), defaultFixpType, sel);
-  Value *newfalsev = translateOrMatchOperandAndType(sel->getFalseValue(), defaultFixpType, sel);
+  Value *newtruev = translateOrMatchOperandAndType(sel->getTrueValue(), fixpt, sel);
+  Value *newfalsev = translateOrMatchOperandAndType(sel->getFalseValue(), fixpt, sel);
   if (!newtruev || !newfalsev || !newcond)
     return nullptr;
 
@@ -221,7 +239,7 @@ Value *FloatToFixed::convertSelect(SelectInst *sel)
 }
 
 
-Value *FloatToFixed::convertBinOp(Instruction *instr)
+Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixpt)
 {
   /*le istruzioni Instruction::
     [Add,Sub,Mul,SDiv,UDiv,SRem,URem,Shl,LShr,AShr,And,Or,Xor]
@@ -230,55 +248,91 @@ Value *FloatToFixed::convertBinOp(Instruction *instr)
     return Unsupported;
   
   IRBuilder<> builder(instr->getNextNode());
-  Instruction::BinaryOps ty;
   int opc = instr->getOpcode();
 
-  Value *val1 = translateOrMatchOperandAndType(instr->getOperand(0), defaultFixpType, instr);
-  Value *val2 = translateOrMatchOperandAndType(instr->getOperand(1), defaultFixpType, instr);
+  FixedPointType intype1 = fixpt, intype2 = fixpt;
+  Value *val1 = translateOrMatchOperand(instr->getOperand(0), intype1, instr);
+  Value *val2 = translateOrMatchOperand(instr->getOperand(1), intype2, instr);
   if (!val1 || !val2)
     return nullptr;
 
-  Type *fxt = defaultFixpType.toLLVMType(instr->getContext());
-  Type *dbfxt = Type::getIntNTy(instr->getContext(), defaultFixpType.bitsAmt*2);
+  if (opc == Instruction::FAdd || opc == Instruction::FSub || opc == Instruction::FRem) {
+    val1 = genConvertFixedToFixed(val1, intype1, fixpt);
+    val2 = genConvertFixedToFixed(val2, intype2, fixpt);
+    
+    if (opc == Instruction::FAdd)
+      return builder.CreateBinOp(Instruction::Add, val1, val2);
+    
+    else if (opc == Instruction::FSub)
+      return builder.CreateBinOp(Instruction::Sub, val1, val2);
+    
+    else if (opc == Instruction::FRem) {
+      if (fixpt.isSigned)
+        return builder.CreateBinOp(Instruction::SRem, val1, val2);
+      else
+        return builder.CreateBinOp(Instruction::URem, val1, val2);
+    }
 
-  if (opc == Instruction::FAdd) {
-    ty = Instruction::Add;
-  } else if (opc == Instruction::FSub) {
-    ty = Instruction::Sub;
-  } else if (opc == Instruction::FMul) {
-
-    Value *ext1 = builder.CreateSExt(val1,dbfxt);
-    Value *ext2 = builder.CreateSExt(val2,dbfxt);
-
-    Value *fixop = builder.CreateMul(ext1,ext2);
-    return builder.CreateTrunc(
-      builder.CreateAShr(fixop,ConstantInt::get(dbfxt, defaultFixpType.fracBitsAmt)),
-      fxt);
-
-  } else if (opc == Instruction::FDiv) {
-
-    Value *ext1 = builder.CreateShl(
-      builder.CreateSExt(val1,dbfxt),
-      ConstantInt::get(dbfxt, defaultFixpType.fracBitsAmt)
-      );
-    Value *ext2 = builder.CreateSExt(val2,dbfxt);
-
-    Value *fixop = builder.CreateSDiv(ext1,ext2);
-    return builder.CreateTrunc(fixop,fxt);
-
-  } else if (opc == Instruction::FRem) {
-    ty = Instruction::SRem;
-  } else {
-    return Unsupported;
+  } else if (opc == Instruction::FMul || opc == Instruction::FDiv) {
+    FixedPointType intermtype(
+      fixpt.isSigned,
+      intype1.bitsAmt + intype2.bitsAmt,
+      intype1.fracBitsAmt + intype2.fracBitsAmt);
+    Type *dbfxt = intermtype.toLLVMType(instr->getContext());
+  
+    if (opc == Instruction::FMul) {
+      Value *ext1 = intype1.isSigned ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
+      Value *ext2 = intype2.isSigned ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+      Value *fixop = builder.CreateMul(ext1, ext2);
+      return genConvertFixedToFixed(fixop, intermtype, fixpt);
+      
+    } else {
+      FixedPointType fixoptype(
+        fixpt.isSigned,
+        intype1.bitsAmt + intype2.bitsAmt,
+        intype1.fracBitsAmt);
+      Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype);
+      Value *ext2 = intype1.isSigned ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+      Value *fixop = builder.CreateSDiv(ext1, ext2);
+      return genConvertFixedToFixed(fixop, fixoptype, fixpt);
+    }
   }
-
-  return builder.CreateBinOp(ty,val1,val2);
+  
+  return Unsupported;
 }
 
 
 Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
 {
-  IRBuilder<> builder (fcmp->getNextNode());
+  Value *op1 = fcmp->getOperand(0);
+  Value *op2 = fcmp->getOperand(1);
+  
+  FixedPointType cmptype;
+  FixedPointType t1, t2;
+  bool hasinfo1 = hasInfo(op1), hasinfo2 = hasInfo(op2);
+  if (hasinfo1 && hasinfo2) {
+    t1 = fixPType(op1);
+    t2 = fixPType(op2);
+  } else if (hasinfo1) {
+    t1 = fixPType(op1);
+    t2 = t1;
+    t2.isSigned = true;
+  } else if (hasinfo2) {
+    t2 = fixPType(op2);
+    t1 = t2;
+    t1.isSigned = true;
+  }
+  bool mixedsign = t1.isSigned != t2.isSigned;
+  int intpart1 = t1.bitsAmt - t1.fracBitsAmt + (mixedsign ? t1.isSigned : 0);
+  int intpart2 = t2.bitsAmt - t2.fracBitsAmt + (mixedsign ? t2.isSigned : 0);
+  cmptype.isSigned = t1.isSigned || t2.isSigned;
+  cmptype.fracBitsAmt = std::max(t1.fracBitsAmt, t2.fracBitsAmt);
+  cmptype.bitsAmt = std::max(intpart1, intpart2) + cmptype.fracBitsAmt;
+  
+  Value *val1 = translateOrMatchOperandAndType(op1, cmptype, fcmp);
+  Value *val2 = translateOrMatchOperandAndType(op2, cmptype, fcmp);
+  
+  IRBuilder<> builder(fcmp->getNextNode());
   CmpInst::Predicate ty;
   int pr = fcmp->getPredicate();
   bool swapped = false;
@@ -294,13 +348,13 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
   } else if (pr == CmpInst::FCMP_ONE) {
     ty = CmpInst::ICMP_NE;
   } else if (pr == CmpInst::FCMP_OGT) {
-    ty = CmpInst::ICMP_SGT;
+    ty = cmptype.isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
   } else if (pr == CmpInst::FCMP_OGE) {
-    ty = CmpInst::ICMP_SGE;
+    ty = cmptype.isSigned ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
   } else if (pr == CmpInst::FCMP_OLE) {
-    ty = CmpInst::ICMP_SLE;
+    ty = cmptype.isSigned ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
   } else if (pr == CmpInst::FCMP_OLT) {
-    ty = CmpInst::ICMP_SLT;
+    ty = cmptype.isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
   } else if (pr == CmpInst::FCMP_ORD) {
     ;
     //TODO gestione NaN
@@ -320,16 +374,13 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
     ty = CmpInst::getInversePredicate(ty);
   }
 
-  Value *val1 = translateOrMatchOperandAndType(fcmp->getOperand(0), defaultFixpType, fcmp);
-  Value *val2 = translateOrMatchOperandAndType(fcmp->getOperand(1), defaultFixpType, fcmp);
-
   return val1 && val2
-    ? builder.CreateICmp(ty,val1,val2)
+    ? builder.CreateICmp(ty, val1, val2)
     : nullptr;
 }
 
 
-Value *FloatToFixed::convertCast(CastInst *cast)
+Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
 {
   /* le istruzioni Instruction::
    * - [FPToSI,FPToUI,SIToFP,UIToFP] vengono gestite qui
@@ -341,40 +392,26 @@ Value *FloatToFixed::convertCast(CastInst *cast)
   
   if (cast->getType()->isIntegerTy() && operand->getType()->isFloatingPointTy()) {
     /* fptosi, fptoui, fptrunc, fpext */
-    Value *val = translateOrMatchOperandAndType(operand, defaultFixpType, cast);
-    
     if (cast->getOpcode() == Instruction::FPToSI) {
-      return builder.CreateSExtOrTrunc(
-        builder.CreateAShr(val,ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)),
-        cast->getType()
-      );
+      return translateOrMatchOperandAndType(operand, FixedPointType(cast->getType(), true), cast);
 
     } else if (cast->getOpcode() == Instruction::FPToUI) {
-      return builder.CreateZExtOrTrunc(
-        builder.CreateAShr(val,ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)),
-        cast->getType()
-      );
+      return translateOrMatchOperandAndType(operand, FixedPointType(cast->getType(), false), cast);
 
     } else if (cast->getOpcode() == Instruction::FPTrunc ||
                cast->getOpcode() == Instruction::FPExt) {
-      /* there is just one type of fixed point type; nothing to convert */
-      return val;
+      return translateOrMatchOperandAndType(operand, fixpt, cast);
     }
   } else {
     /* sitofp, uitofp */
     Value *val = matchOp(operand);
     
     if (cast->getOpcode() == Instruction::SIToFP) {
-      return builder.CreateShl(
-        builder.CreateSExtOrTrunc(val, defaultFixpType.toLLVMType(val->getContext())),
-        ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)
-      );
+      return genConvertFixedToFixed(val, FixedPointType(cast->getType(), true), fixpt);
 
     } else if (cast->getOpcode() == Instruction::UIToFP) {
-      return builder.CreateShl(
-        builder.CreateZExtOrTrunc(val, defaultFixpType.toLLVMType(val->getContext())),
-        ConstantInt::get(defaultFixpType.toLLVMType(val->getContext()), defaultFixpType.fracBitsAmt)
-      );
+      return genConvertFixedToFixed(val, FixedPointType(cast->getType(), false), fixpt);
+      
     }
   }
 
@@ -382,7 +419,7 @@ Value *FloatToFixed::convertCast(CastInst *cast)
 }
 
 
-Value *FloatToFixed::fallback(Instruction *unsupp)
+Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
 {
   Value *fallval;
   Instruction *fixval;
@@ -406,7 +443,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp)
         il rispettivo value è un fix che deve essere convertito in float per retrocompatibilità.
         Se la chiave non è un float allora uso il rispettivo value associato così com'è.*/
       fixval = fallval->getType()->isFloatingPointTy()
-        ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval, defaultFixpType, fallval->getType()))
+        ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval, fixPType(cvtfallval), fallval->getType()))
         : dyn_cast<Instruction>(cvtfallval);
 
       DEBUG(dbgs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
@@ -421,7 +458,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp)
   }
   DEBUG(dbgs() << "  mutated operands to:\n" << *unsupp << "\n");
   if (unsupp->getType()->isFloatingPointTy()) {
-    Value *fallbackv = genConvertFloatToFix(unsupp, defaultFixpType, unsupp);
+    Value *fallbackv = genConvertFloatToFix(unsupp, fixpt, unsupp);
     if (unsupp->hasName())
       fallbackv->setName(unsupp->getName() + ".fallback");
     return fallbackv;
