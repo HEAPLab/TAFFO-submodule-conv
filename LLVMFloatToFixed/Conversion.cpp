@@ -214,22 +214,24 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
 }
 
 
-Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPointType& baset)
+Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPointType& baset, bool *hasfloats)
 {
   if (srct->isPointerTy()) {
-    Type *enc = getLLVMFixedPointTypeForFloatType(srct->getPointerElementType(), baset);
+    Type *enc = getLLVMFixedPointTypeForFloatType(srct->getPointerElementType(), baset, hasfloats);
     if (enc)
       return enc->getPointerTo();
     return nullptr;
     
   } else if (srct->isArrayTy()) {
     int nel = srct->getArrayNumElements();
-    Type *enc = getLLVMFixedPointTypeForFloatType(srct->getArrayElementType(), baset);
+    Type *enc = getLLVMFixedPointTypeForFloatType(srct->getArrayElementType(), baset, hasfloats);
     if (enc)
       return ArrayType::get(enc, nel);
     return nullptr;
     
   } else if (srct->isFloatingPointTy()) {
+    if (hasfloats)
+      *hasfloats = true;
     return baset.toLLVMType(srct->getContext());
     
   }
@@ -238,6 +240,8 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPoi
     srct->print(dbgs());
     dbgs() << "\n";
   );
+  if (hasfloats)
+    *hasfloats = false;
   return srct;
 }
 

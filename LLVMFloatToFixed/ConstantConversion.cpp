@@ -62,10 +62,13 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType& 
 
 Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointType& fixpt)
 {
+  bool hasfloats;
   Type *prevt = glob->getType()->getPointerElementType();
-  Type *newt = getLLVMFixedPointTypeForFloatType(prevt, fixpt);
+  Type *newt = getLLVMFixedPointTypeForFloatType(prevt, fixpt, &hasfloats);
   if (!newt)
     return nullptr;
+  if (!hasfloats)
+    return glob;
   
   Constant *oldinit = glob->getInitializer();
   Constant *newinit = nullptr;

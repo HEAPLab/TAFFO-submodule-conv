@@ -289,7 +289,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
         fixpt.isSigned,
         intype1.fracBitsAmt,
         intype1.bitsAmt + intype2.bitsAmt);
-      Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype);
+      Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype, instr);
       Value *ext2 = intype1.isSigned ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
       Value *fixop = fixpt.isSigned ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
       return genConvertFixedToFixed(fixop, fixoptype, fixpt);
@@ -388,7 +388,7 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
   IRBuilder<> builder(cast->getNextNode());
   Value *operand = cast->getOperand(0);
   
-  if (cast->getType()->isIntegerTy() && operand->getType()->isFloatingPointTy()) {
+  if (operand->getType()->isFloatingPointTy()) {
     /* fptosi, fptoui, fptrunc, fpext */
     if (cast->getOpcode() == Instruction::FPToSI) {
       return translateOrMatchOperandAndType(operand, FixedPointType(cast->getType(), true), cast);
@@ -405,11 +405,10 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
     Value *val = matchOp(operand);
     
     if (cast->getOpcode() == Instruction::SIToFP) {
-      return genConvertFixedToFixed(val, FixedPointType(cast->getType(), true), fixpt);
+      return genConvertFixedToFixed(val, FixedPointType(val->getType(), true), fixpt);
 
     } else if (cast->getOpcode() == Instruction::UIToFP) {
-      return genConvertFixedToFixed(val, FixedPointType(cast->getType(), false), fixpt);
-      
+      return genConvertFixedToFixed(val, FixedPointType(val->getType(), false), fixpt);
     }
   }
 

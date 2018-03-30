@@ -102,7 +102,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *genConvertFixToFloat(llvm::Value *fix, const FixedPointType& fixpt, llvm::Type *destt);
   llvm::Value *genConvertFixedToFixed(llvm::Value *fix, const FixedPointType& srct, const FixedPointType& destt, llvm::Instruction *ip = nullptr);
 
-  llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, const FixedPointType& baset);
+  llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, const FixedPointType& baset, bool *hasfloats = nullptr);
   llvm::Type *getLLVMFixedPointTypeForFloatValue(llvm::Value *val);
   FixedPointType& fixPType(llvm::Value *val) {
     auto vi = info.find(val);

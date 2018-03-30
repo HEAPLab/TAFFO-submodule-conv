@@ -88,7 +88,8 @@ void FloatToFixed::optimizeFixedPointTypes(std::vector<Value*>& queue)
 {
   for (Value *v: queue) {
     if (StoreInst *store = dyn_cast<StoreInst>(v)) {
-      if (hasInfo(store->getPointerOperand()) && hasInfo(store->getValueOperand()))
+      if (std::find(queue.begin(), queue.end(), store->getPointerOperand()) != queue.end() &&
+          std::find(queue.begin(), queue.end(), store->getValueOperand()) != queue.end())
         fixPType(store->getValueOperand()) = fixPType(store->getPointerOperand());
     }
   }
