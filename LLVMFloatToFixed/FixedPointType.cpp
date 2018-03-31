@@ -60,7 +60,7 @@ raw_ostream& operator<<(raw_ostream& stm, const FixedPointType& f)
     stm << "s";
   else
     stm << "u";
-  stm << "fix" << f.bitsAmt - f.fracBitsAmt << ":" << f.fracBitsAmt;
+  stm << f.bitsAmt - f.fracBitsAmt << "_" << f.fracBitsAmt << "fixp";
   return stm;
 };
 

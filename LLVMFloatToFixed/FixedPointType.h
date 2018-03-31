@@ -33,6 +33,7 @@ struct FixedPointType {
       this->fracBitsAmt == rhs.fracBitsAmt &&
       this->bitsAmt == rhs.bitsAmt;
   };
+  
 };
 
 

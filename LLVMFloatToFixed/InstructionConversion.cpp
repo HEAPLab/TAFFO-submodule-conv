@@ -50,6 +50,17 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
   if (res==Unsupported) {
     res = fallback(dyn_cast<Instruction>(val), fixpt);
   }
+  
+  if (res && res != Unsupported && !(res->getType()->isVoidTy()) && isFloatType(val->getType())) {
+    std::string tmpstore;
+    raw_string_ostream tmp(tmpstore);
+    if (res->hasName())
+      tmp << res->getName().str() << ".";
+    else if (val->hasName())
+      tmp << val->getName().str() << ".";
+    tmp << fixPType(val);
+    res->setName(tmp.str());
+  }
 
   return res ? res : ConversionError;
 }
@@ -63,8 +74,7 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca, const FixedPointType& fix
     return alloca;
 
   Value *as = alloca->getArraySize();
-  AllocaInst *newinst = new AllocaInst(newt, as, alloca->getAlignment(),
-    alloca->hasName() ? alloca->getName() + ".fixp" : "fixp");
+  AllocaInst *newinst = new AllocaInst(newt, as, alloca->getAlignment());
   
   newinst->setUsedWithInAlloca(alloca->isUsedWithInAlloca());
   newinst->setSwiftError(alloca->isSwiftError());
