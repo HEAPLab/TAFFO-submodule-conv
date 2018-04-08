@@ -189,20 +189,20 @@ void FloatToFixed::buildConversionQueueForRootValues(
             i++;
           }
         }
-        if (alreadyIn) {
+        if (!alreadyIn) {
+          info[u].isRoot = true;
+          #ifdef LOG_BACKTRACK
+          dbgs() << "  enqueued\n";
+          #endif
+          queue.insert(queue.begin()+next-1, u);
+          next++;
+        } else {
           #ifdef LOG_BACKTRACK
           dbgs() << " already in\n";
           #endif
-          continue;
         }
-        info[u].isRoot = true;
         
-        #ifdef LOG_BACKTRACK
-        dbgs() << "  enqueued\n";
-        #endif
-        queue.insert(queue.begin()+next-1, u);
         completeInfo(v, u);
-        next++;
       }
     }
   }
