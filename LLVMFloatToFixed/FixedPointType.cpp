@@ -7,7 +7,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "FixedPointType.h"
 #include "LLVMFloatToFixedPass.h"
 

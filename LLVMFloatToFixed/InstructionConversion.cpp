@@ -74,7 +74,7 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca, const FixedPointType& fix
     return alloca;
 
   Value *as = alloca->getArraySize();
-  AllocaInst *newinst = new AllocaInst(newt, as, alloca->getAlignment());
+  AllocaInst *newinst = new AllocaInst(newt, alloca->getType()->getPointerAddressSpace(), as, alloca->getAlignment());
   
   newinst->setUsedWithInAlloca(alloca->isUsedWithInAlloca());
   newinst->setSwiftError(alloca->isSwiftError());
@@ -93,7 +93,7 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
   fixpt = fixPType(newptr);
 
   LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
-    load->getAlignment(), load->getOrdering(), load->getSynchScope());
+    load->getAlignment(), load->getOrdering(), load->getSyncScopeID());
   newinst->insertAfter(load);
   return newinst;
 }
@@ -130,7 +130,7 @@ Value *FloatToFixed::convertStore(StoreInst *store)
     return nullptr;
   
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
-    store->getAlignment(), store->getOrdering(), store->getSynchScope());
+    store->getAlignment(), store->getOrdering(), store->getSyncScopeID());
   newinst->insertAfter(store);
   return newinst;
 }

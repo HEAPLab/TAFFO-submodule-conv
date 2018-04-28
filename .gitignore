@@ -29,3 +29,4 @@ test/polybench-c-4.2.1-beta/stats
 npbparams.h
 setparams
 test/NPB3.0-omp-C-master/bin
+build-llvm6

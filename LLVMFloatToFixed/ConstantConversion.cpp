@@ -10,6 +10,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include <cmath>
 #include <cassert>
 #include "LLVMFloatToFixedPass.h"
@@ -91,9 +92,8 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, co
   exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
   val.multiply(exp, APFloat::rmTowardNegative);
 
-  integerPart fixval;
-  APFloat::opStatus cvtres = val.convertToInteger(&fixval, fixpt.bitsAmt, true,
-    APFloat::rmTowardNegative, &precise);
+  APSInt fixval(fixpt.bitsAmt, !fixpt.isSigned);
+  APFloat::opStatus cvtres = val.convertToInteger(fixval, APFloat::rmTowardNegative, &precise);
   
   if (cvtres != APFloat::opStatus::opOK && context) {
     SmallVector<char, 64> valstr;
@@ -111,7 +111,7 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, co
   }
 
   Type *intty = fixpt.toLLVMType(fpc->getContext());
-  return ConstantInt::get(intty, fixval, true);
+  return ConstantInt::get(intty, fixval);
 }
 
 

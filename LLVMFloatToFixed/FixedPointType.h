@@ -7,7 +7,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Support/CommandLine.h"
 
 
