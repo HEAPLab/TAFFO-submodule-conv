@@ -69,6 +69,10 @@ void FloatToFixed::readAllLocalAnnotations(Module &m, SmallPtrSetImpl<Value *>& 
     SmallPtrSet<Value*, 32> t;
     readLocalAnnotations(f, t);
     res.insert(t.begin(), t.end());
+
+    /* Otherwise dce pass ignore the function
+     * (removed also where it's not required) */
+    f.removeFnAttr(Attribute::OptimizeNone);
   }
 }
 
