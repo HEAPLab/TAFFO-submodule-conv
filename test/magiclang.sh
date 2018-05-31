@@ -23,7 +23,6 @@ fi
 CLANG=$LLVM_DIR/bin/clang
 OPT=$LLVM_DIR/bin/opt
 LLC=$LLVM_DIR/bin/llc
-PASSLIB="$ROOT/../build/LLVMFloatToFixed/Debug/LLVMFloatToFixed.$SOEXT"
 if [ ! -e "$PASSLIB" ]; then
   PASSLIB="$ROOT/../build/LLVMFloatToFixed/LLVMFloatToFixed.$SOEXT";
 fi
