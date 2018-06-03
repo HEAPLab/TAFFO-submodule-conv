@@ -42,24 +42,8 @@ bool FloatToFixed::runOnModule(Module &m)
   buildConversionQueueForRootValues(rootsa, vals);
   optimizeFixedPointTypes(vals);
 
-  if (vals.size() < 1000) {
-  DEBUG(errs() << "conversion queue:\n";
-        for (Value *val: vals) {
-          errs() << "bt=" << info[val].isBacktrackingNode << " ";
-          errs() << info[val].fixpType << " ";
-          errs() << "[";
-            for (Value *rootv: info[val].roots) {
-              rootv->print(errs());
-              errs() << ' ';
-            }
-            errs() << "] ";
-            val->print(errs());
-          errs() << "\n";
-        }
-        errs() << "\n\n";);
-  } else {
-    DEBUG(errs() << "not printing the conversion queue because it exceeds 1000 items");
-  }
+  DEBUG(printConversionQueue(vals));
+
   ConversionCount = vals.size();
 
   performConversion(m, vals);
@@ -297,6 +281,29 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
     }
     if (allok)
       i->eraseFromParent();
+  }
+}
+
+
+void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
+{
+  if (vals.size() < 1000) {
+    errs() << "conversion queue:\n";
+                  for (Value *val: vals) {
+                    errs() << "bt=" << info[val].isBacktrackingNode << " ";
+                    errs() << info[val].fixpType << " ";
+                    errs() << "[";
+                    for (Value *rootv: info[val].roots) {
+                      rootv->print(errs());
+                      errs() << ' ';
+                    }
+                    errs() << "] ";
+                    val->print(errs());
+                    errs() << "\n";
+                  }
+                  errs() << "\n\n";
+  } else {
+    errs() << "not printing the conversion queue because it exceeds 1000 items";
   }
 }
 

@@ -66,6 +66,7 @@ struct FloatToFixed : public llvm::ModulePass {
 
   void optimizeFixedPointTypes(std::vector<llvm::Value*>& queue);
   void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res);
+  void printConversionQueue(std::vector<llvm::Value*> vals);
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, FixedPointType& fixpt);
 
@@ -81,6 +82,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *convertGep(llvm::GetElementPtrInst *gep, FixedPointType& fixpt);
   llvm::Value *convertPhi(llvm::PHINode *load, FixedPointType& fixpt);
   llvm::Value *convertSelect(llvm::SelectInst *sel, FixedPointType& fixpt);
+  llvm::Value *convertCall(llvm::CallInst *call, FixedPointType& fixpt);
   llvm::Value *convertBinOp(llvm::Instruction *instr, const FixedPointType& fixpt);
   llvm::Value *convertCmp(llvm::FCmpInst *fcmp);
   llvm::Value *convertCast(llvm::CastInst *cast, const FixedPointType& fixpt);

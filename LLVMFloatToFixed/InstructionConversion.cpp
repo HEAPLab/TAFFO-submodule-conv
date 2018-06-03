@@ -37,6 +37,8 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
     res = convertPhi(phi, fixpt);
   } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
     res = convertSelect(select, fixpt);
+  } else if (CallInst *call = dyn_cast<CallInst>(val)) { //TODO Handle InvokeInst
+    res = convertCall(call, fixpt);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
     if (instr->isBinaryOp()) {
       res = convertBinOp(instr, fixpt);
@@ -244,6 +246,33 @@ Value *FloatToFixed::convertSelect(SelectInst *sel, FixedPointType& fixpt)
   SelectInst *newsel = SelectInst::Create(newcond, newtruev, newfalsev);
   newsel->insertAfter(sel);
   return newsel;
+}
+
+
+Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
+{
+  IRBuilder<> builder(call->getNextNode());
+
+  auto listArg = call->getOperandList();
+  int numArg = call->getNumOperands() - 1;
+  std::vector<Value*> convArgs;
+  std::vector<Type*> typeArgs;
+
+  for (int i = 0; i < numArg; i++) {
+    convArgs.push_back(hasInfo(listArg[i]) ?
+                       translateOrMatchOperand(listArg[i], info[listArg[i]].fixpType, call) :
+                       listArg[i]);
+    typeArgs.push_back(convArgs[i]->getType());
+  }
+
+  Function *oldF = call->getCalledFunction();
+
+  FunctionType *newFunTy = FunctionType::get(fixpt.toLLVMType(call->getContext()), typeArgs, oldF->isVarArg());
+  Function *newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_fixp", oldF->getParent());
+
+  //convertFun(oldF, newF, convArgs, fixpt);
+
+  return builder.CreateCall(newF, convArgs);
 }
 
 
