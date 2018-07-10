@@ -61,6 +61,6 @@ raw_ostream& operator<<(raw_ostream& stm, const FixedPointType& f)
     stm << "u";
   stm << f.bitsAmt - f.fracBitsAmt << "_" << f.fracBitsAmt << "fixp";
   return stm;
-};
+}
 
 
