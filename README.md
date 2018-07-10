@@ -1,3 +1,4 @@
-I'm watching over you
+# PACO
+## floating Point to fixed Point Automatic Conversion & Optimization
 
-Stefano
+A terrible name for a hopefully decent framework
