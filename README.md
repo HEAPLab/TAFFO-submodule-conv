@@ -1,4 +1,4 @@
-# PACO
-## floating Point to fixed Point Automatic Conversion & Optimization
+# TAFFO Fixed Point to Floating Point Conversion
 
-A terrible name for a hopefully decent framework
+
+
