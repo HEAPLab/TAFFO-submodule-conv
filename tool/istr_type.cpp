@@ -6,9 +6,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/raw_ostream.h"
@@ -52,9 +54,9 @@ void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::m
         } else if (opnd->getName() == "polybench_timer_stop" ||
                    opnd->getName() == "timer_stop") {
           eval--;
-        } else if (opnd->getIntrinsicID() == Intrinsic::annotation ||
-                   opnd->getIntrinsicID() == Intrinsic::var_annotation ||
-                   opnd->getIntrinsicID() == Intrinsic::ptr_annotation) {
+        } else if (opnd->getIntrinsicID() == Intrinsic::ID::annotation ||
+                   opnd->getIntrinsicID() == Intrinsic::ID::var_annotation ||
+                   opnd->getIntrinsicID() == Intrinsic::ID::ptr_annotation) {
           continue;
         } else {
           analyze_function(opnd, funcs, stat, eval, ninstr);
