@@ -120,7 +120,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
           }
         }
         queue.push_back(u);
-        
+
         if (info[v].isBacktrackingNode) {
           info[u].isBacktrackingNode = true;
         }
@@ -198,9 +198,9 @@ void FloatToFixed::buildConversionQueueForRootValues(
     SmallPtrSet<Value*, 5> newroots = info[v].roots;
     for (Value *u: v->users()) {
       auto oldrootsi = info.find(u);
-      if (oldrootsi == info.end())
+      if (!info.count(u))
         continue;
-      
+
       auto oldroots = oldrootsi->getSecond().roots;
       SmallPtrSet<Value*, 5> merge(newroots);
       merge.insert(oldroots.begin(), oldroots.end());

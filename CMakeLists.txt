@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.4.3) # like llvm
 
-project(antifloat)
+project(TAFFO-Conversion)
 
 find_package(LLVM REQUIRED CONFIG)
 

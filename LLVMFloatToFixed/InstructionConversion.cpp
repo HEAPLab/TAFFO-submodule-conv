@@ -252,26 +252,37 @@ Value *FloatToFixed::convertSelect(SelectInst *sel, FixedPointType& fixpt)
 Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
 {
   IRBuilder<> builder(call->getNextNode());
+  Function *oldF = call->getCalledFunction();
 
-  auto listArg = call->getOperandList();
-  int numArg = call->getNumOperands() - 1;
+  if(oldF->getName() == "printf" || oldF->getName().startswith("llvm.")) //blacklisted function
+    return Unsupported;
+
   std::vector<Value*> convArgs;
   std::vector<Type*> typeArgs;
 
-  for (int i = 0; i < numArg; i++) {
-    convArgs.push_back(hasInfo(listArg[i]) ?
-                       translateOrMatchOperand(listArg[i], info[listArg[i]].fixpType, call) :
-                       listArg[i]);
+
+  int i=0;
+  for (auto *it = call->arg_begin(); it != call->arg_end(); it++,i++) {
+    if (hasInfo(*it)) {
+      convArgs.push_back(translateOrMatchOperand(*it, info[*it].fixpType, call));
+    } else {
+      convArgs.push_back(dyn_cast<Value>(it));
+    }
     typeArgs.push_back(convArgs[i]->getType());
   }
 
-  Function *oldF = call->getCalledFunction();
 
-  FunctionType *newFunTy = FunctionType::get(fixpt.toLLVMType(call->getContext()), typeArgs, oldF->isVarArg());
-  Function *newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_fixp", oldF->getParent());
+  Function *newF;
+  FunctionType *newFunTy = FunctionType::get(
+          oldF->getReturnType()->isFloatingPointTy() ?
+          fixpt.toLLVMType(call->getContext()) :
+          oldF->getReturnType(),
+          typeArgs, oldF->isVarArg());
+
+
+  newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_fixp", oldF->getParent());
 
   //convertFun(oldF, newF, convArgs, fixpt);
-
   return builder.CreateCall(newF, convArgs);
 }
 
