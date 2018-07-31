@@ -251,6 +251,8 @@ Value *FloatToFixed::convertSelect(SelectInst *sel, FixedPointType& fixpt)
 
 Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
 {
+  /* If the function return a float the new return type will be a fix point of type fixpt,
+   * otherwise the return type is left unchanged.*/
   IRBuilder<> builder(call->getNextNode());
   Function *oldF = call->getCalledFunction();
 
@@ -259,12 +261,16 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
 
   std::vector<Value*> convArgs;
   std::vector<Type*> typeArgs;
+  std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function
 
+  if(oldF->getReturnType()->isFloatingPointTy())
+    fixArgs.push_back(std::pair<int, FixedPointType>(-1, fixpt)); //ret value in signature
 
   int i=0;
   for (auto *it = call->arg_begin(); it != call->arg_end(); it++,i++) {
     if (hasInfo(*it)) {
       convArgs.push_back(translateOrMatchOperand(*it, info[*it].fixpType, call));
+      fixArgs.push_back(std::pair<int, FixedPointType>(i,info[*it].fixpType));
     } else {
       convArgs.push_back(dyn_cast<Value>(it));
     }
@@ -280,7 +286,21 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
           typeArgs, oldF->isVarArg());
 
 
+  for (FunInfo f : functionPool[oldF]) { //check if is previously converted
+    if (f.fixArgs == fixArgs) {
+      newF = f.newFun;
+      DEBUG(dbgs() << *call <<  " use already converted function : " <<
+                   newF->getName() << " " << *newF->getType() << "\n";);
+      return builder.CreateCall(newF, convArgs);
+    }
+  }
+
   newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_fixp", oldF->getParent());
+
+  FunInfo funInfo; //add to pool
+  funInfo.newFun = newF;
+  funInfo.fixArgs = fixArgs;
+  functionPool[oldF].push_back(funInfo);
 
   //convertFun(oldF, newF, convArgs, fixpt);
   return builder.CreateCall(newF, convArgs);

@@ -24,6 +24,7 @@ STATISTIC(FallbackCount, "Number of instructions not replaced by a "
                          "fixed-point-native equivalent");
 STATISTIC(ConversionCount, "Number of instructions affected by flttofix");
 STATISTIC(AnnotationCount, "Number of valid annotations found");
+STATISTIC(FunctionCreated, "Number of fixed point function inserted");
 
 
 /* flags in conversionPool */
@@ -46,12 +47,18 @@ struct ValueInfo {
   llvm::Type *origType;
 };
 
+struct FunInfo {
+  llvm::Function* newFun;
+  std::vector<std::pair<int,FixedPointType>> fixArgs;
+};
+
 
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
   FixedPointType defaultFixpType;
   
   llvm::DenseMap<llvm::Value *, llvm::Value *> operandPool;
+  llvm::DenseMap<llvm::Function*, std::vector<FunInfo>> functionPool;
   llvm::DenseMap<llvm::Value *, ValueInfo> info;
   
   FloatToFixed(): ModulePass(ID) { }
