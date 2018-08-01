@@ -32,3 +32,5 @@ test/NPB3.0-omp-C-master/bin
 build-llvm6
 cmake-build-debug/
 .idea/
+
+test/function

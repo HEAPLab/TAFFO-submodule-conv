@@ -11,7 +11,7 @@ if [ $# -lt 1 ]; then
 fi
 
 if [ -z ${LLVM_DIR+x} ]; then
-  echo 'please set $LLVM_DIR to a prefix where LLVM 4.0 can be found';
+  echo 'please set $LLVM_DIR to a prefix where LLVM 6.0 can be found';
   exit;
 fi
 
@@ -34,9 +34,9 @@ if [ $ISDEBUG != '1' ]; then
   DEBUGONLYFLAG='';
 fi
 
-$CLANG -S -emit-llvm "$1" -o "_tmp0.$1.ll" $3
-$OPT -load="$PASSLIB" -S -flttofix -dce $DEBUGONLYFLAG "_tmp0.$1.ll" -o "_tmp1.$1.ll"
-$CLANG -S -o "_tmp2.$1.s" "_tmp1.$1.ll" $2 $3
+$CLANG -S -emit-llvm "$1" -o "_tmp0.$1.ll" $3 -O0
+$OPT -load="$PASSLIB" -S -flttofix -dce -debug -stats "_tmp0.$1.ll" -o "_tmp1.$1.ll" -O3
+$CLANG -S  -o "_tmp2.$1.s" "_tmp1.$1.ll" $2 $3
 $CLANG -o "$OUTNAME" "_tmp2.$1.s" $2 $3
 
 $CLANG -S -o "_tmp2_not_opt.$1.s" "_tmp0.$1.ll" $2 $3
