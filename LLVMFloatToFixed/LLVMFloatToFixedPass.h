@@ -94,6 +94,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *convertCmp(llvm::FCmpInst *fcmp);
   llvm::Value *convertCast(llvm::CastInst *cast, const FixedPointType& fixpt);
   llvm::Value *fallback(llvm::Instruction *unsupp, FixedPointType& fixpt);
+  void convertFun(llvm::Function *oldF, llvm::Function *newF, std::vector<llvm::Value*> convArgs, FixedPointType& retType);
 
   llvm::Value *matchOp(llvm::Value *val) {
     llvm::Value *res = operandPool[val];
