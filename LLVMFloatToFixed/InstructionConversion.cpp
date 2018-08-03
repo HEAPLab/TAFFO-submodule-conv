@@ -316,6 +316,12 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
     //if return an int we shouldn't return a fix point, go into fallback
     return Unsupported;
   }
+  if (Function* f = dyn_cast<Function>(ret->getParent()->getParent())) {
+    if (f->getReturnType()->isFloatingPointTy()) {
+      //the function return a float, don't convert the ret
+      return Unsupported;
+    }
+  }
 
   Value *v = translateOrMatchOperand(ret->getOperand(0), fixpt);
   ret->setOperand(0,v);
