@@ -195,7 +195,7 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
 {
   dbgs() << "******** trace: genConvertFixToFloat ";
   fix->print(dbgs());
-  dbgs() << " ";
+  dbgs() << " -> ";
   destt->print(dbgs());
   dbgs() << "\n";
   

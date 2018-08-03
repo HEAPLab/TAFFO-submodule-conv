@@ -40,6 +40,8 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
     res = convertSelect(select, fixpt);
   } else if (CallInst *call = dyn_cast<CallInst>(val)) { //TODO Handle InvokeInst
     res = convertCall(call, fixpt);
+  } else if (ReturnInst *ret = dyn_cast<ReturnInst>(val)) {
+    res = convertRet(ret, fixpt);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
     if (instr->isBinaryOp()) {
       res = convertBinOp(instr, fixpt);
@@ -305,6 +307,18 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
 
   convertFun(oldF, newF, convArgs, fixpt);
   return builder.CreateCall(newF, convArgs);
+}
+
+
+Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
+{
+  if (ret->getReturnValue()->getType()->isIntegerTy()) {
+    //if return an int we shouldn't return a fix point, go into fallback
+    return Unsupported;
+  }
+
+  Value *v = translateOrMatchOperand(ret->getOperand(0), fixpt);
+  ret->setOperand(0,v);
 }
 
 
