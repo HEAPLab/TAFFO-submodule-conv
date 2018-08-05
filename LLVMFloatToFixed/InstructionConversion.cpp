@@ -259,7 +259,8 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
   IRBuilder<> builder(call->getNextNode());
   Function *oldF = call->getCalledFunction();
 
-  if(oldF->getName() == "printf" || oldF->getName().startswith("llvm.")) //blacklisted function
+  if(oldF->getName() == "printf" || oldF->getName().startswith("llvm.") || oldF->getName() == "logf" ||
+      oldF->getName() == "expf" || oldF->getName() == "sqrtf") //TODO blacklisted function
     return Unsupported;
 
   std::vector<Value*> convArgs;
@@ -312,18 +313,26 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
 
 Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
 {
+  Value *v;
   if (ret->getReturnValue()->getType()->isIntegerTy()) {
     //if return an int we shouldn't return a fix point, go into fallback
     return Unsupported;
   }
   if (Function* f = dyn_cast<Function>(ret->getParent()->getParent())) {
-    if (f->getReturnType()->isFloatingPointTy()) {
-      //the function return a float, don't convert the ret
-      return Unsupported;
+    if (!f->getReturnType()->isIntegerTy()) {
+      //the function doesn't return a fixp, don't convert the ret
+      Value *oldval = ret->getReturnValue();
+      Value *newval = operandPool[oldval];
+      v = oldval->getType()->isFloatingPointTy()
+          ? dyn_cast<Instruction>(genConvertFixToFloat(newval, fixPType(newval), oldval->getType()))
+          : dyn_cast<Instruction>(newval);
+      
+      ret->setOperand(0,v);
+      return ret;
     }
   }
 
-  Value *v = translateOrMatchOperand(ret->getOperand(0), fixpt);
+  v = translateOrMatchOperand(ret->getOperand(0), fixpt);
   ret->setOperand(0,v);
 }
 
