@@ -133,7 +133,6 @@ Value *FloatToFixed::convertStore(StoreInst *store)
   }
   if (!newval)
     return nullptr;
-  
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
     store->getAlignment(), store->getOrdering(), store->getSyncScopeID());
   newinst->insertAfter(store);
@@ -265,7 +264,7 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
 
   std::vector<Value*> convArgs;
   std::vector<Type*> typeArgs;
-  std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function
+  std::vector<std::pair<int, FixedPointType>> fixArgs; //for match right function
 
   if(oldF->getReturnType()->isFloatingPointTy())
     fixArgs.push_back(std::pair<int, FixedPointType>(-1, fixpt)); //ret value in signature
@@ -281,24 +280,25 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
     typeArgs.push_back(convArgs[i]->getType());
   }
 
-
   Function *newF;
-  FunctionType *newFunTy = FunctionType::get(
-          oldF->getReturnType()->isFloatingPointTy() ?
-          fixpt.toLLVMType(call->getContext()) :
-          oldF->getReturnType(),
-          typeArgs, oldF->isVarArg());
-
-
-  for (FunInfo f : functionPool[oldF]) { //check if is previously converted
+  for (FunInfo f : functionPool[oldF]) { //get right function
     if (f.fixArgs == fixArgs) {
       newF = f.newFun;
-      DEBUG(dbgs() << *call <<  " use already converted function : " <<
+      DEBUG(dbgs() << *call <<  " use converted function : " <<
                    newF->getName() << " " << *newF->getType() << "\n";);
       return builder.CreateCall(newF, convArgs);
     }
   }
 
+  assert("Every function should be cloned previously!\n");
+  
+  FunctionType *newFunTy = FunctionType::get(
+      oldF->getReturnType()->isFloatingPointTy() ?
+      fixpt.toLLVMType(call->getContext()) :
+      oldF->getReturnType(),
+      typeArgs, oldF->isVarArg());
+  
+  
   newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_fixp", oldF->getParent());
 
   FunInfo funInfo; //add to pool
@@ -588,6 +588,19 @@ void FloatToFixed::convertFun(Function *oldF, Function *newF, std::vector<Value*
       info[newIt->user_begin()->getOperand(1)] = info[convArgs[i]];
       roots.push_back(newIt->user_begin()->getOperand(1));
 
+      /*dbgs() << " +++++++++++++++++++++++++++ " << *newIt << "\n"; //Try to handle different OX lvl opt
+      operandPool[dyn_cast<Value>(newIt)] = dyn_cast<Value>(newIt);
+      info[dyn_cast<Value>(newIt)] = info[convArgs[i]];
+      roots.push_back(newIt);
+      for (auto val = newIt->user_begin(); val != newIt->user_end(); val++) {
+        dbgs() << " ######################################## " << **val << "\n";
+
+        info[*val] = info[convArgs[i]];
+        roots.push_back(*val);
+      }
+      info[dyn_cast<Value>(newIt)] = info[convArgs[i]];
+      operandPool[dyn_cast<Value>(newIt)] = dyn_cast<Value>(newIt);*/
+
       //append fixp info to arg name
       std::string tmpstore;
       raw_string_ostream tmp(tmpstore);
@@ -605,6 +618,13 @@ void FloatToFixed::convertFun(Function *oldF, Function *newF, std::vector<Value*
     }
   }
 
+
+  for (Value *v : roots) {
+    dbgs() << "Roots : ";
+    v->print(dbgs());
+    dbgs() << "\n-------\n";
+  }
+
   std::vector<Value*> vals;
   buildConversionQueueForRootValues(roots, vals);
 
@@ -613,8 +633,12 @@ void FloatToFixed::convertFun(Function *oldF, Function *newF, std::vector<Value*
     dbgs() << " --> " << newF->getName() << " = ";
     newF->getType()->print(dbgs());
     dbgs() << "\n";
+    printConversionQueue(vals););
+
   performConversion(*newF->getParent(), vals);
   cleanup(vals);
 
+  dbgs() << "Converted function : \n";
+  newF->print(dbgs());
   FunctionCreated++;
 }

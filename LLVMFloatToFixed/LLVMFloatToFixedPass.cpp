@@ -7,6 +7,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
+#include <llvm/Transforms/Utils/ValueMapper.h>
+#include <llvm/Transforms/Utils/Cloning.h>
 #include "LLVMFloatToFixedPass.h"
 
 //#define LOG_BACKTRACK
@@ -40,6 +42,7 @@ bool FloatToFixed::runOnModule(Module &m)
 
   std::vector<Value*> vals;
   buildConversionQueueForRootValues(rootsa, vals);
+  propagateCall(vals);
   optimizeFixedPointTypes(vals);
 
   DEBUG(printConversionQueue(vals));
@@ -282,6 +285,107 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
     if (allok)
       i->eraseFromParent();
   }
+}
+
+
+void FloatToFixed::propagateCall(std::vector<Value *> &vals)
+{
+  for (int i=0; i < vals.size(); i++) {
+    if (CallInst *call = dyn_cast<CallInst>(vals[i])) {
+      if (Function *newF = createFixFun(call)){
+        Function *oldF = call->getCalledFunction();
+        
+        ValueToValueMapTy mapArgs; // Create Val2Val mapping and clone function
+        Function::arg_iterator newIt = newF->arg_begin();
+        Function::arg_iterator oldIt = oldF->arg_begin();
+        for (; oldIt != oldF->arg_end() ; oldIt++, newIt++) {
+          newIt->setName(oldIt->getName());
+          mapArgs.insert(std::make_pair(oldIt, newIt));
+        }
+        SmallVector<ReturnInst*,100> returns;
+        CloneFunctionInto(newF, oldF, mapArgs, true, returns);
+        
+        std::vector<Value*> roots; //propagate fixp conversion
+        oldIt = oldF->arg_begin();
+        newIt = newF->arg_begin();
+        for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
+          if (oldIt->getType() != newIt->getType()){
+            // Mark the alloca used for the argument (in O0 opt lvl)
+            info[newIt->user_begin()->getOperand(1)] = info[call->getOperand(i)];
+            roots.push_back(newIt->user_begin()->getOperand(1));
+            
+            std::string tmpstore; //append fixp info to arg name
+            raw_string_ostream tmp(tmpstore);
+            tmp << fixPType(newIt->user_begin()->getOperand(1));
+            newIt->setName(newIt->getName() + "." + tmp.str());
+          }
+        }
+  
+        // If return a float, all the return inst should have a fix point (independently from the conv queue)
+        if (oldF->getReturnType()->isFloatingPointTy()) {
+          for (ReturnInst *v : returns) {
+            roots.push_back(v);
+            info[v].fixpType = info[call].fixpType;
+            info[v].fixpTypeRootDistance = 0;
+          }
+        }
+        std::vector<Value*> newVals;
+        buildConversionQueueForRootValues(roots, newVals);
+        vals.insert(vals.end(),newVals.begin(),newVals.end());
+      }
+    }
+  }
+}
+
+
+Function* FloatToFixed::createFixFun(CallInst* call)
+{
+  Function *oldF = call->getCalledFunction();
+  
+  if(oldF->getName() == "printf" || oldF->getName().startswith("llvm.") || oldF->getName() == "logf" ||
+     oldF->getName() == "expf" || oldF->getName() == "sqrtf")
+    return nullptr;
+  
+  std::vector<Type*> typeArgs;
+  std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function
+  
+  if(oldF->getReturnType()->isFloatingPointTy())
+    fixArgs.push_back(std::pair<int, FixedPointType>(-1, info[call].fixpType)); //ret value in signature
+  
+  int i=0;
+  for (auto arg = call->arg_begin(); arg != call->arg_end(); arg++,i++) { //detect fix argument
+    Value *v = dyn_cast<Value>(arg);
+    if (hasInfo(v)) {
+      fixArgs.push_back(std::pair<int, FixedPointType>(i,info[v].fixpType));
+      typeArgs.push_back(info[v].fixpType.toLLVMType(call->getContext()));
+    } else {
+      typeArgs.push_back(v->getType());
+    }
+  }
+  
+  Function *newF;
+  FunctionType *newFunTy = FunctionType::get(
+      oldF->getReturnType()->isFloatingPointTy() ?
+      info[call].fixpType.toLLVMType(call->getContext()) :
+      oldF->getReturnType(),
+      typeArgs, oldF->isVarArg());
+  
+  for (FunInfo f : functionPool[oldF]) { //check if is previously converted
+    if (f.fixArgs == fixArgs) {
+      newF = f.newFun;
+      DEBUG(dbgs() << *call <<  " use already converted function : " <<
+                   newF->getName() << " " << *newF->getType() << "\n";);
+      return nullptr;
+    }
+  }
+  
+  newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_fixp", oldF->getParent());
+  FunInfo funInfo; //add to pool
+  funInfo.newFun = newF;
+  funInfo.fixArgs = fixArgs;
+  functionPool[oldF].push_back(funInfo);
+  FunctionCreated++;
+  return newF;
 }
 
 
