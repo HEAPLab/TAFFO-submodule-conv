@@ -42,7 +42,7 @@ bool FloatToFixed::runOnModule(Module &m)
 
   std::vector<Value*> vals;
   buildConversionQueueForRootValues(rootsa, vals);
-  propagateCall(vals);
+  propagateCall(vals, global);
   optimizeFixedPointTypes(vals);
 
   DEBUG(printConversionQueue(vals));
@@ -288,7 +288,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
 }
 
 
-void FloatToFixed::propagateCall(std::vector<Value *> &vals)
+void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global)
 {
   for (int i=0; i < vals.size(); i++) {
     if (CallInst *call = dyn_cast<CallInst>(vals[i])) {
@@ -329,9 +329,16 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals)
             info[v].fixpTypeRootDistance = 0;
           }
         }
-        std::vector<Value*> newVals;
+        std::vector<Value*> newVals(global.begin(), global.end());
         buildConversionQueueForRootValues(roots, newVals);
-        vals.insert(vals.end(),newVals.begin(),newVals.end());
+        
+        for (Value *val : newVals){
+          if (Instruction *inst = dyn_cast<Instruction>(val)) {
+            if (inst->getFunction()==newF){
+              vals.push_back(val);
+            }
+          }
+        }
       }
     }
   }
