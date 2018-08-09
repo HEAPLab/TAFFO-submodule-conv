@@ -291,23 +291,7 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
   }
 
   assert("Every function should be cloned previously!\n");
-  
-  FunctionType *newFunTy = FunctionType::get(
-      oldF->getReturnType()->isFloatingPointTy() ?
-      fixpt.toLLVMType(call->getContext()) :
-      oldF->getReturnType(),
-      typeArgs, oldF->isVarArg());
-  
-  
-  newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_fixp", oldF->getParent());
-
-  FunInfo funInfo; //add to pool
-  funInfo.newFun = newF;
-  funInfo.fixArgs = fixArgs;
-  functionPool[oldF].push_back(funInfo);
-
-  convertFun(oldF, newF, convArgs, fixpt);
-  return builder.CreateCall(newF, convArgs);
+  return Unsupported;
 }
 
 
@@ -563,82 +547,3 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
   return unsupp;
 }
 
-
-void FloatToFixed::convertFun(Function *oldF, Function *newF, std::vector<Value*> convArgs, FixedPointType& retType)
-{
-  ValueToValueMapTy mapArgs;
-  std::vector<Value*> roots;
-
-  Function::arg_iterator newIt = newF->arg_begin();
-  Function::arg_iterator oldIt = oldF->arg_begin();
-  for (; oldIt != oldF->arg_end() ; oldIt++, newIt++) {
-    newIt->setName(oldIt->getName());
-    mapArgs.insert(std::make_pair(oldIt, newIt));
-  }
-
-  SmallVector<ReturnInst*,100> returns;
-  CloneFunctionInto(newF, oldF, mapArgs, true, returns);
-
-
-  oldIt = oldF->arg_begin();
-  newIt = newF->arg_begin();
-  for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
-    if (oldIt->getType() != newIt->getType()){
-      // Mark the alloca used for the argument in the O0 optimization level
-      info[newIt->user_begin()->getOperand(1)] = info[convArgs[i]];
-      roots.push_back(newIt->user_begin()->getOperand(1));
-
-      /*dbgs() << " +++++++++++++++++++++++++++ " << *newIt << "\n"; //Try to handle different OX lvl opt
-      operandPool[dyn_cast<Value>(newIt)] = dyn_cast<Value>(newIt);
-      info[dyn_cast<Value>(newIt)] = info[convArgs[i]];
-      roots.push_back(newIt);
-      for (auto val = newIt->user_begin(); val != newIt->user_end(); val++) {
-        dbgs() << " ######################################## " << **val << "\n";
-
-        info[*val] = info[convArgs[i]];
-        roots.push_back(*val);
-      }
-      info[dyn_cast<Value>(newIt)] = info[convArgs[i]];
-      operandPool[dyn_cast<Value>(newIt)] = dyn_cast<Value>(newIt);*/
-
-      //append fixp info to arg name
-      std::string tmpstore;
-      raw_string_ostream tmp(tmpstore);
-      tmp << fixPType(newIt->user_begin()->getOperand(1));
-      newIt->setName(newIt->getName() + "." + tmp.str());
-    }
-  }
-
-  // If return a float, all the return inst should have a fix point (independently from the conv queue)
-  if (oldF->getReturnType()->isFloatingPointTy()) {
-    for (ReturnInst *v : returns) {
-      roots.push_back(v);
-      info[v].fixpType = retType;
-      info[v].fixpTypeRootDistance = 0;
-    }
-  }
-
-
-  for (Value *v : roots) {
-    dbgs() << "Roots : ";
-    v->print(dbgs());
-    dbgs() << "\n-------\n";
-  }
-
-  std::vector<Value*> vals;
-  buildConversionQueueForRootValues(roots, vals);
-
-  DEBUG(dbgs() << "Converting function : " << oldF->getName() << " = ";
-    oldF->getType()->print(dbgs());
-    dbgs() << " --> " << newF->getName() << " = ";
-    newF->getType()->print(dbgs());
-    dbgs() << "\n";
-    printConversionQueue(vals););
-
-  performConversion(*newF->getParent(), vals);
-  cleanup(vals);
-
-  dbgs() << "Converted function : \n";
-  newF->print(dbgs());
-  FunctionCreated++;
-}
