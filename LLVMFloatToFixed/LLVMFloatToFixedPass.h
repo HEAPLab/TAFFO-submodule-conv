@@ -2,6 +2,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
@@ -98,6 +99,13 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *convertCmp(llvm::FCmpInst *fcmp);
   llvm::Value *convertCast(llvm::CastInst *cast, const FixedPointType& fixpt);
   llvm::Value *fallback(llvm::Instruction *unsupp, FixedPointType& fixpt);
+  
+  std::set<std::string> blackFun = {"printf","log","logf","exp","expf","sqrt","sqrtf","cos","sin",
+                                    "tan","acos","asin","atan"};
+  bool isSpecialFunction(const llvm::Function* f) { //TODO better logic here
+    llvm::StringRef fName = f->getName();
+    return fName.startswith("llvm.") || blackFun.count(fName);
+  }
 
   llvm::Value *matchOp(llvm::Value *val) {
     llvm::Value *res = operandPool[val];

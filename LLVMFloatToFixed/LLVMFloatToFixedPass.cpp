@@ -265,26 +265,34 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
     }
   }
 
-  for (Value *v: q) {
-    StoreInst *i = dyn_cast<StoreInst>(v);
-    if (!i)
-      continue;
-    const auto& roots = info[v].roots;
-
-    bool allok = true;
-    for (Value *root: roots) {
-      if (!isrootok[root]) {
-        DEBUG(i->print(errs());
-              errs() << " not deleted: involves root ";
-              root->print(errs());
-              errs() << '\n');
-        allok = false;
-        break;
+  auto clear = [&] (bool (*toDelete) (const Instruction &Y)) {
+    for (Value *v: q) {
+      Instruction *i = dyn_cast<Instruction>(v);
+      if (!i || (!toDelete(*i)))
+        continue;
+      const auto &roots = info[v].roots;
+    
+      bool allok = true;
+      for (Value *root: roots) {
+        if (!isrootok[root]) {
+          DEBUG(i->print(errs());
+                    errs() << " not deleted: involves root ";
+                    root->print(errs());
+                    errs() << '\n');
+          allok = false;
+          break;
+        }
+      }
+      if (allok) {
+        if (!i->use_empty())
+          i->replaceAllUsesWith(UndefValue::get(i->getType()));
+        i->eraseFromParent();
       }
     }
-    if (allok)
-      i->eraseFromParent();
-  }
+  };
+  
+  clear(isa<StoreInst>);
+  clear(isa<CallInst>);
 }
 
 
@@ -294,6 +302,9 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     if (CallInst *call = dyn_cast<CallInst>(vals[i])) {
       if (Function *newF = createFixFun(call)){
         Function *oldF = call->getCalledFunction();
+        
+        DEBUG(dbgs() << "Converting function " << oldF->getName() << " : " << *oldF->getType()
+                     << " into " << newF->getName() << " : " << *newF->getType() << "\n");
         
         ValueToValueMapTy mapArgs; // Create Val2Val mapping and clone function
         Function::arg_iterator newIt = newF->arg_begin();
@@ -348,9 +359,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
 Function* FloatToFixed::createFixFun(CallInst* call)
 {
   Function *oldF = call->getCalledFunction();
-  
-  if(oldF->getName() == "printf" || oldF->getName().startswith("llvm.") || oldF->getName() == "logf" ||
-     oldF->getName() == "expf" || oldF->getName() == "sqrtf")
+  if(isSpecialFunction(oldF))
     return nullptr;
   
   std::vector<Type*> typeArgs;

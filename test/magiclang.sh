@@ -35,9 +35,9 @@ if [ $ISDEBUG != '1' ]; then
 fi
 
 $CLANG -S -emit-llvm "$1" -o "_tmp0.$1.ll" $3 -O0
-$OPT -load="$PASSLIB" -S -flttofix -dce -debug -stats "_tmp0.$1.ll" -o "_tmp1.$1.ll" -O3
+$OPT -load="$PASSLIB" -S -flttofix -dce -debug -stats "_tmp0.$1.ll" -o "_tmp1.$1.ll" 
 $CLANG -S  -o "_tmp2.$1.s" "_tmp1.$1.ll" $2 $3
-$CLANG -o "$OUTNAME" "_tmp2.$1.s" $2 $3
+$CLANG -o "$OUTNAME" "_tmp2.$1.s" $2 $3 -lm
 
 $CLANG -S -o "_tmp2_not_opt.$1.s" "_tmp0.$1.ll" $2 $3
-$CLANG -o "$OUTNAME._not_opt" "_tmp2_not_opt.$1.s" $2 $3
+$CLANG -o "$OUTNAME._not_opt" "_tmp2_not_opt.$1.s" $2 $3 -lm

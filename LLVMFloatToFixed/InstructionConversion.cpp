@@ -258,8 +258,7 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
   IRBuilder<> builder(call->getNextNode());
   Function *oldF = call->getCalledFunction();
 
-  if(oldF->getName() == "printf" || oldF->getName().startswith("llvm.") || oldF->getName() == "logf" ||
-      oldF->getName() == "expf" || oldF->getName() == "sqrtf") //TODO blacklisted function
+  if(isSpecialFunction(oldF))
     return Unsupported;
 
   std::vector<Value*> convArgs;

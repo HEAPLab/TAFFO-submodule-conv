@@ -1,20 +1,25 @@
-float __attribute((annotate("no_float 39 9"))) global = 3.333;
+#include <stdio.h>
+#include <math.h>
+
+float  __attribute((annotate("no_float 39 9"))) global = 33.333;
 
 float fun(float x, float y){
     float local;
     local = x * y + global;
+    global++;
     return local;
 }
 
 int funInt(float x, float y){
     int local;
     local = x * y + global;
+    global*=1.098;
     return local;
 }
 
 int main() {
     float a=10.2049;
-    float __attribute((annotate("no_float 34 8"))) b=10.1024;
+    float __attribute((annotate("no_float 34 28"))) b=10.1024;
     int c = 2;
     
     
@@ -34,7 +39,7 @@ int main() {
     
     // ------------------ //
     
-    b = a/4000;
+    a = a/4000;
     
     b = fun(b,b);
     printf("%f\n",b);
@@ -71,7 +76,7 @@ int main() {
     
     printf("*******************\n");
     
-    b=10.05;
+    a=10.05;
 
     a = funInt(b,b);
     printf("%f\n",a);
@@ -86,7 +91,8 @@ int main() {
     printf("%f\n",a);
     
     
-    a = 3.19;
+    a = sqrt(b);
+    b = exp(a*9.99);
     
     b = funInt(a,b);
     printf("%f\n",b);
@@ -100,7 +106,7 @@ int main() {
     b = funInt(b,b);
     printf("%f\n",b);
     
-    
+    b = a;
     
     c = funInt(b,b);
     printf("%d\n",c);
