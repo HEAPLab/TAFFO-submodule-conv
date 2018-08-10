@@ -533,17 +533,21 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
       newops.push_back(fallval);
     }
   }
-
-  for (int i=0, n=unsupp->getNumOperands(); i<n; i++) {
-    unsupp->setOperand(i, newops[i]);
+  
+  Instruction *tmp = unsupp->clone();
+  tmp->setName(unsupp->getName() + ".flt");
+  tmp->insertAfter(unsupp);
+  
+  for (int i=0, n=tmp->getNumOperands(); i<n; i++) {
+    tmp->setOperand(i, newops[i]);
   }
-  DEBUG(dbgs() << "  mutated operands to:\n" << *unsupp << "\n");
-  if (unsupp->getType()->isFloatingPointTy()) {
-    Value *fallbackv = genConvertFloatToFix(unsupp, fixpt, unsupp);
-    if (unsupp->hasName())
-      fallbackv->setName(unsupp->getName() + ".fallback");
+  DEBUG(dbgs() << "  mutated operands to:\n" << *tmp << "\n");
+  if (tmp->getType()->isFloatingPointTy()) {
+    Value *fallbackv = genConvertFloatToFix(tmp, fixpt, tmp);
+    if (tmp->hasName())
+      fallbackv->setName(tmp->getName() + ".fallback");
     return fallbackv;
   }
-  return unsupp;
+  return tmp;
 }
 
