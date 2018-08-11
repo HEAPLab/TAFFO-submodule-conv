@@ -34,3 +34,7 @@ cmake-build-debug/
 .idea/
 
 test/function
+
+test/axbench/blackscholes/bin/
+test/axbench/blackscholes/obj/
+test/axbench/blackscholes/data/output/
