@@ -136,9 +136,11 @@ fptype CNDF ( fptype InputX )
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
-fptype BlkSchlsEqEuroNoDiv( fptype sptprice,
-                            fptype strike, fptype rate, fptype volatility,
-                            fptype time, int otype, float timet, fptype* N1, fptype* N2)
+fptype BlkSchlsEqEuroNoDiv( fptype sptprice __attribute((annotate("no_float 39 19"))) ,
+                            fptype strike __attribute((annotate("no_float 40 19"))) , fptype rate __attribute((annotate("no_float 30 18"))), 
+                            fptype volatility __attribute((annotate("no_float 30 54"))), fptype time __attribute((annotate("no_float 24 24"))), 
+                            int otype, float timet __attribute((annotate("no_float 39 15"))), 
+                            fptype*  N1, fptype* N2)
 {
     fptype OptionPrice;
 
