@@ -38,3 +38,7 @@ test/function
 test/axbench/blackscholes/bin/
 test/axbench/blackscholes/obj/
 test/axbench/blackscholes/data/output/
+
+test/axbench/fft/bin/
+test/axbench/fft/obj/
+test/axbench/fft/data/output
