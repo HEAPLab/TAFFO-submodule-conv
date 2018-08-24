@@ -2,7 +2,7 @@
 
 rm -rf data/output
 mkdir data/output
-benchmark=blackscholes
+benchmark=jmeint
 
 for f in data/input/*.data
 do

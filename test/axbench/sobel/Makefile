@@ -4,16 +4,16 @@ LD			:= clang++
 OX          := -O3
 
 CFLAGS		:= -Wall -Wnarrowing -std=c++11
-LFLAGS		:= -lboost_regex 
+LFLAGS		:= -lboost_regex
 HEADERS     := src
-INCLUDE 	:= -I${HEADERS}
+INCLUDE 	:= -I${HEADERS} 
 
-MODULE		:= fft.out
+MODULE		:= sobel.out
 
-CPP_FILES       := $(wildcard src/*.cpp)
-LL_FILES        := $(addprefix obj/,$(notdir $(CPP_FILES:.cpp=.ll))) 
-OBJ_FLOAT       := obj/main.o
-OBJ_FIX         := obj/main.fixp.o
+CPP_FILES := $(wildcard src/*.cpp)
+LL_FILES  := $(addprefix obj/,$(notdir $(CPP_FILES:.cpp=.ll))) 
+OBJ_FLOAT := obj/main.o
+OBJ_FIX   := obj/main.fixp.o
 
 .PHONY: all clean
 	
@@ -33,7 +33,6 @@ DIR:
 $(MODULE): $(OBJ_FLOAT) $(OBJ_FIX)
 	$(LD) $(OBJ_FLOAT) $(LFLAGS) -o bin/$@
 	$(LD) $(OBJ_FIX) $(LFLAGS) -o bin/$@.fixp
-
 
 obj/%.ll : src/%.cpp
 	$(CC) -S -emit-llvm $(CFLAGS) $(INCLUDE) $< -o $@
@@ -58,5 +57,3 @@ clean:
 	@rm -rf *.out
 	@rm -rf bin
 	@rm -rf obj
-	@rm -rf *.ll
-	@rm -rf *.s

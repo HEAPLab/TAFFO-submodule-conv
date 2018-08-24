@@ -2,7 +2,7 @@
 
 rm -rf data/output
 mkdir data/output
-benchmark=blackscholes
+benchmark=inversek2j
 
 for f in data/input/*.data
 do
@@ -13,10 +13,10 @@ do
 	echo -e "\e[95m------ ${filename} ------\e[0m"
 	
 	echo -e "\e[96m*** Float Version ***\e[0m"
-	time ./bin/${benchmark}.out ${f} data/output/${filename}_${benchmark}_out.data
+	time ./bin/inversek2j.out ${f} data/output/${filename}_${benchmark}_out.data
 	
 	echo -e "\e[96m*** Fix Version ***\e[0m"
-	time ./bin/${benchmark}.out.fixp ${f} data/output/${filename}_${benchmark}_out.data.fixp
+	time ./bin/inversek2j.out.fixp ${f} data/output/${filename}_${benchmark}_out.data.fixp
 	
 	echo -e "\e[32m### QoS ###\e[0m"
 	python ./scripts/qos.py data/output/${filename}_${benchmark}_out.data data/output/${filename}_${benchmark}_out.data.fixp
