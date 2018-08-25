@@ -264,8 +264,8 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
   std::vector<Value*> convArgs;
   std::vector<Type*> typeArgs;
   std::vector<std::pair<int, FixedPointType>> fixArgs; //for match right function
-
-  if(oldF->getReturnType()->isFloatingPointTy())
+  
+  if(isFloatType(oldF->getReturnType()))
     fixArgs.push_back(std::pair<int, FixedPointType>(-1, fixpt)); //ret value in signature
 
   int i=0;
@@ -289,7 +289,7 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
     }
   }
 
-  assert("Every function should be cloned previously!\n");
+  assert(newF && "Every function should be cloned previously!\n");
   return Unsupported;
 }
 

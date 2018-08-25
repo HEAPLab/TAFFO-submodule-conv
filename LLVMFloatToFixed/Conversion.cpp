@@ -193,11 +193,11 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
 
 Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixpt, Type *destt)
 {
-  dbgs() << "******** trace: genConvertFixToFloat ";
+  DEBUG(dbgs() << "******** trace: genConvertFixToFloat ";
   fix->print(dbgs());
   dbgs() << " -> ";
   destt->print(dbgs());
-  dbgs() << "\n";
+  dbgs() << "\n";);
   
   Instruction *i = dyn_cast<Instruction>(fix);
   if (!i)

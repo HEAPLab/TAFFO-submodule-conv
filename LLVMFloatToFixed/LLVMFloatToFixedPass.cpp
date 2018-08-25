@@ -103,7 +103,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
 
   size_t prevQueueSize = 0;
   while (prevQueueSize < queue.size()) {
-    dbgs() << "***** buildConversionQueueForRootValues iter " << prevQueueSize << " < " << queue.size() << "\n";
+    DEBUG(dbgs() << "***** buildConversionQueueForRootValues iter " << prevQueueSize << " < " << queue.size() << "\n";);
     prevQueueSize = queue.size();
 
     size_t next = 0;
@@ -365,24 +365,26 @@ Function* FloatToFixed::createFixFun(CallInst* call)
   std::vector<Type*> typeArgs;
   std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function
   
-  if(oldF->getReturnType()->isFloatingPointTy())
+  if(isFloatType(oldF->getReturnType()))
     fixArgs.push_back(std::pair<int, FixedPointType>(-1, info[call].fixpType)); //ret value in signature
   
   int i=0;
   for (auto arg = call->arg_begin(); arg != call->arg_end(); arg++,i++) { //detect fix argument
     Value *v = dyn_cast<Value>(arg);
+    Type* newTy;
     if (hasInfo(v)) {
       fixArgs.push_back(std::pair<int, FixedPointType>(i,info[v].fixpType));
-      typeArgs.push_back(info[v].fixpType.toLLVMType(call->getContext()));
+      newTy = getLLVMFixedPointTypeForFloatValue(v);
     } else {
-      typeArgs.push_back(v->getType());
+      newTy = v->getType();
     }
+    typeArgs.push_back(newTy);
   }
   
   Function *newF;
   FunctionType *newFunTy = FunctionType::get(
-      oldF->getReturnType()->isFloatingPointTy() ?
-      info[call].fixpType.toLLVMType(call->getContext()) :
+      isFloatType(oldF->getReturnType()) ?
+      getLLVMFixedPointTypeForFloatValue(call) :
       oldF->getReturnType(),
       typeArgs, oldF->isVarArg());
   
