@@ -81,7 +81,7 @@ UINT8* encodeMcu(
 	levelShift(Y1);
 
 	double dataIn [BLOCK_SIZE];
-	double dataOut[BLOCK_SIZE];
+	double __attribute((annotate("no_float 10 22"))) dataOut[BLOCK_SIZE];
 
 	for (int i = 0; i < BLOCK_SIZE; ++i)
 	{
