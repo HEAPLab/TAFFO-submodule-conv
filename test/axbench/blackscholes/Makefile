@@ -37,7 +37,7 @@ $(MODULE): $(OBJ_FILES) $(OBJ_FILES_FIX)
 
 
 obj/%.ll obj/%.fixp.ll: src/%.c
-	$(CC) -S -emit-llvm $< -o $@ -O0
+	$(CC) -S -emit-llvm $< -o $@
 	opt -load=$(PASSLIB) -S -flttofix -dce -debug-only=flttofix -stats $(OX) $@ -o obj/$*.fixp.ll 
 
 obj/%.s: obj/%.ll

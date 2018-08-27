@@ -46,7 +46,7 @@ $(OBJ_FLOAT) : obj/main.ll
 	$(CC) -c obj/main.s -o $@
 
 obj/main.fixp.ll : obj/main.ll
-	opt -load=$(PASSLIB) -S -flttofix -dce -stats $(OX) $< -o $@
+	opt -load=$(PASSLIB) -S -flttofix -dce -debug-only=flttofix -stats $(OX) $< -o $@
 
 $(OBJ_FIX) : obj/main.fixp.ll
 	$(CC) -S $^ -o obj/main.fixp.s $(OX)
