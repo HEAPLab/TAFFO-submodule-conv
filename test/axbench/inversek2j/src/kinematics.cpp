@@ -9,15 +9,15 @@
 #include "kinematics.hpp"
 
 
-float l1 = 0.5 ;
-float l2 = 0.5 ;
+float  __attribute((annotate("no_float 2 30"))) l1 = 0.5 ;
+float  __attribute((annotate("no_float 2 30"))) l2 = 0.5 ;
 
-void forwardk2j(float theta1, float theta2, float* x, float* y) {
+void forwardk2j(float  __attribute((annotate("no_float 4 28"))) theta1, float  __attribute((annotate("no_float 4 28"))) theta2, float*  x, float* y) {
 	*x = l1 * cos(theta1) + l2 * cos(theta1 + theta2) ;
 	*y = l1 * sin(theta1) + l2 * sin(theta1 + theta2) ;
 }
 
-void inversek2j(float x, float y, float* theta1, float* theta2) {
+void inversek2j(float  __attribute((annotate("no_float 4 28"))) x, float  __attribute((annotate("no_float 4 28"))) y, float* theta1, float* theta2) {
 
 	double dataIn[2];
 	dataIn[0] = x;
