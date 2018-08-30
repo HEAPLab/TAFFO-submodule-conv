@@ -17,6 +17,8 @@
 #define DEBUG_TYPE "flttofix"
 #define DEBUG_ANNOTATION "annotation"
 
+#define INPUT_INFO_METADATA "taffo.info"
+
 STATISTIC(FixToFloatCount, "Number of generic fixed point to floating point "
                            "value conversion operations inserted");
 STATISTIC(FloatToFixCount, "Number of generic floating point to fixed point "

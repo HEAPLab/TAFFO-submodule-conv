@@ -41,18 +41,25 @@ void FloatToFixed::performConversion(
     }
     
     Value *newv = convertSingleValue(m, v, info[v].fixpType);
-    if (newv && newv != ConversionError) {
+    if (newv) {
       operandPool.insert({v, newv});
-      info[newv] = info[v];
+    }
+    
+    if (newv && newv != ConversionError) {
+      if (Instruction *inst = dyn_cast<Instruction>(newv)) {
+        inst->setMetadata(INPUT_INFO_METADATA,
+                          dyn_cast<Instruction>(v)->getMetadata(INPUT_INFO_METADATA));
+      } else if (GlobalObject *con = dyn_cast<GlobalObject>(newv)) {
+        con->setMetadata(INPUT_INFO_METADATA,
+                          dyn_cast<GlobalObject>(v)->getMetadata(INPUT_INFO_METADATA));
+      }
+      
+      info.insert({newv, info[v]});
     } else {
       DEBUG(dbgs() << "warning: ";
             v->print(dbgs());
             dbgs() << " not converted\n";);
-      
-      if (newv)
-        operandPool.insert({v, newv});
     }
-    
     i++;
   }
 }
