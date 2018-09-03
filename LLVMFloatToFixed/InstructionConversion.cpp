@@ -114,20 +114,31 @@ Value *FloatToFixed::convertStore(StoreInst *store)
     return nullptr;
   
   Value *newval;
-  if (val->getType()->isFloatingPointTy()) {
+  if (isFloatType(val->getType())) {
     FixedPointType valtype;
     Type *peltype = newptr->getType()->getPointerElementType();
     
     if (peltype->isFloatingPointTy()) {
       newval = translateOrMatchOperand(val, valtype, store);
       newval = genConvertFixToFloat(newval, valtype, peltype);
-      
+  
     } else if (peltype->isIntegerTy()) {
       valtype = fixPType(newptr);
       newval = translateOrMatchOperandAndType(val, valtype, store);
       
-    } else
+    } else if (peltype->isPointerTy()){
+      newval = translateOrMatchOperand(val, valtype, store);
+      if (!newval || newval->getType() != peltype) {
+        BitCastInst *bc = new BitCastInst(!newval ? val : newval,peltype);
+        bc->insertBefore(store);
+        newval = bc;
+      }
+      DEBUG(dbgs()<< "[Store] Detect pointer store :"<< *store << "\n";);
+      
+    } else {
       return nullptr;
+    }
+    
   } else {
     newval = matchOp(val);
   }
