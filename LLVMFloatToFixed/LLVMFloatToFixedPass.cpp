@@ -293,13 +293,15 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
   
   clear(isa<StoreInst>);
   clear(isa<CallInst>);
+  clear(isa<InvokeInst>);
 }
 
 
 void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global)
 {
   for (int i=0; i < vals.size(); i++) {
-    if (CallInst *call = dyn_cast<CallInst>(vals[i])) {
+    if (isa<CallInst>(vals[i]) || isa<InvokeInst>(vals[i])) {
+      CallSite *call = new CallSite(vals[i]);
       if (Function *newF = createFixFun(call)){
         Function *oldF = call->getCalledFunction();
         
@@ -322,7 +324,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
           if (oldIt->getType() != newIt->getType()){
             // Mark the alloca used for the argument (in O0 opt lvl)
-            info[newIt->user_begin()->getOperand(1)] = info[call->getOperand(i)];
+            info[newIt->user_begin()->getOperand(1)] = info[call->getInstruction()->getOperand(i)];
             roots.push_back(newIt->user_begin()->getOperand(1));
             
             std::string tmpstore; //append fixp info to arg name
@@ -336,7 +338,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         if (oldF->getReturnType()->isFloatingPointTy()) {
           for (ReturnInst *v : returns) {
             roots.push_back(v);
-            info[v].fixpType = info[call].fixpType;
+            info[v].fixpType = info[call->getInstruction()].fixpType;
             info[v].fixpTypeRootDistance = 0;
           }
         }
@@ -356,7 +358,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
 }
 
 
-Function* FloatToFixed::createFixFun(CallInst* call)
+Function* FloatToFixed::createFixFun(CallSite* call)
 {
   Function *oldF = call->getCalledFunction();
   if(isSpecialFunction(oldF))
@@ -365,8 +367,8 @@ Function* FloatToFixed::createFixFun(CallInst* call)
   std::vector<Type*> typeArgs;
   std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function
   
-  if(isFloatType(oldF->getReturnType()))
-    fixArgs.push_back(std::pair<int, FixedPointType>(-1, info[call].fixpType)); //ret value in signature
+  if(isFloatType(oldF->getReturnType())) //ret value in signature
+    fixArgs.push_back(std::pair<int, FixedPointType>(-1, info[call->getInstruction()].fixpType));
   
   int i=0;
   for (auto arg = call->arg_begin(); arg != call->arg_end(); arg++,i++) { //detect fix argument
@@ -384,14 +386,14 @@ Function* FloatToFixed::createFixFun(CallInst* call)
   Function *newF;
   FunctionType *newFunTy = FunctionType::get(
       isFloatType(oldF->getReturnType()) ?
-      getLLVMFixedPointTypeForFloatValue(call) :
+      getLLVMFixedPointTypeForFloatValue(call->getInstruction()) :
       oldF->getReturnType(),
       typeArgs, oldF->isVarArg());
   
   for (FunInfo f : functionPool[oldF]) { //check if is previously converted
     if (f.fixArgs == fixArgs) {
       newF = f.newFun;
-      DEBUG(dbgs() << *call <<  " use already converted function : " <<
+      DEBUG(dbgs() << *(call->getInstruction()) <<  " use already converted function : " <<
                    newF->getName() << " " << *newF->getType() << "\n";);
       return nullptr;
     }

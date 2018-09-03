@@ -1,6 +1,7 @@
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -78,7 +79,7 @@ struct FloatToFixed : public llvm::ModulePass {
   void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res);
   void cleanup(const std::vector<llvm::Value*>& queue);
   void propagateCall(std::vector<llvm::Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global);
-  llvm::Function *createFixFun(llvm::CallInst* call);
+  llvm::Function *createFixFun(llvm::CallSite* call);
   void printConversionQueue(std::vector<llvm::Value*> vals);
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, FixedPointType& fixpt);
@@ -95,18 +96,16 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *convertGep(llvm::GetElementPtrInst *gep, FixedPointType& fixpt);
   llvm::Value *convertPhi(llvm::PHINode *load, FixedPointType& fixpt);
   llvm::Value *convertSelect(llvm::SelectInst *sel, FixedPointType& fixpt);
-  llvm::Value *convertCall(llvm::CallInst *call, FixedPointType& fixpt);
+  llvm::Value *convertCall(llvm::CallSite *call, FixedPointType& fixpt);
   llvm::Value *convertRet(llvm::ReturnInst *ret, FixedPointType& fixpt);
   llvm::Value *convertBinOp(llvm::Instruction *instr, const FixedPointType& fixpt);
   llvm::Value *convertCmp(llvm::FCmpInst *fcmp);
   llvm::Value *convertCast(llvm::CastInst *cast, const FixedPointType& fixpt);
   llvm::Value *fallback(llvm::Instruction *unsupp, FixedPointType& fixpt);
   
-  std::set<std::string> blackFun = {"printf","log","logf","exp","expf","sqrt","sqrtf","cos","sin",
-                                    "tan","acos","asin","atan"};
-  bool isSpecialFunction(const llvm::Function* f) { //TODO better logic here
+  bool isSpecialFunction(const llvm::Function* f) {
     llvm::StringRef fName = f->getName();
-    return fName.startswith("llvm.") || blackFun.count(fName);
+    return fName.startswith("llvm.") || f->getBasicBlockList().size() == 0;
   }
 
   llvm::Value *matchOp(llvm::Value *val) {

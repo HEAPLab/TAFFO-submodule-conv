@@ -38,7 +38,8 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
     res = convertPhi(phi, fixpt);
   } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
     res = convertSelect(select, fixpt);
-  } else if (CallInst *call = dyn_cast<CallInst>(val)) { //TODO Handle InvokeInst
+  } else if (isa<CallInst>(val) || isa<InvokeInst>(val)) {
+    CallSite *call = new CallSite(val);
     res = convertCall(call, fixpt);
   } else if (ReturnInst *ret = dyn_cast<ReturnInst>(val)) {
     res = convertRet(ret, fixpt);
@@ -262,11 +263,13 @@ Value *FloatToFixed::convertSelect(SelectInst *sel, FixedPointType& fixpt)
 }
 
 
-Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
+Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 {
   /* If the function return a float the new return type will be a fix point of type fixpt,
    * otherwise the return type is left unchanged.*/
-  IRBuilder<> builder(call->getNextNode());
+  IRBuilder<> builder(call->isCall()
+                      ? call->getInstruction()->getNextNode()
+                      : call->getInstruction()->getPrevNode());
   Function *oldF = call->getCalledFunction();
 
   if(isSpecialFunction(oldF))
@@ -282,7 +285,7 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
   int i=0;
   for (auto *it = call->arg_begin(); it != call->arg_end(); it++,i++) {
     if (hasInfo(*it)) {
-      convArgs.push_back(translateOrMatchOperand(*it, info[*it].fixpType, call));
+      convArgs.push_back(translateOrMatchOperand(*it, info[*it].fixpType, call->getInstruction()));
       fixArgs.push_back(std::pair<int, FixedPointType>(i,info[*it].fixpType));
     } else {
       convArgs.push_back(dyn_cast<Value>(it));
@@ -294,13 +297,22 @@ Value *FloatToFixed::convertCall(CallInst *call, FixedPointType& fixpt)
   for (FunInfo f : functionPool[oldF]) { //get right function
     if (f.fixArgs == fixArgs) {
       newF = f.newFun;
-      DEBUG(dbgs() << *call <<  " use converted function : " <<
+      DEBUG(dbgs() << *(call->getInstruction()) <<  " use converted function : " <<
                    newF->getName() << " " << *newF->getType() << "\n";);
-      return builder.CreateCall(newF, convArgs);
+      
+      if (call->isCall()) {
+        return builder.CreateCall(newF, convArgs);
+      } else if (call->isInvoke()) {
+        InvokeInst *invk = dyn_cast<InvokeInst>(call->getInstruction());
+        return builder.CreateInvoke(newF, invk->getNormalDest(), invk->getUnwindDest(), convArgs);
+      } else {
+        assert("Unknown CallSite type");
+      }
     }
   }
-
-  assert(newF && "Every function should be cloned previously!\n");
+  
+  dbgs() << "[Error]" << *(call->getInstruction()) << " don't find a function to call!\n";
+  assert(!newF && "Every function should be cloned previously!");
   return Unsupported;
 }
 
