@@ -133,13 +133,15 @@ struct FloatToFixed : public llvm::ModulePass {
   bool hasInfo(llvm::Value *val) {
     return info.find(val) != info.end();
   }
-  llvm::Value *cpMetaData(llvm::Value* dst, llvm::Value* src) {
+  llvm::Value *cpMetaData(llvm::Value* dst, llvm::Value* src, llvm::Instruction* target = nullptr) {
     using namespace llvm;
     MDNode *md = nullptr;
     if (Instruction *from = dyn_cast<Instruction>(src))
       md = from->getMetadata(INPUT_INFO_METADATA);
     else if (GlobalObject *from = dyn_cast<GlobalObject>(src))
       md = from->getMetadata(INPUT_INFO_METADATA);
+    else if (target)
+      md = target->getMetadata(INPUT_INFO_METADATA);
 
     if (md) {
       if (Instruction *to = dyn_cast<Instruction>(dst))

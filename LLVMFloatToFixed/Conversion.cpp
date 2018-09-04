@@ -122,22 +122,22 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
   if (SIToFPInst *instr = dyn_cast<SIToFPInst>(flt)) {
     Value *intparam = instr->getOperand(0);
     return cpMetaData(builder.CreateShl(
-              cpMetaData(builder.CreateIntCast(intparam, destt, true),flt),
-            fixpt.fracBitsAmt),flt);
+              cpMetaData(builder.CreateIntCast(intparam, destt, true),flt,ip),
+            fixpt.fracBitsAmt),flt,ip);
   } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(flt)) {
     Value *intparam = instr->getOperand(0);
     return cpMetaData(builder.CreateShl(
-              cpMetaData(builder.CreateIntCast(intparam, destt, false),flt),
-            fixpt.fracBitsAmt),flt);
+              cpMetaData(builder.CreateIntCast(intparam, destt, false),flt,ip),
+            fixpt.fracBitsAmt),flt,ip);
   } else {
     double twoebits = pow(2.0, fixpt.fracBitsAmt);
     Value *interm = cpMetaData(builder.CreateFMul(
-          cpMetaData(ConstantFP::get(flt->getType(), twoebits),flt),
-        flt),flt);
+          cpMetaData(ConstantFP::get(flt->getType(), twoebits),flt,ip),
+        flt),flt,ip);
     if (fixpt.isSigned) {
-      return cpMetaData(builder.CreateFPToSI(interm, destt),flt);
+      return cpMetaData(builder.CreateFPToSI(interm, destt),flt,ip);
     } else {
-      return cpMetaData(builder.CreateFPToUI(interm, destt),flt);
+      return cpMetaData(builder.CreateFPToUI(interm, destt),flt,ip);
     }
   }
 }
