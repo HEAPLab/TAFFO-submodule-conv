@@ -134,17 +134,25 @@ struct FloatToFixed : public llvm::ModulePass {
     return info.find(val) != info.end();
   }
   llvm::Value *cpMetaData(llvm::Value* dst, llvm::Value* src) {
-    if (llvm::Instruction *to = llvm::dyn_cast<llvm::Instruction>(dst)) {
-      to->setMetadata(INPUT_INFO_METADATA,
-                        llvm::dyn_cast<llvm::Instruction>(src)->getMetadata(INPUT_INFO_METADATA));
-      if (to->getMetadata(INPUT_INFO_METADATA))
-        llvm::dbgs() << "Unable to propagate Metadata from" << *src << " to" << *dst << "\n";
-    } else if (llvm::GlobalObject *con = llvm::dyn_cast<llvm::GlobalObject>(dst)) {
-      con->setMetadata(INPUT_INFO_METADATA,
-                       llvm::dyn_cast<llvm::GlobalObject>(src)->getMetadata(INPUT_INFO_METADATA));
-      if (con->getMetadata(INPUT_INFO_METADATA))
-        llvm::dbgs() << "Unable to propagate Metadata from" << *src << " to" << *dst << "\n";
+    using namespace llvm;
+    MDNode *md = nullptr;
+    if (Instruction *from = dyn_cast<Instruction>(src))
+      md = from->getMetadata(INPUT_INFO_METADATA);
+    else if (GlobalObject *from = dyn_cast<GlobalObject>(src))
+      md = from->getMetadata(INPUT_INFO_METADATA);
+
+    if (md) {
+      if (Instruction *to = dyn_cast<Instruction>(dst))
+	to->setMetadata(INPUT_INFO_METADATA, md);
+      else if (GlobalObject *to = dyn_cast<GlobalObject>(dst))
+	to->setMetadata(INPUT_INFO_METADATA, md);
+      else
+	llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n";
     }
+    else {
+      llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n";
+    }
+
     return dst;
   }
 };
