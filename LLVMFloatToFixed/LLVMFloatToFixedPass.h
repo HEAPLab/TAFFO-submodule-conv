@@ -133,7 +133,20 @@ struct FloatToFixed : public llvm::ModulePass {
   bool hasInfo(llvm::Value *val) {
     return info.find(val) != info.end();
   }
-  
+  llvm::Value *cpMetaData(llvm::Value* dst, llvm::Value* src) {
+    if (llvm::Instruction *to = llvm::dyn_cast<llvm::Instruction>(dst)) {
+      to->setMetadata(INPUT_INFO_METADATA,
+                        llvm::dyn_cast<llvm::Instruction>(src)->getMetadata(INPUT_INFO_METADATA));
+      if (to->getMetadata(INPUT_INFO_METADATA))
+        llvm::dbgs() << "Unable to propagate Metadata from" << *src << " to" << *dst << "\n";
+    } else if (llvm::GlobalObject *con = llvm::dyn_cast<llvm::GlobalObject>(dst)) {
+      con->setMetadata(INPUT_INFO_METADATA,
+                       llvm::dyn_cast<llvm::GlobalObject>(src)->getMetadata(INPUT_INFO_METADATA));
+      if (con->getMetadata(INPUT_INFO_METADATA))
+        llvm::dbgs() << "Unable to propagate Metadata from" << *src << " to" << *dst << "\n";
+    }
+    return dst;
+  }
 };
 
 

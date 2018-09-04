@@ -131,6 +131,7 @@ Value *FloatToFixed::convertStore(StoreInst *store)
       newval = translateOrMatchOperand(val, valtype, store);
       if (!newval || newval->getType() != peltype) {
         BitCastInst *bc = new BitCastInst(!newval ? val : newval,peltype);
+        cpMetaData(bc,!newval ? val : newval);
         bc->insertBefore(store);
         newval = bc;
       }
@@ -159,6 +160,7 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
     /* till we can flag a structure for conversion we bitcast away the
      * item pointer to a fixed point type and hope everything still works */
     BitCastInst *bci = new BitCastInst(gep, getLLVMFixedPointTypeForFloatType(gep->getType(), fixpt));
+    cpMetaData(bci,gep);
     bci->setName(gep->getName() + ".haxfixp");
     bci->insertAfter(gep);
     bci->print(dbgs());
@@ -388,6 +390,9 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
       Value *ext1 = intype1.isSigned ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
       Value *ext2 = intype2.isSigned ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
       Value *fixop = builder.CreateMul(ext1, ext2);
+      cpMetaData(ext1,val1);
+      cpMetaData(ext2,val2);
+      cpMetaData(fixop,ext1);
       return genConvertFixedToFixed(fixop, intermtype, fixpt);
       
     } else {
@@ -398,6 +403,8 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
       Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype, instr);
       Value *ext2 = intype1.isSigned ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
       Value *fixop = fixpt.isSigned ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
+      cpMetaData(ext2,val2);
+      cpMetaData(fixop,ext2);
       return genConvertFixedToFixed(fixop, fixoptype, fixpt);
     }
   }
