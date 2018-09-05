@@ -92,7 +92,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
   }
   
   auto completeInfo = [this](Value *v, Value *u) {
-    ValueInfo &vinfo = info[v];
+    ValueInfo vinfo = info[v];
     ValueInfo &uinfo = info[u];
     uinfo.origType = u->getType();
     if (uinfo.fixpTypeRootDistance > std::max(vinfo.fixpTypeRootDistance, vinfo.fixpTypeRootDistance+1)) {
@@ -294,6 +294,8 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
   clear(isa<StoreInst>);
   clear(isa<CallInst>);
   clear(isa<InvokeInst>);
+  clear(isa<ReturnInst>);
+  clear(isa<BranchInst>);
 }
 
 

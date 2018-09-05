@@ -542,7 +542,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
     fallval = unsupp->getOperand(i);
 
     Value *cvtfallval = operandPool[fallval];
-    if (cvtfallval == ConversionError || (cvtfallval && cvtfallval->getType()->isPointerTy())) {
+    if (cvtfallval == ConversionError) {
       DEBUG(dbgs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
       return nullptr;
     }
@@ -552,10 +552,16 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
       /*Nel caso in cui la chiave (valore rimosso in precedenze) è un float
         il rispettivo value è un fix che deve essere convertito in float per retrocompatibilità.
         Se la chiave non è un float allora uso il rispettivo value associato così com'è.*/
-      fixval = fallval->getType()->isFloatingPointTy()
-        ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval, fixPType(cvtfallval), fallval->getType()))
-        : dyn_cast<Instruction>(cvtfallval);
-
+      if (cvtfallval->getType()->isPointerTy()) {
+        BitCastInst *bc = new BitCastInst(cvtfallval,unsupp->getOperand(i)->getType());
+        cpMetaData(bc,cvtfallval);
+        bc->insertBefore(unsupp);
+        fixval = bc;
+      } else {
+        fixval = fallval->getType()->isFloatingPointTy()
+                 ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval, fixPType(cvtfallval), fallval->getType()))
+                 : dyn_cast<Instruction>(cvtfallval);
+      }
       DEBUG(dbgs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
       newops.push_back(fixval);
     } else {
@@ -564,7 +570,8 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
   }
   
   Instruction *tmp = unsupp->clone();
-  tmp->setName(unsupp->getName() + ".flt");
+  if (!tmp->getType()->isVoidTy())
+    tmp->setName(unsupp->getName() + ".flt");
   tmp->insertAfter(unsupp);
   
   for (int i=0, n=tmp->getNumOperands(); i<n; i++) {
