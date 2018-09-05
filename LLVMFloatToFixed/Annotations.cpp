@@ -94,16 +94,19 @@ bool FloatToFixed::parseAnnotation(SmallPtrSetImpl<Value *>& variables, Constant
 
   StringRef annstr = annoStr->getAsString();
   std::istringstream strstm(annstr.substr(0, annstr.size()-1));
-  
+
   std::string head;
   strstm >> head;
+  if (head == "target")
+    strstm >> head;
+
   if (head == "no_float")
     vi.isBacktrackingNode = false;
   else if (head == "force_no_float")
     vi.isBacktrackingNode = true;
   else
     return false;
-  
+
   int intbits, fracbits;
   strstm >> intbits >> fracbits;
   if (!strstm.fail()) {

@@ -19,6 +19,7 @@
 #define DEBUG_ANNOTATION "annotation"
 
 #define INPUT_INFO_METADATA "taffo.info"
+#define TARGET_METADATA     "taffo.target"
 
 STATISTIC(FixToFloatCount, "Number of generic fixed point to floating point "
                            "value conversion operations inserted");
@@ -136,12 +137,17 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *cpMetaData(llvm::Value* dst, llvm::Value* src, llvm::Instruction* target = nullptr) {
     using namespace llvm;
     MDNode *md = nullptr;
-    if (Instruction *from = dyn_cast<Instruction>(src))
+    MDNode *targetMD = nullptr;
+    if (Instruction *from = dyn_cast<Instruction>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
-    else if (GlobalObject *from = dyn_cast<GlobalObject>(src))
+      targetMD = from->getMetadata(TARGET_METADATA);
+    } else if (GlobalObject *from = dyn_cast<GlobalObject>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
-    else if (target)
+      targetMD = from->getMetadata(TARGET_METADATA);
+    } else if (target) {
       md = target->getMetadata(INPUT_INFO_METADATA);
+      targetMD = target->getMetadata(TARGET_METADATA);
+    }
 
     if (md) {
       if (Instruction *to = dyn_cast<Instruction>(dst))
@@ -150,9 +156,15 @@ struct FloatToFixed : public llvm::ModulePass {
 	to->setMetadata(INPUT_INFO_METADATA, md);
       else
 	llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n";
-    }
-    else {
+    } else {
       llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n";
+    }
+
+    if (targetMD) {
+      if (Instruction *to = dyn_cast<Instruction>(dst))
+	to->setMetadata(TARGET_METADATA, targetMD);
+      else if (GlobalObject *to = dyn_cast<GlobalObject>(dst))
+	to->setMetadata(TARGET_METADATA, targetMD);
     }
 
     return dst;
