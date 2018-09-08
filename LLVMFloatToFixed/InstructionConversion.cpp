@@ -313,7 +313,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
     }
   }
   
-  dbgs() << "[Error]" << *(call->getInstruction()) << " don't find a function to call!\n";
+  dbgs() << "[Error]" << *(call->getInstruction()) << " doesn't find a function to call!\n";
   assert(!newF && "Every function should be cloned previously!");
   return Unsupported;
 }
@@ -322,26 +322,34 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
 {
   Value *v;
-  if (ret->getReturnValue()->getType()->isIntegerTy()) {
+  Value *oldv = ret->getReturnValue();
+  Instruction *newRet;
+  
+  if (oldv->getType()->isIntegerTy()) {
     //if return an int we shouldn't return a fix point, go into fallback
     return Unsupported;
   }
   if (Function* f = dyn_cast<Function>(ret->getParent()->getParent())) {
     if (!f->getReturnType()->isIntegerTy()) {
       //the function doesn't return a fixp, don't convert the ret
-      Value *oldval = ret->getReturnValue();
-      Value *newval = operandPool[oldval];
-      v = oldval->getType()->isFloatingPointTy()
-          ? dyn_cast<Instruction>(genConvertFixToFloat(newval, fixPType(newval), oldval->getType()))
+      Value *newval = operandPool[oldv];
+      v = oldv->getType()->isFloatingPointTy()
+          ? dyn_cast<Instruction>(genConvertFixToFloat(newval, fixPType(newval), oldv->getType()))
           : dyn_cast<Instruction>(newval);
       
       ret->setOperand(0,v);
-      return ret;
+      newRet = ret->clone();
+      newRet->insertAfter(ret);
+      return newRet;
     }
   }
 
   v = translateOrMatchOperand(ret->getOperand(0), fixpt);
+  
   ret->setOperand(0,v);
+  newRet = ret->clone();
+  newRet->insertAfter(ret);
+  return newRet;
 }
 
 
