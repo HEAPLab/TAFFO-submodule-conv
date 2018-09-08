@@ -145,14 +145,12 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
 
 Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& srct, const FixedPointType& destt, Instruction *ip)
 {
+  if (srct == destt)
+    return fix;
+  
   Type *llvmsrct = fix->getType();
   assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");
   assert(llvmsrct->isIntegerTy() && "cannot change fixed point format of a float");
-
-  // Constants are previously converted, fix to fix meaningless
-  if (Constant *cons = dyn_cast<Constant>(fix)){
-    return cons;
-  }
   
   Type *llvmdestt = destt.toLLVMType(fix->getContext());
   
