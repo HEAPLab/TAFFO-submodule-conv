@@ -509,6 +509,17 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
   IRBuilder<> builder(cast->getNextNode());
   Value *operand = cast->getOperand(0);
   
+  if (BitCastInst *bc = dyn_cast<BitCastInst>(cast)) {
+    Value *newOperand = operandPool[operand];
+    if (newOperand && newOperand!=ConversionError){
+      return builder.CreateBitCast(
+          newOperand,
+          bc->getDestTy());
+    } else {
+      return Unsupported;
+    }
+  }
+  
   if (operand->getType()->isFloatingPointTy()) {
     /* fptosi, fptoui, fptrunc, fpext */
     if (cast->getOpcode() == Instruction::FPToSI) {
