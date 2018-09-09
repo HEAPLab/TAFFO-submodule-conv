@@ -344,7 +344,11 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
             info[v].fixpTypeRootDistance = 0;
           }
         }
-        std::vector<Value*> newVals(global.begin(), global.end());
+        std::vector<Value*> newVals;
+        roots.insert(roots.begin(), global.begin(), global.end());
+        SmallPtrSet<Value*, 32> localFix;
+        readLocalAnnotations(*newF,localFix);
+        roots.insert(roots.begin(), localFix.begin(), localFix.end());
         buildConversionQueueForRootValues(roots, newVals);
         
         for (Value *val : newVals){
