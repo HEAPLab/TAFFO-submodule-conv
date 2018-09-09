@@ -269,9 +269,6 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 {
   /* If the function return a float the new return type will be a fix point of type fixpt,
    * otherwise the return type is left unchanged.*/
-  IRBuilder<> builder(call->isCall()
-                      ? call->getInstruction()->getNextNode()
-                      : call->getInstruction()->getPrevNode());
   Function *oldF = call->getCalledFunction();
 
   if(isSpecialFunction(oldF))
@@ -303,10 +300,14 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
                    newF->getName() << " " << *newF->getType() << "\n";);
       
       if (call->isCall()) {
-        return builder.CreateCall(newF, convArgs);
+        CallInst *newCall = CallInst::Create(newF, convArgs);
+        newCall->insertBefore(call->getInstruction());
+        return newCall;
       } else if (call->isInvoke()) {
         InvokeInst *invk = dyn_cast<InvokeInst>(call->getInstruction());
-        return builder.CreateInvoke(newF, invk->getNormalDest(), invk->getUnwindDest(), convArgs);
+        InvokeInst *newInvk = InvokeInst::Create(newF, invk->getNormalDest(), invk->getUnwindDest(), convArgs);
+        newInvk->insertBefore(invk);
+        return newInvk;
       } else {
         assert("Unknown CallSite type");
       }
