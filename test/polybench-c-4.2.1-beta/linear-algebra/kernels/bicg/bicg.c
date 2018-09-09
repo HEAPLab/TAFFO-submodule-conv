@@ -24,18 +24,18 @@
 /* Array initialization. */
 static
 void init_array (int m, int n,
-		 DATA_TYPE POLYBENCH_2D(A,N,M,n,m),
-		 DATA_TYPE POLYBENCH_1D(r,N,n),
-		 DATA_TYPE POLYBENCH_1D(p,M,m)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(A,N,M,n,m),
+		 DATA_TYPE1 POLYBENCH_1D(r,N,n),
+		 DATA_TYPE2 POLYBENCH_1D(p,M,m)) __attribute__((always_inline))
 {
   int i, j;
 
   for (i = 0; i < m; i++)
-    p[i] = (DATA_TYPE)(i % m) / m;
+    p[i] = (DATA_TYPE1)(i % m) / m;
   for (i = 0; i < n; i++) {
-    r[i] = (DATA_TYPE)(i % n) / n;
+    r[i] = (DATA_TYPE1)(i % n) / n;
     for (j = 0; j < m; j++)
-      A[i][j] = (DATA_TYPE) (i*(j+1) % n)/n;
+      A[i][j] = (DATA_TYPE1) (i*(j+1) % n)/n;
   }
 }
 
@@ -44,8 +44,8 @@ void init_array (int m, int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int m, int n,
-		 DATA_TYPE POLYBENCH_1D(s,M,m),
-		 DATA_TYPE POLYBENCH_1D(q,N,n)) __attribute__((always_inline))
+		 DATA_TYPE2 POLYBENCH_1D(s,M,m),
+		 DATA_TYPE1 POLYBENCH_1D(q,N,n)) __attribute__((always_inline))
 
 {
   int i;
@@ -71,11 +71,11 @@ void print_array(int m, int n,
    including the call and return. */
 static
 void kernel_bicg(int m, int n,
-		 DATA_TYPE POLYBENCH_2D(A,N,M,n,m),
-		 DATA_TYPE POLYBENCH_1D(s,M,m),
-		 DATA_TYPE POLYBENCH_1D(q,N,n),
-		 DATA_TYPE POLYBENCH_1D(p,M,m),
-		 DATA_TYPE POLYBENCH_1D(r,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(A,N,M,n,m),
+		 DATA_TYPE2 POLYBENCH_1D(s,M,m),
+		 DATA_TYPE1 POLYBENCH_1D(q,N,n),
+		 DATA_TYPE2 POLYBENCH_1D(p,M,m),
+		 DATA_TYPE1 POLYBENCH_1D(r,N,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -103,11 +103,11 @@ int main(int argc, char** argv)
   int m = M;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, N, M, n, m);
-  POLYBENCH_1D_ARRAY_DECL(s, DATA_TYPE, M, m);
-  POLYBENCH_1D_ARRAY_DECL(q, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(p, DATA_TYPE, M, m);
-  POLYBENCH_1D_ARRAY_DECL(r, DATA_TYPE, N, n);
+  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE1, N, M, n, m);
+  POLYBENCH_1D_ARRAY_DECL(s, DATA_TYPE2, M, m);
+  POLYBENCH_1D_ARRAY_DECL(q, DATA_TYPE1, N, n);
+  POLYBENCH_1D_ARRAY_DECL(p, DATA_TYPE2, M, m);
+  POLYBENCH_1D_ARRAY_DECL(r, DATA_TYPE1, N, n);
 
   /* Initialize array(s). */
   init_array (m, n,

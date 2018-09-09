@@ -24,11 +24,11 @@
 /* Array initialization. */
 static
 void init_array(int m, int n,
-		DATA_TYPE *alpha,
-		DATA_TYPE *beta,
-		DATA_TYPE POLYBENCH_2D(C,M,N,m,n),
-		DATA_TYPE POLYBENCH_2D(A,M,M,m,m),
-		DATA_TYPE POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
+		DATA_TYPE1 *alpha,
+		DATA_TYPE2 *beta,
+		DATA_TYPE1 POLYBENCH_2D(C,M,N,m,n),
+		DATA_TYPE2 POLYBENCH_2D(A,M,M,m,m),
+		DATA_TYPE1 POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -36,12 +36,12 @@ void init_array(int m, int n,
   *beta = 1.2;
   for (i = 0; i < m; i++)
     for (j = 0; j < n; j++) {
-      C[i][j] = (DATA_TYPE) ((i+j) % 100) / m;
-      B[i][j] = (DATA_TYPE) ((n+i-j) % 100) / m;
+      C[i][j] = (DATA_TYPE1) ((i+j) % 100) / m;
+      B[i][j] = (DATA_TYPE1) ((n+i-j) % 100) / m;
     }
   for (i = 0; i < m; i++) {
     for (j = 0; j <=i; j++)
-      A[i][j] = (DATA_TYPE) ((i+j) % 100) / m;
+      A[i][j] = (DATA_TYPE1) ((i+j) % 100) / m;
     for (j = i+1; j < m; j++)
       A[i][j] = -999; //regions of arrays that should not be used
   }
@@ -52,7 +52,7 @@ void init_array(int m, int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int m, int n,
-		 DATA_TYPE POLYBENCH_2D(C,M,N,m,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(C,M,N,m,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -72,14 +72,14 @@ void print_array(int m, int n,
    including the call and return. */
 static
 void kernel_symm(int m, int n,
-		 DATA_TYPE alpha,
-		 DATA_TYPE beta,
-		 DATA_TYPE POLYBENCH_2D(C,M,N,m,n),
-		 DATA_TYPE POLYBENCH_2D(A,M,M,m,m),
-		 DATA_TYPE POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
+		 DATA_TYPE1 alpha,
+		 DATA_TYPE2 beta,
+		 DATA_TYPE1 POLYBENCH_2D(C,M,N,m,n),
+		 DATA_TYPE2 POLYBENCH_2D(A,M,M,m,m),
+		 DATA_TYPE1 POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
 {
   int i, j, k;
-  DATA_TYPE temp2;
+  DATA_TYPE1 temp2;
 
 //BLAS PARAMS
 //SIDE = 'L'
@@ -112,11 +112,11 @@ int main(int argc, char** argv)
   int n = N;
 
   /* Variable declaration/allocation. */
-  DATA_TYPE alpha;
-  DATA_TYPE beta;
-  POLYBENCH_2D_ARRAY_DECL(C,DATA_TYPE,M,N,m,n);
-  POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE,M,M,m,m);
-  POLYBENCH_2D_ARRAY_DECL(B,DATA_TYPE,M,N,m,n);
+  DATA_TYPE1 alpha;
+  DATA_TYPE2 beta;
+  POLYBENCH_2D_ARRAY_DECL(C,DATA_TYPE1,M,N,m,n);
+  POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE2,M,M,m,m);
+  POLYBENCH_2D_ARRAY_DECL(B,DATA_TYPE1,M,N,m,n);
 
   /* Initialize array(s). */
   init_array (m, n, &alpha, &beta,

@@ -24,18 +24,18 @@
 /* Array initialization. */
 static
 void init_array (int m, int n,
-		 DATA_TYPE POLYBENCH_2D(A,M,N,m,n),
-		 DATA_TYPE POLYBENCH_1D(x,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(A,M,N,m,n),
+		 DATA_TYPE2 POLYBENCH_1D(x,N,n)) __attribute__((always_inline))
 {
   int i, j;
-  DATA_TYPE fn;
-  fn = (DATA_TYPE)n;
+  DATA_TYPE1 fn;
+  fn = (DATA_TYPE1)n;
 
   for (i = 0; i < n; i++)
       x[i] = 1 + (i / fn);
   for (i = 0; i < m; i++)
     for (j = 0; j < n; j++)
-      A[i][j] = (DATA_TYPE) ((i+j) % n) / (5*m);
+      A[i][j] = (DATA_TYPE1) ((i+j) % n) / (5*m);
 }
 
 
@@ -43,7 +43,7 @@ void init_array (int m, int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
 
 {
   int i;
@@ -63,10 +63,10 @@ void print_array(int n,
    including the call and return. */
 static
 void kernel_atax(int m, int n,
-		 DATA_TYPE POLYBENCH_2D(A,M,N,m,n),
-		 DATA_TYPE POLYBENCH_1D(x,N,n),
-		 DATA_TYPE POLYBENCH_1D(y,N,n),
-		 DATA_TYPE POLYBENCH_1D(tmp,M,m)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(A,M,N,m,n),
+		 DATA_TYPE2 POLYBENCH_1D(x,N,n),
+		 DATA_TYPE1 POLYBENCH_1D(y,N,n),
+		 DATA_TYPE2 POLYBENCH_1D(tmp,M,m)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -93,10 +93,10 @@ int main(int argc, char** argv)
   int n = N;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, M, N, m, n);
-  POLYBENCH_1D_ARRAY_DECL(x, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(tmp, DATA_TYPE, M, m);
+  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE1, M, N, m, n);
+  POLYBENCH_1D_ARRAY_DECL(x, DATA_TYPE2, N, n);
+  POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE1, N, n);
+  POLYBENCH_1D_ARRAY_DECL(tmp, DATA_TYPE2, M, m);
 
   /* Initialize array(s). */
   init_array (m, n, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(x));

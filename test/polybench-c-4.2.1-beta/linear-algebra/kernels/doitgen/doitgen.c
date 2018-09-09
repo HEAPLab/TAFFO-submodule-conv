@@ -24,18 +24,18 @@
 /* Array initialization. */
 static
 void init_array(int nr, int nq, int np,
-		DATA_TYPE POLYBENCH_3D(A,NR,NQ,NP,nr,nq,np),
-		DATA_TYPE POLYBENCH_2D(C4,NP,NP,np,np)) __attribute__((always_inline))
+		DATA_TYPE1 POLYBENCH_3D(A,NR,NQ,NP,nr,nq,np),
+		DATA_TYPE2 POLYBENCH_2D(C4,NP,NP,np,np)) __attribute__((always_inline))
 {
   int i, j, k;
 
   for (i = 0; i < nr; i++)
     for (j = 0; j < nq; j++)
       for (k = 0; k < np; k++)
-	A[i][j][k] = (DATA_TYPE) ((i*j + k)%np) / np;
+	A[i][j][k] = (DATA_TYPE1) ((i*j + k)%np) / np;
   for (i = 0; i < np; i++)
     for (j = 0; j < np; j++)
-      C4[i][j] = (DATA_TYPE) (i*j % np) / np;
+      C4[i][j] = (DATA_TYPE1) (i*j % np) / np;
 }
 
 
@@ -43,7 +43,7 @@ void init_array(int nr, int nq, int np,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int nr, int nq, int np,
-		 DATA_TYPE POLYBENCH_3D(A,NR,NQ,NP,nr,nq,np)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_3D(A,NR,NQ,NP,nr,nq,np)) __attribute__((always_inline))
 {
   int i, j, k;
 
@@ -63,9 +63,9 @@ void print_array(int nr, int nq, int np,
 /* Main computational kernel. The whole function will be timed,
    including the call and return. */
 void kernel_doitgen(int nr, int nq, int np,
-		    DATA_TYPE POLYBENCH_3D(A,NR,NQ,NP,nr,nq,np),
-		    DATA_TYPE POLYBENCH_2D(C4,NP,NP,np,np),
-		    DATA_TYPE POLYBENCH_1D(sum,NP,np)) __attribute__((always_inline))
+		    DATA_TYPE1 POLYBENCH_3D(A,NR,NQ,NP,nr,nq,np),
+		    DATA_TYPE2 POLYBENCH_2D(C4,NP,NP,np,np),
+		    DATA_TYPE1 POLYBENCH_1D(sum,NP,np)) __attribute__((always_inline))
 {
   int r, q, p, s;
 
@@ -93,9 +93,9 @@ int main(int argc, char** argv)
   int np = NP;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_3D_ARRAY_DECL(A,DATA_TYPE,NR,NQ,NP,nr,nq,np);
-  POLYBENCH_1D_ARRAY_DECL(sum,DATA_TYPE,NP,np);
-  POLYBENCH_2D_ARRAY_DECL(C4,DATA_TYPE,NP,NP,np,np);
+  POLYBENCH_3D_ARRAY_DECL(A,DATA_TYPE1,NR,NQ,NP,nr,nq,np);
+  POLYBENCH_1D_ARRAY_DECL(sum,DATA_TYPE1,NP,np);
+  POLYBENCH_2D_ARRAY_DECL(C4,DATA_TYPE2,NP,NP,np,np);
 
   /* Initialize array(s). */
   init_array (nr, nq, np,

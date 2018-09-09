@@ -24,20 +24,20 @@
 /* Array initialization. */
 static
 void init_array(int m, int n,
-		DATA_TYPE *alpha,
-		DATA_TYPE POLYBENCH_2D(A,M,M,m,m),
-		DATA_TYPE POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
+		DATA_TYPE1 *alpha,
+		DATA_TYPE2 POLYBENCH_2D(A,M,M,m,m),
+		DATA_TYPE1 POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
 {
   int i, j;
 
   *alpha = 1.5;
   for (i = 0; i < m; i++) {
     for (j = 0; j < i; j++) {
-      A[i][j] = (DATA_TYPE)((i+j) % m)/m;
+      A[i][j] = (DATA_TYPE1)((i+j) % m)/m;
     }
     A[i][i] = 1.0;
     for (j = 0; j < n; j++) {
-      B[i][j] = (DATA_TYPE)((n+(i-j)) % n)/n;
+      B[i][j] = (DATA_TYPE1)((n+(i-j)) % n)/n;
     }
  }
 
@@ -48,7 +48,7 @@ void init_array(int m, int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int m, int n,
-		 DATA_TYPE POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -68,9 +68,9 @@ void print_array(int m, int n,
    including the call and return. */
 static
 void kernel_trmm(int m, int n,
-		 DATA_TYPE alpha,
-		 DATA_TYPE POLYBENCH_2D(A,M,M,m,m),
-		 DATA_TYPE POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
+		 DATA_TYPE1 alpha,
+		 DATA_TYPE2 POLYBENCH_2D(A,M,M,m,m),
+		 DATA_TYPE1 POLYBENCH_2D(B,M,N,m,n)) __attribute__((always_inline))
 {
   int i, j, k;
 
@@ -101,9 +101,9 @@ int main(int argc, char** argv)
   int n = N;
 
   /* Variable declaration/allocation. */
-  DATA_TYPE alpha;
-  POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE,M,M,m,m);
-  POLYBENCH_2D_ARRAY_DECL(B,DATA_TYPE,M,N,m,n);
+  DATA_TYPE1 alpha;
+  POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE2,M,M,m,m);
+  POLYBENCH_2D_ARRAY_DECL(B,DATA_TYPE1,M,N,m,n);
 
   /* Initialize array(s). */
   init_array (m, n, &alpha, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));

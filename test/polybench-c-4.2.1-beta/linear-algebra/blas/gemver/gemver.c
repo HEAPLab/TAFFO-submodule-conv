@@ -24,24 +24,24 @@
 /* Array initialization. */
 static
 void init_array (int n,
-		 DATA_TYPE *alpha,
-		 DATA_TYPE *beta,
-		 DATA_TYPE POLYBENCH_2D(A,N,N,n,n),
-		 DATA_TYPE POLYBENCH_1D(u1,N,n),
-		 DATA_TYPE POLYBENCH_1D(v1,N,n),
-		 DATA_TYPE POLYBENCH_1D(u2,N,n),
-		 DATA_TYPE POLYBENCH_1D(v2,N,n),
-		 DATA_TYPE POLYBENCH_1D(w,N,n),
-		 DATA_TYPE POLYBENCH_1D(x,N,n),
-		 DATA_TYPE POLYBENCH_1D(y,N,n),
-		 DATA_TYPE POLYBENCH_1D(z,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 *alpha,
+		 DATA_TYPE2 *beta,
+		 DATA_TYPE1 POLYBENCH_2D(A,N,N,n,n),
+		 DATA_TYPE2 POLYBENCH_1D(u1,N,n),
+		 DATA_TYPE1 POLYBENCH_1D(v1,N,n),
+		 DATA_TYPE2 POLYBENCH_1D(u2,N,n),
+		 DATA_TYPE1 POLYBENCH_1D(v2,N,n),
+		 DATA_TYPE2 POLYBENCH_1D(w,N,n),
+		 DATA_TYPE1 POLYBENCH_1D(x,N,n),
+		 DATA_TYPE2 POLYBENCH_1D(y,N,n),
+		 DATA_TYPE1 POLYBENCH_1D(z,N,n)) __attribute__((always_inline))
 {
   int i, j;
 
   *alpha = 1.5;
   *beta = 1.2;
 
-  DATA_TYPE fn = (DATA_TYPE)n;
+  DATA_TYPE1 fn = (DATA_TYPE1)n;
 
   for (i = 0; i < n; i++)
     {
@@ -54,7 +54,7 @@ void init_array (int n,
       x[i] = 0.0;
       w[i] = 0.0;
       for (j = 0; j < n; j++)
-        A[i][j] = (DATA_TYPE) (i*j % n) / n;
+        A[i][j] = (DATA_TYPE1) (i*j % n) / n;
     }
 }
 
@@ -63,7 +63,7 @@ void init_array (int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_1D(w,N,n)) __attribute__((always_inline))
+		 DATA_TYPE2 POLYBENCH_1D(w,N,n)) __attribute__((always_inline))
 {
   int i;
 
@@ -82,17 +82,17 @@ void print_array(int n,
    including the call and return. */
 static
 void kernel_gemver(int n,
-		   DATA_TYPE alpha,
-		   DATA_TYPE beta,
-		   DATA_TYPE POLYBENCH_2D(A,N,N,n,n),
-		   DATA_TYPE POLYBENCH_1D(u1,N,n),
-		   DATA_TYPE POLYBENCH_1D(v1,N,n),
-		   DATA_TYPE POLYBENCH_1D(u2,N,n),
-		   DATA_TYPE POLYBENCH_1D(v2,N,n),
-		   DATA_TYPE POLYBENCH_1D(w,N,n),
-		   DATA_TYPE POLYBENCH_1D(x,N,n),
-		   DATA_TYPE POLYBENCH_1D(y,N,n),
-		   DATA_TYPE POLYBENCH_1D(z,N,n)) __attribute__((always_inline))
+		   DATA_TYPE1 alpha,
+		   DATA_TYPE2 beta,
+		   DATA_TYPE1 POLYBENCH_2D(A,N,N,n,n),
+		   DATA_TYPE2 POLYBENCH_1D(u1,N,n),
+		   DATA_TYPE1 POLYBENCH_1D(v1,N,n),
+		   DATA_TYPE2 POLYBENCH_1D(u2,N,n),
+		   DATA_TYPE1 POLYBENCH_1D(v2,N,n),
+		   DATA_TYPE2 POLYBENCH_1D(w,N,n),
+		   DATA_TYPE1 POLYBENCH_1D(x,N,n),
+		   DATA_TYPE2 POLYBENCH_1D(y,N,n),
+		   DATA_TYPE1 POLYBENCH_1D(z,N,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -123,17 +123,17 @@ int main(int argc, char** argv)
   int n = N;
 
   /* Variable declaration/allocation. */
-  DATA_TYPE alpha;
-  DATA_TYPE beta;
-  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, N, N, n, n);
-  POLYBENCH_1D_ARRAY_DECL(u1, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(v1, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(u2, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(v2, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(w, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(x, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(z, DATA_TYPE, N, n);
+  DATA_TYPE1 alpha;
+  DATA_TYPE2 beta;
+  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE1, N, N, n, n);
+  POLYBENCH_1D_ARRAY_DECL(u1, DATA_TYPE2, N, n);
+  POLYBENCH_1D_ARRAY_DECL(v1, DATA_TYPE1, N, n);
+  POLYBENCH_1D_ARRAY_DECL(u2, DATA_TYPE2, N, n);
+  POLYBENCH_1D_ARRAY_DECL(v2, DATA_TYPE1, N, n);
+  POLYBENCH_1D_ARRAY_DECL(w, DATA_TYPE2, N, n);
+  POLYBENCH_1D_ARRAY_DECL(x, DATA_TYPE1, N, n);
+  POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE2, N, n);
+  POLYBENCH_1D_ARRAY_DECL(z, DATA_TYPE1, N, n);
 
 
   /* Initialize array(s). */

@@ -24,10 +24,10 @@
 /* Array initialization. */
 static
 void init_array(int n, int m,
-		DATA_TYPE *alpha,
-		DATA_TYPE *beta,
-		DATA_TYPE POLYBENCH_2D(C,N,N,n,n),
-		DATA_TYPE POLYBENCH_2D(A,N,M,n,m)) __attribute__((always_inline))
+		DATA_TYPE1 *alpha,
+		DATA_TYPE2 *beta,
+		DATA_TYPE1 POLYBENCH_2D(C,N,N,n,n),
+		DATA_TYPE2 POLYBENCH_2D(A,N,M,n,m)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -35,10 +35,10 @@ void init_array(int n, int m,
   *beta = 1.2;
   for (i = 0; i < n; i++)
     for (j = 0; j < m; j++)
-      A[i][j] = (DATA_TYPE) ((i*j+1)%n) / n;
+      A[i][j] = (DATA_TYPE1) ((i*j+1)%n) / n;
   for (i = 0; i < n; i++)
     for (j = 0; j < n; j++)
-      C[i][j] = (DATA_TYPE) ((i*j+2)%m) / m;
+      C[i][j] = (DATA_TYPE1) ((i*j+2)%m) / m;
 }
 
 
@@ -46,7 +46,7 @@ void init_array(int n, int m,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_2D(C,N,N,n,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(C,N,N,n,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -66,10 +66,10 @@ void print_array(int n,
    including the call and return. */
 static
 void kernel_syrk(int n, int m,
-		 DATA_TYPE alpha,
-		 DATA_TYPE beta,
-		 DATA_TYPE POLYBENCH_2D(C,N,N,n,n),
-		 DATA_TYPE POLYBENCH_2D(A,N,M,n,m)) __attribute__((always_inline))
+		 DATA_TYPE1 alpha,
+		 DATA_TYPE2 beta,
+		 DATA_TYPE1 POLYBENCH_2D(C,N,N,n,n),
+		 DATA_TYPE2 POLYBENCH_2D(A,N,M,n,m)) __attribute__((always_inline))
 {
   int i, j, k;
 
@@ -100,10 +100,10 @@ int main(int argc, char** argv)
   int m = M;
 
   /* Variable declaration/allocation. */
-  DATA_TYPE alpha;
-  DATA_TYPE beta;
-  POLYBENCH_2D_ARRAY_DECL(C,DATA_TYPE,N,N,n,n);
-  POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE,N,M,n,m);
+  DATA_TYPE1 alpha;
+  DATA_TYPE2 beta;
+  POLYBENCH_2D_ARRAY_DECL(C,DATA_TYPE1,N,N,n,n);
+  POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE2,N,M,n,m);
 
   /* Initialize array(s). */
   init_array (n, m, &alpha, &beta, POLYBENCH_ARRAY(C), POLYBENCH_ARRAY(A));

@@ -12,6 +12,7 @@ FRAC=''
 TOT=''
 TBLDUMP=0
 LISTDUMP=0
+D_CONF="CONF_GOOD"
 
 for arg; do
   case $arg in
@@ -25,6 +26,9 @@ for arg; do
       D_STANDARD_DATASET=$arg
       D_LARGE_DATASET=$arg
       D_EXTRALARGE_DATASET=$arg
+      ;;
+    CONF_[A-Z]*)
+      D_CONF=$arg
       ;;
     --only=*)
       ONLY="${arg#*=}"
@@ -91,7 +95,7 @@ compile() {
       rm -f "build/$1_64";
     fi
     ./magiclang.sh "$ROOT/$1/$1.c" "-O3" \
-      "-I utilities -I $ROOT/$1 -DPOLYBENCH_TIME -D$2 -D$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS" \
+      "-I utilities -I $ROOT/$1 -DPOLYBENCH_TIME -D$2 -D$D_DATA_TYPE -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_STACK_ARRAYS -D$D_CONF" \
       "" "$1_out" "-lm utilities/polybench.c" "-fixpfracbitsamt=${options[0 + D_M]} -fixpbitsamt=${options[1 + D_M]}"; 
   fi
 }

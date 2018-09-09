@@ -25,16 +25,16 @@
 static
 void init_array (int m,
 		 int n,
-		 DATA_TYPE *float_n,
-		 DATA_TYPE POLYBENCH_2D(data,N,M,n,m)) __attribute__((always_inline))
+		 DATA_TYPE1 *float_n,
+		 DATA_TYPE1 POLYBENCH_2D(data,N,M,n,m)) __attribute__((always_inline))
 {
   int i, j;
 
-  *float_n = (DATA_TYPE)N;
+  *float_n = (DATA_TYPE1)N;
 
   for (i = 0; i < N; i++)
     for (j = 0; j < M; j++)
-      data[i][j] = ((DATA_TYPE)(i*j)/M + i)/N;
+      data[i][j] = ((DATA_TYPE1)(i*j)/M + i)/N;
 
 }
 
@@ -43,7 +43,7 @@ void init_array (int m,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int m,
-		 DATA_TYPE POLYBENCH_2D(corr,M,M,m,m)) __attribute__((always_inline))
+		 DATA_TYPE2 POLYBENCH_2D(corr,M,M,m,m)) __attribute__((always_inline))
 
 {
   int i, j;
@@ -64,15 +64,15 @@ void print_array(int m,
    including the call and return. */
 static
 void kernel_correlation(int m, int n,
-			DATA_TYPE float_n,
-			DATA_TYPE POLYBENCH_2D(data,N,M,n,m),
-			DATA_TYPE POLYBENCH_2D(corr,M,M,m,m),
-			DATA_TYPE POLYBENCH_1D(mean,M,m),
-			DATA_TYPE POLYBENCH_1D(stddev,M,m)) __attribute__((always_inline))
+			DATA_TYPE1 float_n,
+			DATA_TYPE1 POLYBENCH_2D(data,N,M,n,m),
+			DATA_TYPE2 POLYBENCH_2D(corr,M,M,m,m),
+			DATA_TYPE1 POLYBENCH_1D(mean,M,m),
+			DATA_TYPE2 POLYBENCH_1D(stddev,M,m)) __attribute__((always_inline))
 {
   int i, j, k;
 
-  DATA_TYPE eps = SCALAR_VAL(0.1);
+  DATA_TYPE2 eps = SCALAR_VAL(0.1);
 
 
 #pragma scop
@@ -131,11 +131,11 @@ int main(int argc, char** argv)
   int m = M;
 
   /* Variable declaration/allocation. */
-  DATA_TYPE float_n;
-  POLYBENCH_2D_ARRAY_DECL(data,DATA_TYPE,N,M,n,m);
-  POLYBENCH_2D_ARRAY_DECL(corr,DATA_TYPE,M,M,m,m);
-  POLYBENCH_1D_ARRAY_DECL(mean,DATA_TYPE,M,m);
-  POLYBENCH_1D_ARRAY_DECL(stddev,DATA_TYPE,M,m);
+  DATA_TYPE1 float_n;
+  POLYBENCH_2D_ARRAY_DECL(data,DATA_TYPE1,N,M,n,m);
+  POLYBENCH_2D_ARRAY_DECL(corr,DATA_TYPE2,M,M,m,m);
+  POLYBENCH_1D_ARRAY_DECL(mean,DATA_TYPE1,M,m);
+  POLYBENCH_1D_ARRAY_DECL(stddev,DATA_TYPE2,M,m);
 
   /* Initialize array(s). */
   init_array (m, n, &float_n, POLYBENCH_ARRAY(data));

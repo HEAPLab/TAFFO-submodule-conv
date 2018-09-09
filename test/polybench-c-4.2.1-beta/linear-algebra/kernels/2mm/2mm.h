@@ -71,8 +71,20 @@
 #  define DATA_PRINTF_MODIFIER "%d "
 #endif
 
+#if defined(CONF_BAD)
+#define ANN_1 __attribute__((annotate("no_float")))
+#define ANN_2 __attribute__((annotate("no_float 16 16")))
+#elif defined(CONF_WORSE)
+#define ANN_1
+#define ANN_2 __attribute__((annotate("no_float")))
+#else  // CONF_GOOD
+#define ANN_1 __attribute__((annotate("no_float")))
+#define ANN_2 __attribute__((annotate("no_float")))
+#endif
+
 #ifdef DATA_TYPE_IS_FLOAT
-#  define DATA_TYPE __attribute__((annotate("no_float"))) float
+#  define DATA_TYPE1 ANN_1 float
+#  define DATA_TYPE2 ANN_2 float
 #  define DATA_PRINTF_MODIFIER "%0.16f "
 #  define SCALAR_VAL(x) x##f
 #  define SQRT_FUN(x) sqrtf(x)
@@ -81,7 +93,8 @@
 # endif
 
 #ifdef DATA_TYPE_IS_DOUBLE
-#  define DATA_TYPE __attribute__((annotate("no_float"))) double
+#  define DATA_TYPE1 ANN_1 double
+#  define DATA_TYPE2 ANN_2 double
 #  define DATA_PRINTF_MODIFIER "%0.16lf "
 #  define SCALAR_VAL(x) x
 #  define SQRT_FUN(x) sqrt(x)
