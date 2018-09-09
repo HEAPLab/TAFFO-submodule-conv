@@ -151,20 +151,20 @@ struct FloatToFixed : public llvm::ModulePass {
 
     if (md) {
       if (Instruction *to = dyn_cast<Instruction>(dst))
-	to->setMetadata(INPUT_INFO_METADATA, md);
+        to->setMetadata(INPUT_INFO_METADATA, md);
       else if (GlobalObject *to = dyn_cast<GlobalObject>(dst))
-	to->setMetadata(INPUT_INFO_METADATA, md);
+        to->setMetadata(INPUT_INFO_METADATA, md);
       else
-	llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n";
+        DEBUG(llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n");
     } else {
-      llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n";
+      DEBUG(llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n");
     }
 
     if (targetMD) {
       if (Instruction *to = dyn_cast<Instruction>(dst))
-	to->setMetadata(TARGET_METADATA, targetMD);
+        to->setMetadata(TARGET_METADATA, targetMD);
       else if (GlobalObject *to = dyn_cast<GlobalObject>(dst))
-	to->setMetadata(TARGET_METADATA, targetMD);
+        to->setMetadata(TARGET_METADATA, targetMD);
     }
 
     return dst;
