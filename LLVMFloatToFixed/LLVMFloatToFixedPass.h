@@ -21,12 +21,13 @@
 #define INPUT_INFO_METADATA "taffo.info"
 #define TARGET_METADATA     "taffo.target"
 
-STATISTIC(FixToFloatCount, "Number of generic fixed point to floating point "
-                           "value conversion operations inserted");
-STATISTIC(FloatToFixCount, "Number of generic floating point to fixed point "
-                           "value conversion operations inserted");
-STATISTIC(FallbackCount, "Number of instructions not replaced by a "
-                         "fixed-point-native equivalent");
+STATISTIC(FixToFloatCount, "Number of generic fixed point to floating point value conversion operations inserted");
+STATISTIC(FloatToFixCount, "Number of generic floating point to fixed point value conversion operations inserted");
+STATISTIC(FixToFloatWeight, "Number of generic fixed point to floating point value conversion operations inserted,"
+  " weighted by the loop depth");
+STATISTIC(FloatToFixWeight, "Number of generic floating point to fixed point value conversion operations inserted,"
+  " weighted by the loop depth");
+STATISTIC(FallbackCount, "Number of instructions not replaced by a fixed-point-native equivalent");
 STATISTIC(ConversionCount, "Number of instructions affected by flttofix");
 STATISTIC(AnnotationCount, "Number of valid annotations found");
 STATISTIC(FunctionCreated, "Number of fixed point function inserted");
@@ -66,7 +67,8 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::DenseMap<llvm::Function*, std::vector<FunInfo>> functionPool;
   llvm::DenseMap<llvm::Value *, ValueInfo> info;
   
-  FloatToFixed(): ModulePass(ID) { }
+  FloatToFixed(): ModulePass(ID) { };
+  void getAnalysisUsage(llvm::AnalysisUsage &) const override;
   bool runOnModule(llvm::Module &M) override;
 
   void readGlobalAnnotations(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *>& res, bool functionAnnotation = false);
@@ -169,6 +171,8 @@ struct FloatToFixed : public llvm::ModulePass {
 
     return dst;
   }
+  
+  int getLoopNestingLevelOfValue(llvm::Value *v);
 };
 
 

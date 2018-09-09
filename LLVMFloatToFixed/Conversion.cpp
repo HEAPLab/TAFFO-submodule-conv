@@ -114,6 +114,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
   }
   
   FloatToFixCount++;
+  FloatToFixWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(flt)));
   
   IRBuilder<> builder(ip);
   Type *destt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
@@ -202,6 +203,7 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
   if (!i)
     return nullptr;
   FixToFloatCount++;
+  FixToFloatWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(fix)));
   
   if (!fix->getType()->isIntegerTy()) {
     DEBUG(errs() << "can't wrap-convert to flt non integer value ";

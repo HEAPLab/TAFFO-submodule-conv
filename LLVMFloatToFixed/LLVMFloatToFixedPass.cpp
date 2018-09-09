@@ -6,6 +6,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <llvm/Transforms/Utils/ValueMapper.h>
 #include <llvm/Transforms/Utils/Cloning.h>
@@ -25,6 +26,13 @@ static RegisterPass<FloatToFixed> X(
   "Floating Point to Fixed Point conversion pass",
   true /* Does not only look at CFG */,
   true /* Optimization Pass */);
+
+
+void FloatToFixed::getAnalysisUsage(llvm::AnalysisUsage &au) const
+{
+  au.addRequiredTransitive<LoopInfoWrapperPass>();
+  au.setPreservesAll();
+}
 
 
 bool FloatToFixed::runOnModule(Module &m)
@@ -67,6 +75,19 @@ bool flttofix::isFloatType(Type *srct)
     return true;
   }
   return false;
+}
+
+
+int FloatToFixed::getLoopNestingLevelOfValue(llvm::Value *v)
+{
+  Instruction *inst = dyn_cast<Instruction>(v);
+  if (!inst)
+    return -1;
+  
+  Function *fun = inst->getFunction();
+  LoopInfo &li = this->getAnalysis<LoopInfoWrapperPass>(*fun).getLoopInfo();
+  BasicBlock *bb = inst->getParent();
+  return li.getLoopDepth(bb);
 }
 
 
