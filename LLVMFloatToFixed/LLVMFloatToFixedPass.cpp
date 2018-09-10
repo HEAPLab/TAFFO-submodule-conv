@@ -285,6 +285,8 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       DEBUG(errs() << '\n');
     }
   }
+  
+  std::vector<Instruction *> toErase;
 
   auto clear = [&] (bool (*toDelete) (const Instruction &Y)) {
     for (Value *v: q) {
@@ -307,7 +309,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       if (allok) {
         if (!i->use_empty())
           i->replaceAllUsesWith(UndefValue::get(i->getType()));
-        i->eraseFromParent();
+        toErase.push_back(i);
       }
     }
   };
@@ -317,6 +319,10 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
   clear(isa<InvokeInst>);
   clear(isa<ReturnInst>);
   clear(isa<BranchInst>);
+  
+  for (Instruction *v: toErase) {
+    v->eraseFromParent();
+  }
 }
 
 
