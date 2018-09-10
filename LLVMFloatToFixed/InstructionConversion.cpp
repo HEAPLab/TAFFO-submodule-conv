@@ -219,10 +219,14 @@ Value *FloatToFixed::convertPhi(PHINode *load, FixedPointType& fixpt)
   for (int i=0; i<load->getNumIncomingValues(); i++) {
     Value *thisval = load->getIncomingValue(i);
     BasicBlock *thisbb = load->getIncomingBlock(i);
-    Value *newval = translateOrMatchOperandAndType(thisval, fixpt, load);
+    Value *newval = translateOrMatchOperandAndType(thisval, fixpt, thisbb->getFirstNonPHI());
     if (!newval) {
       delete newphi;
       return nullptr;
+    }
+    Instruction *inst2 = dyn_cast<Instruction>(newval);
+    if (inst2) {
+      assert(inst2->getParent() == thisbb && "new phi value coming from wrong BB");
     }
     newphi->addIncoming(newval, thisbb);
   }

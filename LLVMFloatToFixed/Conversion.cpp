@@ -156,9 +156,8 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   Type *llvmdestt = destt.toLLVMType(fix->getContext());
   
   Instruction *fixinst = dyn_cast<Instruction>(fix);
-  if (!ip && fixinst) {
+  if (fixinst)
     ip = fixinst->getNextNode();
-  }
   assert(ip && "ip required when converted value not an instruction");
 
   IRBuilder<> builder(ip);
