@@ -73,8 +73,10 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointTy
   
   Constant *oldinit = glob->getInitializer();
   Constant *newinit = nullptr;
-  if (oldinit)
+  if (oldinit && !oldinit->isNullValue())
     newinit = convertConstant(oldinit, fixpt);
+  else
+    newinit = Constant::getNullValue(newt);
   
   GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(), newinit);
   newglob->setAlignment(glob->getAlignment());
