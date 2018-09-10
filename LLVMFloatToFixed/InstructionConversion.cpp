@@ -406,6 +406,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
       cpMetaData(ext1,val1);
       cpMetaData(ext2,val2);
       cpMetaData(fixop,ext1);
+      cpMetaData(fixop,ext2);
       return genConvertFixedToFixed(fixop, intermtype, fixpt);
       
     } else {
