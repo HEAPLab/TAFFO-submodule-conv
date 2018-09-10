@@ -407,6 +407,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
       cpMetaData(ext2,val2);
       cpMetaData(fixop,ext1);
       cpMetaData(fixop,ext2);
+      updateFPTypeMetadata(fixop, intermtype.isSigned, intype1.fracBitsAmt, intermtype.bitsAmt);
       return genConvertFixedToFixed(fixop, intermtype, fixpt);
       
     } else {
@@ -419,6 +420,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
       Value *fixop = fixpt.isSigned ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
       cpMetaData(ext2,val2);
       cpMetaData(fixop,ext2);
+      updateFPTypeMetadata(fixop, fixoptype.isSigned, fixoptype.fracBitsAmt, fixoptype.bitsAmt);
       return genConvertFixedToFixed(fixop, fixoptype, fixpt);
     }
   }
