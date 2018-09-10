@@ -24,15 +24,15 @@
 /* Array initialization. */
 static
 void init_array(int m, int n,
-		DATA_TYPE POLYBENCH_2D(A,M,N,m,n),
-		DATA_TYPE POLYBENCH_2D(R,N,N,n,n),
-		DATA_TYPE POLYBENCH_2D(Q,M,N,m,n)) __attribute__((always_inline))
+		DATA_TYPE1 POLYBENCH_2D(A,M,N,m,n),
+		DATA_TYPE2 POLYBENCH_2D(R,N,N,n,n),
+		DATA_TYPE1 POLYBENCH_2D(Q,M,N,m,n)) __attribute__((always_inline))
 {
   int i, j;
 
   for (i = 0; i < m; i++)
     for (j = 0; j < n; j++) {
-      A[i][j] = (((DATA_TYPE) ((i*j) % m) / m )*100) + 10;
+      A[i][j] = (((DATA_TYPE1) ((i*j) % m) / m )*100) + 10;
       Q[i][j] = 0.0;
     }
   for (i = 0; i < n; i++)
@@ -45,9 +45,9 @@ void init_array(int m, int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int m, int n,
-		 DATA_TYPE POLYBENCH_2D(A,M,N,m,n),
-		 DATA_TYPE POLYBENCH_2D(R,N,N,n,n),
-		 DATA_TYPE POLYBENCH_2D(Q,M,N,m,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(A,M,N,m,n),
+		 DATA_TYPE2 POLYBENCH_2D(R,N,N,n,n),
+		 DATA_TYPE1 POLYBENCH_2D(Q,M,N,m,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -77,13 +77,13 @@ void print_array(int m, int n,
  http://www.inf.ethz.ch/personal/gander/ */
 static
 void kernel_gramschmidt(int m, int n,
-			DATA_TYPE POLYBENCH_2D(A,M,N,m,n),
-			DATA_TYPE POLYBENCH_2D(R,N,N,n,n),
-			DATA_TYPE POLYBENCH_2D(Q,M,N,m,n)) __attribute__((always_inline))
+			DATA_TYPE1 POLYBENCH_2D(A,M,N,m,n),
+			DATA_TYPE2 POLYBENCH_2D(R,N,N,n,n),
+			DATA_TYPE1 POLYBENCH_2D(Q,M,N,m,n)) __attribute__((always_inline))
 {
   int i, j, k;
 
-  DATA_TYPE nrm;
+  DATA_TYPE2 nrm;
 
 #pragma scop
   for (k = 0; k < _PB_N; k++)
@@ -115,9 +115,9 @@ int main(int argc, char** argv)
   int n = N;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE,M,N,m,n);
-  POLYBENCH_2D_ARRAY_DECL(R,DATA_TYPE,N,N,n,n);
-  POLYBENCH_2D_ARRAY_DECL(Q,DATA_TYPE,M,N,m,n);
+  POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE1,M,N,m,n);
+  POLYBENCH_2D_ARRAY_DECL(R,DATA_TYPE2,N,N,n,n);
+  POLYBENCH_2D_ARRAY_DECL(Q,DATA_TYPE1,M,N,m,n);
 
   /* Initialize array(s). */
   init_array (m, n,

@@ -24,14 +24,14 @@
 /* Array initialization. */
 static
 void init_array (int n,
-		 DATA_TYPE POLYBENCH_2D(u,N,N,n,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(u,N,N,n,n)) __attribute__((always_inline))
 {
   int i, j;
 
   for (i = 0; i < n; i++)
     for (j = 0; j < n; j++)
       {
-	u[i][j] =  (DATA_TYPE)(i + n-j) / n;
+	u[i][j] =  (DATA_TYPE1)(i + n-j) / n;
       }
 }
 
@@ -40,7 +40,7 @@ void init_array (int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_2D(u,N,N,n,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(u,N,N,n,n)) __attribute__((always_inline))
 
 {
   int i, j;
@@ -65,22 +65,22 @@ void print_array(int n,
  */
 static
 void kernel_adi(int tsteps, int n,
-		DATA_TYPE POLYBENCH_2D(u,N,N,n,n),
-		DATA_TYPE POLYBENCH_2D(v,N,N,n,n),
-		DATA_TYPE POLYBENCH_2D(p,N,N,n,n),
-		DATA_TYPE POLYBENCH_2D(q,N,N,n,n)) __attribute__((always_inline))
+		DATA_TYPE1 POLYBENCH_2D(u,N,N,n,n),
+		DATA_TYPE2 POLYBENCH_2D(v,N,N,n,n),
+		DATA_TYPE1 POLYBENCH_2D(p,N,N,n,n),
+		DATA_TYPE2 POLYBENCH_2D(q,N,N,n,n)) __attribute__((always_inline))
 {
   int t, i, j;
-  DATA_TYPE DX, DY, DT;
-  DATA_TYPE B1, B2;
-  DATA_TYPE mul1, mul2;
-  DATA_TYPE a, b, c, d, e, f;
+  DATA_TYPE1 DX, DY, DT;
+  DATA_TYPE2 B1, B2;
+  DATA_TYPE1 mul1, mul2;
+  DATA_TYPE2 a, b, c, d, e, f;
 
 #pragma scop
 
-  DX = SCALAR_VAL(1.0)/(DATA_TYPE)_PB_N;
-  DY = SCALAR_VAL(1.0)/(DATA_TYPE)_PB_N;
-  DT = SCALAR_VAL(1.0)/(DATA_TYPE)_PB_TSTEPS;
+  DX = SCALAR_VAL(1.0)/(DATA_TYPE1)_PB_N;
+  DY = SCALAR_VAL(1.0)/(DATA_TYPE1)_PB_N;
+  DT = SCALAR_VAL(1.0)/(DATA_TYPE1)_PB_TSTEPS;
   B1 = SCALAR_VAL(2.0);
   B2 = SCALAR_VAL(1.0);
   mul1 = B1 * DT / (DX * DX);
@@ -135,10 +135,10 @@ int main(int argc, char** argv)
   int tsteps = TSTEPS;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_2D_ARRAY_DECL(u, DATA_TYPE, N, N, n, n);
-  POLYBENCH_2D_ARRAY_DECL(v, DATA_TYPE, N, N, n, n);
-  POLYBENCH_2D_ARRAY_DECL(p, DATA_TYPE, N, N, n, n);
-  POLYBENCH_2D_ARRAY_DECL(q, DATA_TYPE, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(u, DATA_TYPE1, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(v, DATA_TYPE2, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(p, DATA_TYPE1, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(q, DATA_TYPE2, N, N, n, n);
 
 
   /* Initialize array(s). */

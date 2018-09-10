@@ -24,13 +24,13 @@
 /* Array initialization. */
 static
 void init_array (int n,
-		 DATA_TYPE POLYBENCH_1D(r,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_1D(r,N,n)) __attribute__((always_inline))
 {
   int i, j;
 
   for (i = 0; i < n; i++)
     {
-      r[i] = (DATA_TYPE)(n+1-i) / (n*200.0) + 1.5;
+      r[i] = (DATA_TYPE1)(n+1-i) / (n*200.0) + 1.5;
     }
 }
 
@@ -39,7 +39,7 @@ void init_array (int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
 
 {
   int i;
@@ -59,13 +59,13 @@ void print_array(int n,
    including the call and return. */
 static
 void kernel_durbin(int n,
-		   DATA_TYPE POLYBENCH_1D(r,N,n),
-		   DATA_TYPE POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
+		   DATA_TYPE1 POLYBENCH_1D(r,N,n),
+		   DATA_TYPE2 POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
 {
- DATA_TYPE z[N];
- DATA_TYPE alpha;
- DATA_TYPE beta;
- DATA_TYPE sum;
+ DATA_TYPE1 z[N];
+ DATA_TYPE2 alpha;
+ DATA_TYPE1 beta;
+ DATA_TYPE2 sum;
 
  int i,k;
 
@@ -101,8 +101,8 @@ int main(int argc, char** argv)
   int n = N;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_1D_ARRAY_DECL(r, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE, N, n);
+  POLYBENCH_1D_ARRAY_DECL(r, DATA_TYPE1, N, n);
+  POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE2, N, n);
 
 
   /* Initialize array(s). */

@@ -23,9 +23,9 @@
 
 /* Array initialization. */
 static
-void init_array (int w, int h, DATA_TYPE* alpha,
-		 DATA_TYPE POLYBENCH_2D(imgIn,W,H,w,h),
-		 DATA_TYPE POLYBENCH_2D(imgOut,W,H,w,h)) __attribute__((always_inline))
+void init_array (int w, int h, DATA_TYPE2* alpha,
+		 DATA_TYPE1 POLYBENCH_2D(imgIn,W,H,w,h),
+		 DATA_TYPE2 POLYBENCH_2D(imgOut,W,H,w,h)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -34,7 +34,7 @@ void init_array (int w, int h, DATA_TYPE* alpha,
   //input should be between 0 and 1 (grayscale image pixel)
   for (i = 0; i < w; i++)
      for (j = 0; j < h; j++)
-	imgIn[i][j] = (DATA_TYPE) ((313*i+991*j)%65536) / 65535.0f;
+	imgIn[i][j] = (DATA_TYPE1) ((313*i+991*j)%65536) / 65535.0f;
 }
 
 
@@ -42,7 +42,7 @@ void init_array (int w, int h, DATA_TYPE* alpha,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int w, int h,
-		 DATA_TYPE POLYBENCH_2D(imgOut,W,H,w,h)) __attribute__((always_inline))
+		 DATA_TYPE2 POLYBENCH_2D(imgOut,W,H,w,h)) __attribute__((always_inline))
 
 {
   int i, j;
@@ -64,20 +64,20 @@ void print_array(int w, int h,
    including the call and return. */
 /* Original code provided by Gael Deest */
 static
-void kernel_deriche(int w, int h, DATA_TYPE alpha,
-       DATA_TYPE POLYBENCH_2D(imgIn, W, H, w, h),
-       DATA_TYPE POLYBENCH_2D(imgOut, W, H, w, h),
-       DATA_TYPE POLYBENCH_2D(y1, W, H, w, h),
-       DATA_TYPE POLYBENCH_2D(y2, W, H, w, h))  __attribute__((always_inline)) {
+void kernel_deriche(int w, int h, DATA_TYPE2 alpha,
+       DATA_TYPE1 POLYBENCH_2D(imgIn, W, H, w, h),
+       DATA_TYPE2 POLYBENCH_2D(imgOut, W, H, w, h),
+       DATA_TYPE1 POLYBENCH_2D(y1, W, H, w, h),
+       DATA_TYPE2 POLYBENCH_2D(y2, W, H, w, h))  __attribute__((always_inline)) {
     int i,j;
-    DATA_TYPE xm1, tm1, ym1, ym2;
-    DATA_TYPE xp1, xp2;
-    DATA_TYPE tp1, tp2;
-    DATA_TYPE yp1, yp2;
+    DATA_TYPE1 xm1, tm1, ym1, ym2;
+    DATA_TYPE2 xp1, xp2;
+    DATA_TYPE1 tp1, tp2;
+    DATA_TYPE2 yp1, yp2;
 
-    DATA_TYPE k;
-    DATA_TYPE a1, a2, a3, a4, a5, a6, a7, a8;
-    DATA_TYPE b1, b2, c1, c2;
+    DATA_TYPE1 k;
+    DATA_TYPE2 a1, a2, a3, a4, a5, a6, a7, a8;
+    DATA_TYPE1 b1, b2, c1, c2;
 
 #pragma scop
    k = (SCALAR_VAL(1.0)-EXP_FUN(-alpha))*(SCALAR_VAL(1.0)-EXP_FUN(-alpha))/(SCALAR_VAL(1.0)+SCALAR_VAL(2.0)*alpha*EXP_FUN(-alpha)-EXP_FUN(SCALAR_VAL(2.0)*alpha));
@@ -162,11 +162,11 @@ int main(int argc, char** argv)
   int h = H;
 
   /* Variable declaration/allocation. */
-  DATA_TYPE alpha;
-  POLYBENCH_2D_ARRAY_DECL(imgIn, DATA_TYPE, W, H, w, h);
-  POLYBENCH_2D_ARRAY_DECL(imgOut, DATA_TYPE, W, H, w, h);
-  POLYBENCH_2D_ARRAY_DECL(y1, DATA_TYPE, W, H, w, h);
-  POLYBENCH_2D_ARRAY_DECL(y2, DATA_TYPE, W, H, w, h);
+  DATA_TYPE2 alpha;
+  POLYBENCH_2D_ARRAY_DECL(imgIn, DATA_TYPE1, W, H, w, h);
+  POLYBENCH_2D_ARRAY_DECL(imgOut, DATA_TYPE2, W, H, w, h);
+  POLYBENCH_2D_ARRAY_DECL(y1, DATA_TYPE1, W, H, w, h);
+  POLYBENCH_2D_ARRAY_DECL(y2, DATA_TYPE2, W, H, w, h);
 
 
   /* Initialize array(s). */

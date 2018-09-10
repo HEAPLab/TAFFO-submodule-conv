@@ -24,7 +24,7 @@
 /* Array initialization. */
 static
 void init_array (int n,
-		 DATA_TYPE POLYBENCH_2D(path,N,N,n,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(path,N,N,n,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -41,7 +41,7 @@ void init_array (int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_2D(path,N,N,n,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(path,N,N,n,n)) __attribute__((always_inline))
 
 {
   int i, j;
@@ -62,7 +62,7 @@ void print_array(int n,
    including the call and return. */
 static
 void kernel_floyd_warshall(int n,
-			   DATA_TYPE POLYBENCH_2D(path,N,N,n,n)) __attribute__((always_inline))
+			   DATA_TYPE1 POLYBENCH_2D(path,N,N,n,n)) __attribute__((always_inline))
 {
   int i, j, k;
 
@@ -70,9 +70,16 @@ void kernel_floyd_warshall(int n,
   for (k = 0; k < _PB_N; k++)
     {
       for(i = 0; i < _PB_N; i++)
-	for (j = 0; j < _PB_N; j++)
-	  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?
-	    path[i][j] : path[i][k] + path[k][j];
+        for (j = 0; j < _PB_N; j++) {
+          DATA_TYPE2 tmpa = path[i][k];
+          DATA_TYPE2 tmpb = path[k][j];
+          int cond = path[i][j] < path[i][k] + path[k][j];
+          if (cond) {
+            path[i][j] = path[i][j];
+          } else {
+            path[i][j] = tmpa + tmpb;
+          }
+        }
     }
 #pragma endscop
 
@@ -85,7 +92,7 @@ int main(int argc, char** argv)
   int n = N;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_2D_ARRAY_DECL(path, DATA_TYPE, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(path, DATA_TYPE1, N, N, n, n);
 
 
   /* Initialize array(s). */

@@ -24,13 +24,13 @@
 /* Array initialization. */
 static
 void init_array (int n,
-		 DATA_TYPE POLYBENCH_2D(A,N,N,n,n),
-		 DATA_TYPE POLYBENCH_1D(b,N,n),
-		 DATA_TYPE POLYBENCH_1D(x,N,n),
-		 DATA_TYPE POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(A,N,N,n,n),
+		 DATA_TYPE2 POLYBENCH_1D(b,N,n),
+		 DATA_TYPE1 POLYBENCH_1D(x,N,n),
+		 DATA_TYPE2 POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
 {
   int i, j;
-  DATA_TYPE fn = (DATA_TYPE)n;
+  DATA_TYPE1 fn = (DATA_TYPE1)n;
 
   for (i = 0; i < n; i++)
     {
@@ -42,7 +42,7 @@ void init_array (int n,
   for (i = 0; i < n; i++)
     {
       for (j = 0; j <= i; j++)
-	A[i][j] = (DATA_TYPE)(-j % n) / n + 1;
+	A[i][j] = (DATA_TYPE1)(-j % n) / n + 1;
       for (j = i+1; j < n; j++) {
 	A[i][j] = 0;
       }
@@ -52,7 +52,7 @@ void init_array (int n,
   /* Make the matrix positive semi-definite. */
   /* not necessary for LU, but using same code as cholesky */
   int r,s,t;
-  POLYBENCH_2D_ARRAY_DECL(B, DATA_TYPE, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(B, DATA_TYPE2, N, N, n, n);
   for (r = 0; r < n; ++r)
     for (s = 0; s < n; ++s)
       (POLYBENCH_ARRAY(B))[r][s] = 0;
@@ -72,7 +72,7 @@ void init_array (int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_1D(x,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_1D(x,N,n)) __attribute__((always_inline))
 
 {
   int i;
@@ -92,14 +92,14 @@ void print_array(int n,
    including the call and return. */
 static
 void kernel_ludcmp(int n,
-		   DATA_TYPE POLYBENCH_2D(A,N,N,n,n),
-		   DATA_TYPE POLYBENCH_1D(b,N,n),
-		   DATA_TYPE POLYBENCH_1D(x,N,n),
-		   DATA_TYPE POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
+		   DATA_TYPE1 POLYBENCH_2D(A,N,N,n,n),
+		   DATA_TYPE2 POLYBENCH_1D(b,N,n),
+		   DATA_TYPE1 POLYBENCH_1D(x,N,n),
+		   DATA_TYPE2 POLYBENCH_1D(y,N,n)) __attribute__((always_inline))
 {
   int i, j, k;
 
-  DATA_TYPE w;
+  DATA_TYPE1 w;
 
 #pragma scop
   for (i = 0; i < _PB_N; i++) {
@@ -143,10 +143,10 @@ int main(int argc, char** argv)
   int n = N;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, N, N, n, n);
-  POLYBENCH_1D_ARRAY_DECL(b, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(x, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE, N, n);
+  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE1, N, N, n, n);
+  POLYBENCH_1D_ARRAY_DECL(b, DATA_TYPE2, N, n);
+  POLYBENCH_1D_ARRAY_DECL(x, DATA_TYPE1, N, n);
+  POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE2, N, n);
 
 
   /* Initialize array(s). */

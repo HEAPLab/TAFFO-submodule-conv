@@ -24,15 +24,15 @@
 /* Array initialization. */
 static
 void init_array (int n,
-		 DATA_TYPE POLYBENCH_1D(A,N,n),
-		 DATA_TYPE POLYBENCH_1D(B,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_1D(A,N,n),
+		 DATA_TYPE2 POLYBENCH_1D(B,N,n)) __attribute__((always_inline))
 {
   int i;
 
   for (i = 0; i < n; i++)
       {
-	A[i] = ((DATA_TYPE) i+ 2) / n;
-	B[i] = ((DATA_TYPE) i+ 3) / n;
+	A[i] = ((DATA_TYPE1) i+ 2) / n;
+	B[i] = ((DATA_TYPE1) i+ 3) / n;
       }
 }
 
@@ -41,7 +41,7 @@ void init_array (int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_1D(A,N,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_1D(A,N,n)) __attribute__((always_inline))
 
 {
   int i;
@@ -63,8 +63,8 @@ void print_array(int n,
 static
 void kernel_jacobi_1d(int tsteps,
 			    int n,
-			    DATA_TYPE POLYBENCH_1D(A,N,n),
-			    DATA_TYPE POLYBENCH_1D(B,N,n)) __attribute__((always_inline))
+			    DATA_TYPE1 POLYBENCH_1D(A,N,n),
+			    DATA_TYPE2 POLYBENCH_1D(B,N,n)) __attribute__((always_inline))
 {
   int t, i;
 
@@ -88,8 +88,8 @@ int main(int argc, char** argv)
   int tsteps = TSTEPS;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_1D_ARRAY_DECL(A, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(B, DATA_TYPE, N, n);
+  POLYBENCH_1D_ARRAY_DECL(A, DATA_TYPE1, N, n);
+  POLYBENCH_1D_ARRAY_DECL(B, DATA_TYPE2, N, n);
 
 
   /* Initialize array(s). */

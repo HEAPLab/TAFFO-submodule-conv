@@ -24,9 +24,9 @@
 /* Array initialization. */
 static
 void init_array(int n,
-		DATA_TYPE POLYBENCH_2D(L,N,N,n,n),
-		DATA_TYPE POLYBENCH_1D(x,N,n),
-		DATA_TYPE POLYBENCH_1D(b,N,n)) __attribute__((always_inline))
+		DATA_TYPE1 POLYBENCH_2D(L,N,N,n,n),
+		DATA_TYPE2 POLYBENCH_1D(x,N,n),
+		DATA_TYPE1 POLYBENCH_1D(b,N,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -35,7 +35,7 @@ void init_array(int n,
       x[i] = - 999;
       b[i] =  i ;
       for (j = 0; j <= i; j++)
-	L[i][j] = (DATA_TYPE) (i+n-j+1)*2/n;
+	L[i][j] = (DATA_TYPE1) (i+n-j+1)*2/n;
     }
 }
 
@@ -44,7 +44,7 @@ void init_array(int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_1D(x,N,n)) __attribute__((always_inline))
+		 DATA_TYPE2 POLYBENCH_1D(x,N,n)) __attribute__((always_inline))
 
 {
   int i;
@@ -64,9 +64,9 @@ void print_array(int n,
    including the call and return. */
 static
 void kernel_trisolv(int n,
-		    DATA_TYPE POLYBENCH_2D(L,N,N,n,n),
-		    DATA_TYPE POLYBENCH_1D(x,N,n),
-		    DATA_TYPE POLYBENCH_1D(b,N,n)) __attribute__((always_inline))
+		    DATA_TYPE1 POLYBENCH_2D(L,N,N,n,n),
+		    DATA_TYPE2 POLYBENCH_1D(x,N,n),
+		    DATA_TYPE1 POLYBENCH_1D(b,N,n)) __attribute__((always_inline))
 {
   int i, j;
 
@@ -89,9 +89,9 @@ int main(int argc, char** argv)
   int n = N;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_2D_ARRAY_DECL(L, DATA_TYPE, N, N, n, n);
-  POLYBENCH_1D_ARRAY_DECL(x, DATA_TYPE, N, n);
-  POLYBENCH_1D_ARRAY_DECL(b, DATA_TYPE, N, n);
+  POLYBENCH_2D_ARRAY_DECL(L, DATA_TYPE1, N, N, n, n);
+  POLYBENCH_1D_ARRAY_DECL(x, DATA_TYPE2, N, n);
+  POLYBENCH_1D_ARRAY_DECL(b, DATA_TYPE1, N, n);
 
 
   /* Initialize array(s). */

@@ -24,16 +24,16 @@
 /* Array initialization. */
 static
 void init_array (int n,
-		 DATA_TYPE POLYBENCH_2D(A,N,N,n,n),
-		 DATA_TYPE POLYBENCH_2D(B,N,N,n,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(A,N,N,n,n),
+		 DATA_TYPE2 POLYBENCH_2D(B,N,N,n,n)) __attribute__((always_inline))
 {
   int i, j;
 
   for (i = 0; i < n; i++)
     for (j = 0; j < n; j++)
       {
-	A[i][j] = ((DATA_TYPE) i*(j+2) + 2) / n;
-	B[i][j] = ((DATA_TYPE) i*(j+3) + 3) / n;
+	A[i][j] = ((DATA_TYPE1) i*(j+2) + 2) / n;
+	B[i][j] = ((DATA_TYPE2) i*(j+3) + 3) / n;
       }
 }
 
@@ -42,7 +42,7 @@ void init_array (int n,
    Can be used also to check the correctness of the output. */
 static
 void print_array(int n,
-		 DATA_TYPE POLYBENCH_2D(A,N,N,n,n)) __attribute__((always_inline))
+		 DATA_TYPE1 POLYBENCH_2D(A,N,N,n,n)) __attribute__((always_inline))
 
 {
   int i, j;
@@ -64,8 +64,8 @@ void print_array(int n,
 static
 void kernel_jacobi_2d(int tsteps,
 			    int n,
-			    DATA_TYPE POLYBENCH_2D(A,N,N,n,n),
-			    DATA_TYPE POLYBENCH_2D(B,N,N,n,n)) __attribute__((always_inline))
+			    DATA_TYPE1 POLYBENCH_2D(A,N,N,n,n),
+			    DATA_TYPE2 POLYBENCH_2D(B,N,N,n,n)) __attribute__((always_inline))
 {
   int t, i, j;
 
@@ -91,8 +91,8 @@ int main(int argc, char** argv)
   int tsteps = TSTEPS;
 
   /* Variable declaration/allocation. */
-  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, N, N, n, n);
-  POLYBENCH_2D_ARRAY_DECL(B, DATA_TYPE, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE1, N, N, n, n);
+  POLYBENCH_2D_ARRAY_DECL(B, DATA_TYPE2, N, N, n, n);
 
 
   /* Initialize array(s). */
