@@ -61,7 +61,7 @@
 
 #if defined(CONF_BAD)
 #define ANN_1 __attribute__((annotate("no_float")))
-#define ANN_2 __attribute__((annotate("no_float 7 25")))
+#define ANN_2 __attribute__((annotate("no_float 13 19")))
 #elif defined(CONF_WORSE)
 #define ANN_1
 #define ANN_2 __attribute__((annotate("no_float")))
