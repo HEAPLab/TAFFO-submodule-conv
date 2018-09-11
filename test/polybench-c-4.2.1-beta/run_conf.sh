@@ -24,6 +24,9 @@ main() {
   do_conf CONF_BAD bad
   echo '**** worse'
   do_conf CONF_WORSE worse
+  
+  cp multiconf_readme_template.txt $OUT/README.txt
+  hostname > $OUT/MACHINE.txt
 }
 
 
