@@ -289,9 +289,8 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
   int i=0;
   for (auto *it = call->arg_begin(); it != call->arg_end(); it++,i++) {
     if (hasInfo(*it)) {
-      FixedPointType argfixpt = fixPType(*it);
-      convArgs.push_back(translateOrMatchOperandAndType(*it, argfixpt, call->getInstruction()));
-      fixArgs.push_back(std::pair<int, FixedPointType>(i, argfixpt));
+      convArgs.push_back(translateOrMatchOperand(*it, fixPType(*it), call->getInstruction()));
+      fixArgs.push_back(std::pair<int, FixedPointType>(i, fixPType(*it)));
     } else {
       convArgs.push_back(dyn_cast<Value>(it));
     }

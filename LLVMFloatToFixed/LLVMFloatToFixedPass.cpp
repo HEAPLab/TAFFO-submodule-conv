@@ -354,7 +354,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
           if (oldIt->getType() != newIt->getType()){
             // Mark the alloca used for the argument (in O0 opt lvl)
-            valueInfo(newIt->user_begin()->getOperand(1)) = valueInfo(call->getInstruction()->getOperand(i));
+            *valueInfo(newIt->user_begin()->getOperand(1)) = *valueInfo(call->getInstruction()->getOperand(i));
             roots.push_back(newIt->user_begin()->getOperand(1));
             
             std::string tmpstore; //append fixp info to arg name
