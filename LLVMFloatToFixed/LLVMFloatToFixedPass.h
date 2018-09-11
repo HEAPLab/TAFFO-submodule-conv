@@ -203,8 +203,8 @@ struct FloatToFixed : public llvm::ModulePass {
     if (Instruction *i = dyn_cast<Instruction>(v)) {
       MDNode *md = i->getMetadata(INPUT_INFO_METADATA);
       if (md) {
-	Metadata *iimds[] = {FPTNode, md->getOperand(1U), md->getOperand(2U)};
-	i->setMetadata(INPUT_INFO_METADATA, MDNode::get(v->getContext(), iimds));
+        Metadata *iimds[] = {FPTNode, md->getOperand(1U), md->getOperand(2U)};
+        i->setMetadata(INPUT_INFO_METADATA, MDNode::get(v->getContext(), iimds));
       }
     }
   }
