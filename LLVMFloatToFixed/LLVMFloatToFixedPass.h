@@ -65,7 +65,9 @@ struct FloatToFixed : public llvm::ModulePass {
   
   llvm::DenseMap<llvm::Value *, llvm::Value *> operandPool;
   llvm::DenseMap<llvm::Function*, std::vector<FunInfo>> functionPool;
-  llvm::DenseMap<llvm::Value *, ValueInfo> info;
+  
+  /* to not be accessed directly, use valueInfo() */
+  llvm::DenseMap<llvm::Value *, std::shared_ptr<ValueInfo>> info;
   
   FloatToFixed(): ModulePass(ID) { };
   void getAnalysisUsage(llvm::AnalysisUsage &) const override;
@@ -118,7 +120,9 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *translateOrMatchOperand(llvm::Value *val, FixedPointType& iofixpt, llvm::Instruction *ip = nullptr);
   llvm::Value *translateOrMatchOperandAndType(llvm::Value *val, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr) {
     FixedPointType iofixpt = fixpt;
+    llvm::dbgs() << "translateOrMatchOperandAndType " << *val << fixpt << " " << iofixpt << "\n";
     llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip);
+    llvm::dbgs() << "new iofixpt = " << iofixpt << "\n";
     return genConvertFixedToFixed(tmp, iofixpt, fixpt, ip);
   };
   
@@ -128,10 +132,20 @@ struct FloatToFixed : public llvm::ModulePass {
 
   llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, const FixedPointType& baset, bool *hasfloats = nullptr);
   llvm::Type *getLLVMFixedPointTypeForFloatValue(llvm::Value *val);
+  std::shared_ptr<ValueInfo> valueInfo(llvm::Value *val) {
+    auto vi = info.find(val);
+    if (vi == info.end()) {
+      DEBUG(llvm::dbgs() << "new valueinfo for " << *val << "\n");
+      info[val] = std::make_shared<ValueInfo>(ValueInfo());
+      return info[val];
+    } else {
+      return vi->getSecond();
+    }
+  };
   FixedPointType& fixPType(llvm::Value *val) {
     auto vi = info.find(val);
     assert((vi != info.end()) && "value with no info");
-    return vi->getSecond().fixpType;
+    return vi->getSecond()->fixpType;
   };
   bool hasInfo(llvm::Value *val) {
     return info.find(val) != info.end();

@@ -40,15 +40,16 @@ void FloatToFixed::performConversion(
       }
     }
     
-    Value *newv = convertSingleValue(m, v, info[v].fixpType);
+    DEBUG(dbgs() << "performConversion " << *v << "\n");
+    
+    Value *newv = convertSingleValue(m, v, valueInfo(v)->fixpType);
     if (newv) {
       operandPool.insert({v, newv});
     }
     
     if (newv && newv != ConversionError) {
       cpMetaData(newv,v);
-      
-      info.insert({newv, info[v]});
+      *valueInfo(newv) = *valueInfo(v);
     } else {
       DEBUG(dbgs() << "warning: ";
             v->print(dbgs());
@@ -148,6 +149,8 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
 {
   if (srct == destt)
     return fix;
+  
+  dbgs() << "------> genConvertFixedToFixed(" << srct << " =/= " << destt << ")\n";
   
   Type *llvmsrct = fix->getType();
   assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");

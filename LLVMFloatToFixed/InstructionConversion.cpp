@@ -97,6 +97,7 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
     return nullptr;
   assert(newptr && "a load can't be in the conversion queue just because");
   fixpt = fixPType(newptr);
+  dbgs() << *newptr << " type = " << fixpt << '\n';
 
   LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
     load->getAlignment(), load->getOrdering(), load->getSyncScopeID());
@@ -155,7 +156,7 @@ Value *FloatToFixed::convertStore(StoreInst *store)
 
 Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
 {
-  if (info[gep].isRoot && info[gep].isBacktrackingNode) {
+  if (valueInfo(gep)->isRoot && valueInfo(gep)->isBacktrackingNode) {
     dbgs() << "*** UGLY HACK *** ";
     /* till we can flag a structure for conversion we bitcast away the
      * item pointer to a fixed point type and hope everything still works */
@@ -288,8 +289,9 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
   int i=0;
   for (auto *it = call->arg_begin(); it != call->arg_end(); it++,i++) {
     if (hasInfo(*it)) {
-      convArgs.push_back(translateOrMatchOperand(*it, info[*it].fixpType, call->getInstruction()));
-      fixArgs.push_back(std::pair<int, FixedPointType>(i,info[*it].fixpType));
+      FixedPointType argfixpt = fixPType(*it);
+      convArgs.push_back(translateOrMatchOperandAndType(*it, argfixpt, call->getInstruction()));
+      fixArgs.push_back(std::pair<int, FixedPointType>(i, argfixpt));
     } else {
       convArgs.push_back(dyn_cast<Value>(it));
     }

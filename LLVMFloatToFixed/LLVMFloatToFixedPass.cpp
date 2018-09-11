@@ -109,12 +109,12 @@ void FloatToFixed::buildConversionQueueForRootValues(
 {
   queue.insert(queue.begin(), val.begin(), val.end());
   for (auto i = queue.begin(); i != queue.end(); i++) {
-    info[*i].isRoot = true;
+    valueInfo(*i)->isRoot = true;
   }
   
   auto completeInfo = [this](Value *v, Value *u) {
-    ValueInfo vinfo = info[v];
-    ValueInfo &uinfo = info[u];
+    ValueInfo vinfo = *valueInfo(v);
+    ValueInfo &uinfo = *valueInfo(u);
     uinfo.origType = u->getType();
     if (uinfo.fixpTypeRootDistance > std::max(vinfo.fixpTypeRootDistance, vinfo.fixpTypeRootDistance+1)) {
       uinfo.fixpType = vinfo.fixpType;
@@ -132,6 +132,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
       Value *v = queue.at(next);
 
       for (auto *u: v->users()) {
+        
         /* Insert u at the end of the queue.
          * If u exists already in the queue, *move* it to the end instead. */
         for (int i=0; i<queue.size();) {
@@ -145,8 +146,8 @@ void FloatToFixed::buildConversionQueueForRootValues(
         }
         queue.push_back(u);
 
-        if (info[v].isBacktrackingNode) {
-          info[u].isBacktrackingNode = true;
+        if (valueInfo(v)->isBacktrackingNode) {
+          valueInfo(u)->isBacktrackingNode = true;
         }
         completeInfo(v, u);
       }
@@ -156,7 +157,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
     next = queue.size();
     for (next = queue.size(); next != 0; next--) {
       Value *v = queue.at(next-1);
-      if (!(info[v].isBacktrackingNode))
+      if (!(valueInfo(v)->isBacktrackingNode))
         continue;
       
       Instruction *inst = dyn_cast<Instruction>(v);
@@ -181,9 +182,9 @@ void FloatToFixed::buildConversionQueueForRootValues(
           #endif
           continue;
         }
-        info[v].isRoot = false;
+        valueInfo(v)->isRoot = false;
         
-        info[u].isBacktrackingNode = true;
+        valueInfo(u)->isBacktrackingNode = true;
         
         bool alreadyIn = false;
         for (int i=0; i<queue.size() && !alreadyIn;) {
@@ -197,7 +198,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
           }
         }
         if (!alreadyIn) {
-          info[u].isRoot = true;
+          valueInfo(u)->isRoot = true;
           #ifdef LOG_BACKTRACK
           dbgs() << "  enqueued\n";
           #endif
@@ -215,20 +216,20 @@ void FloatToFixed::buildConversionQueueForRootValues(
   }
   
   for (Value *v: queue) {
-    if (info[v].isRoot) {
-      info[v].roots = {v};
+    if (valueInfo(v)->isRoot) {
+      valueInfo(v)->roots = {v};
     }
     
-    SmallPtrSet<Value*, 5> newroots = info[v].roots;
+    SmallPtrSet<Value*, 5> newroots = valueInfo(v)->roots;
     for (Value *u: v->users()) {
       auto oldrootsi = info.find(u);
       if (!info.count(u))
         continue;
 
-      auto oldroots = oldrootsi->getSecond().roots;
+      auto oldroots = oldrootsi->getSecond()->roots;
       SmallPtrSet<Value*, 5> merge(newroots);
       merge.insert(oldroots.begin(), oldroots.end());
-      info[u].roots = merge;
+      valueInfo(u)->roots = merge;
     }
   }
 }
@@ -260,7 +261,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
 {
   std::vector<Value*> roots;
   for (Value *v: q) {
-    if (info[v].isRoot == true)
+    if (valueInfo(v)->isRoot == true)
       roots.push_back(v);
   }
   
@@ -277,7 +278,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       }
       DEBUG(qi->print(errs());
             errs() << " not converted; invalidates roots ");
-      const auto& rootsaffected = info[qi].roots;
+      const auto& rootsaffected = valueInfo(qi)->roots;
       for (Value *root: rootsaffected) {
         isrootok[root] = false;
         DEBUG(root->print(errs()));
@@ -293,7 +294,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       Instruction *i = dyn_cast<Instruction>(v);
       if (!i || (!toDelete(*i)))
         continue;
-      const auto &roots = info[v].roots;
+      const auto &roots = valueInfo(v)->roots;
     
       bool allok = true;
       for (Value *root: roots) {
@@ -353,7 +354,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
           if (oldIt->getType() != newIt->getType()){
             // Mark the alloca used for the argument (in O0 opt lvl)
-            info[newIt->user_begin()->getOperand(1)] = info[call->getInstruction()->getOperand(i)];
+            valueInfo(newIt->user_begin()->getOperand(1)) = valueInfo(call->getInstruction()->getOperand(i));
             roots.push_back(newIt->user_begin()->getOperand(1));
             
             std::string tmpstore; //append fixp info to arg name
@@ -367,8 +368,8 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         if (oldF->getReturnType()->isFloatingPointTy()) {
           for (ReturnInst *v : returns) {
             roots.push_back(v);
-            info[v].fixpType = info[call->getInstruction()].fixpType;
-            info[v].fixpTypeRootDistance = 0;
+            valueInfo(v)->fixpType = valueInfo(call->getInstruction())->fixpType;
+            valueInfo(v)->fixpTypeRootDistance = 0;
           }
         }
         std::vector<Value*> newVals;
@@ -401,14 +402,14 @@ Function* FloatToFixed::createFixFun(CallSite* call)
   std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function
   
   if(isFloatType(oldF->getReturnType())) //ret value in signature
-    fixArgs.push_back(std::pair<int, FixedPointType>(-1, info[call->getInstruction()].fixpType));
+    fixArgs.push_back(std::pair<int, FixedPointType>(-1, valueInfo(call->getInstruction())->fixpType));
   
   int i=0;
   for (auto arg = call->arg_begin(); arg != call->arg_end(); arg++,i++) { //detect fix argument
     Value *v = dyn_cast<Value>(arg);
     Type* newTy;
     if (hasInfo(v)) {
-      fixArgs.push_back(std::pair<int, FixedPointType>(i,info[v].fixpType));
+      fixArgs.push_back(std::pair<int, FixedPointType>(i,valueInfo(v)->fixpType));
       newTy = getLLVMFixedPointTypeForFloatValue(v);
     } else {
       newTy = v->getType();
@@ -447,10 +448,10 @@ void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
   if (vals.size() < 1000) {
     errs() << "conversion queue:\n";
                   for (Value *val: vals) {
-                    errs() << "bt=" << info[val].isBacktrackingNode << " ";
-                    errs() << info[val].fixpType << " ";
+                    errs() << "bt=" << valueInfo(val)->isBacktrackingNode << " ";
+                    errs() << valueInfo(val)->fixpType << " ";
                     errs() << "[";
-                    for (Value *rootv: info[val].roots) {
+                    for (Value *rootv: valueInfo(val)->roots) {
                       rootv->print(errs());
                       errs() << ' ';
                     }
