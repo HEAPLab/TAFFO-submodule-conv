@@ -97,7 +97,7 @@ bool FloatToFixed::parseAnnotation(SmallPtrSetImpl<Value *>& variables, Constant
 
   std::string head;
   strstm >> head;
-  if (head == "target")
+  if (head.find("target") != std::string::npos)
     strstm >> head;
 
   if (head == "no_float")
