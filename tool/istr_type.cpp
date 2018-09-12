@@ -96,7 +96,8 @@ void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::m
     }
   }
   
-  funcs.erase(f);
+  //funcs.erase(f);
+  //don't count twice a function which is called twice
 }
 
 
