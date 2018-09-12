@@ -44,9 +44,15 @@ void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::m
     for (auto iter3 = bb.begin(); iter3 != bb.end(); iter3++) {
       Instruction &inst = *iter3;
 
+      Function *opnd = nullptr;
       CallInst *call = dyn_cast<CallInst>(&inst);
-      if(call) {
-        Function *opnd = call->getCalledFunction();
+      if (call)
+        opnd = call->getCalledFunction();
+      InvokeInst *invoke = dyn_cast<InvokeInst>(&inst);
+      if (invoke)
+        opnd = invoke->getCalledFunction();
+      
+      if (opnd) {
         if (opnd->getName() == "polybench_timer_start" ||
             opnd->getName() == "timer_start") {
           eval++;
@@ -54,6 +60,12 @@ void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::m
         } else if (opnd->getName() == "polybench_timer_stop" ||
                    opnd->getName() == "timer_stop") {
           eval--;
+        } else if (opnd->getName().contains("AxBenchTimer")) {
+          if (opnd->getName().contains("nanosecondsSinceInit")) {
+            eval--;
+          } else {
+            eval++;
+          }
         } else if (opnd->getIntrinsicID() == Intrinsic::ID::annotation ||
                    opnd->getIntrinsicID() == Intrinsic::ID::var_annotation ||
                    opnd->getIntrinsicID() == Intrinsic::ID::ptr_annotation) {
