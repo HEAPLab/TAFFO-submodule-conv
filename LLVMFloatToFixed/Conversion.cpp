@@ -150,8 +150,6 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   if (srct == destt)
     return fix;
   
-  dbgs() << "------> genConvertFixedToFixed(" << srct << " =/= " << destt << ")\n";
-  
   Type *llvmsrct = fix->getType();
   assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");
   assert(llvmsrct->isIntegerTy() && "cannot change fixed point format of a float");

@@ -97,7 +97,6 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
     return nullptr;
   assert(newptr && "a load can't be in the conversion queue just because");
   fixpt = fixPType(newptr);
-  dbgs() << *newptr << " type = " << fixpt << '\n';
 
   LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
     load->getAlignment(), load->getOrdering(), load->getSyncScopeID());
