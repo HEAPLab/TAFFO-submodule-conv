@@ -22,23 +22,31 @@ cl::OptionCategory IstrFreqOptions("istr_type options");
 cl::opt<bool> Verbose("verbose", cl::value_desc("verbose"),
   cl::desc("Enable Verbose Output"),
   cl::init(false));
+cl::opt<bool> CountCallSite("callsites", cl::value_desc("callsites"),
+  cl::desc("Count call instructions to profiled functions"),
+  cl::init(false));
 cl::opt<std::string> InputFilename(cl::Positional, cl::Required,
   cl::desc("<input file>"));
 
 
-void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::map<std::string, int>& stat, int &eval, int &ninstr)
+bool analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::map<std::string, int>& stat, int &eval, int &ninstr)
 {
   if (funcs.find(f) != funcs.end()) {
     if (Verbose)
       std::cerr << "Recursion!" << std::endl;
-    return;
+    return true;
   }
   if (Verbose)
     std::cerr << " Function: " << f->getName().str() << std::endl;
   funcs.insert(f);
   
-  for (auto iter2 = f->getBasicBlockList().begin();
-       iter2 != f->getBasicBlockList().end(); iter2++) {
+  auto &bblist = f->getBasicBlockList();
+  if (bblist.empty()) {
+    funcs.erase(f);
+    return false;
+  }
+  
+  for (auto iter2 = f->getBasicBlockList().begin(); iter2 != f->getBasicBlockList().end(); iter2++) {
     BasicBlock &bb = *iter2;
     
     for (auto iter3 = bb.begin(); iter3 != bb.end(); iter3++) {
@@ -65,13 +73,16 @@ void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::m
             eval--;
           } else {
             eval++;
+            continue;
           }
         } else if (opnd->getIntrinsicID() == Intrinsic::ID::annotation ||
                    opnd->getIntrinsicID() == Intrinsic::ID::var_annotation ||
                    opnd->getIntrinsicID() == Intrinsic::ID::ptr_annotation) {
           continue;
         } else {
-          analyze_function(opnd, funcs, stat, eval, ninstr);
+          bool success = analyze_function(opnd, funcs, stat, eval, ninstr);
+          if (success && !CountCallSite)
+            continue;
         }
       }
 
@@ -100,16 +111,29 @@ void analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::m
         stat["Shift"]++;
       }
       
-      if (call) {
+      if (call || invoke) {
         std::stringstream stm;
-        stm << "call(" << call->getCalledFunction()->getName().str() << ")";
+        
+        if (call) {
+          stm << "call(";
+        } else {
+          stm << "invoke(";
+        }
+        
+        if (opnd) {
+          stm << opnd->getName().str();
+        } else {
+          stm << "%indirect";
+        }
+        
+        stm << ")";
         stat[stm.str()]++;
       }
     }
   }
   
-  //funcs.erase(f);
-  //don't count twice a function which is called twice
+  funcs.erase(f);
+  return true;
 }
 
 
