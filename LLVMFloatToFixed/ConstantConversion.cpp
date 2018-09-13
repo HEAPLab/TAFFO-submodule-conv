@@ -35,6 +35,7 @@ Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt)
       }
       ArrayType* aty = ArrayType::get(consts[0]->getType(),consts.size());
       return ConstantArray::get(aty,consts);
+    }
   } else if (ConstantDataSequential *cds = dyn_cast<ConstantDataSequential>(flt)) {
     if (ConstantDataArray *cda = dyn_cast<ConstantDataArray>(cds)) {
       std::vector<Constant*> consts;
