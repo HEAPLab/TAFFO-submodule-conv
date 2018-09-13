@@ -27,6 +27,25 @@ Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt)
     return convertGlobalVariable(gvar, fixpt);
   } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
     return convertLiteral(fpc, nullptr, fixpt);
+  } else if (ConstantAggregate *cag = dyn_cast<ConstantAggregate>(flt)) {
+    if (ConstantArray *ca = dyn_cast<ConstantArray>(cag)) {
+      std::vector<Constant*> consts;
+      for (int i=0;i<ca->getNumOperands();i++) {
+        consts.push_back(convertConstant(ca->getOperand(i),fixpt));
+      }
+      ArrayType* aty = ArrayType::get(consts[0]->getType(),consts.size());
+      return ConstantArray::get(aty,consts);
+  } else if (ConstantDataSequential *cds = dyn_cast<ConstantDataSequential>(flt)) {
+    if (ConstantDataArray *cda = dyn_cast<ConstantDataArray>(cds)) {
+      std::vector<Constant*> consts;
+      std::vector<uint64_t > ltl;
+      for (int i=0;i<cda->getNumElements();i++) {
+        consts.push_back(convertConstant(cda->getElementAsConstant(i),fixpt));
+        ConstantFP *cfp = dyn_cast<ConstantFP>(consts[i]);
+        ltl.push_back(cfp->getValueAPF().convertToFloat());
+      }
+      return ConstantDataArray::get(cda->getContext(),ltl);
+    }
   } else if (auto cag = dyn_cast<ConstantAggregateZero>(flt)) {
     Type *newt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
     return ConstantAggregateZero::get(newt);
