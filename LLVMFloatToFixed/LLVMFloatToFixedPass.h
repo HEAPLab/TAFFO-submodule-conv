@@ -92,6 +92,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Constant *convertConstant(llvm::Constant *flt, FixedPointType& fixpt);
   llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob, FixedPointType& fixpt);
   llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, FixedPointType& fixpt);
+  llvm::Constant *convertConstantAggregate(llvm::ConstantAggregate *cag, FixedPointType& fixpt);
   llvm::Constant *convertConstantDataSequential(llvm::ConstantDataSequential *, const FixedPointType&);
   template <class T> llvm::Constant *createConstantDataSequential(llvm::ConstantDataSequential *, const FixedPointType&);
   llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *, const FixedPointType&);

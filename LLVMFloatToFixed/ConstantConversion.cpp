@@ -28,14 +28,7 @@ Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt)
   } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
     return convertLiteral(fpc, nullptr, fixpt);
   } else if (ConstantAggregate *cag = dyn_cast<ConstantAggregate>(flt)) {
-    if (ConstantArray *ca = dyn_cast<ConstantArray>(cag)) {
-      std::vector<Constant*> consts;
-      for (int i=0;i<ca->getNumOperands();i++) {
-        consts.push_back(convertConstant(ca->getOperand(i),fixpt));
-      }
-      ArrayType* aty = ArrayType::get(consts[0]->getType(),consts.size());
-      return ConstantArray::get(aty,consts);
-    }
+    return convertConstantAggregate(cag, fixpt);
   } else if (ConstantDataSequential *cds = dyn_cast<ConstantDataSequential>(flt)) {
     return convertConstantDataSequential(cds, fixpt);
   } else if (auto cag = dyn_cast<ConstantAggregateZero>(flt)) {
@@ -93,6 +86,42 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointTy
   newglob->setAlignment(glob->getAlignment());
   newglob->setName(glob->getName() + ".fixp");
   return newglob;
+}
+
+
+Constant *FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, FixedPointType& fixpt)
+{
+  std::vector<Constant*> consts;
+  for (int i=0; i<cag->getNumOperands(); i++) {
+    Constant *oldconst = cag->getOperand(i);
+    Constant *newconst;
+    if (isFloatType(oldconst->getType())) {
+      newconst = convertConstant(cag->getOperand(i), fixpt);
+      if (!newconst)
+        return nullptr;
+    } else {
+      newconst = oldconst;
+    }
+    consts.push_back(newconst);
+  }
+  
+  if (ConstantArray *array = dyn_cast<ConstantArray>(cag)) {
+    ArrayType* aty = ArrayType::get(consts[0]->getType(),consts.size());
+    return ConstantArray::get(aty, consts);
+    
+  } else if (ConstantVector *vector = dyn_cast<ConstantVector>(cag)) {
+    return ConstantVector::get(consts);
+    
+  } else if (ConstantStruct *strt = dyn_cast<ConstantStruct>(cag)) {
+    std::vector<Type *> types;
+    for (Constant *c: consts) {
+      types.push_back(c->getType());
+    }
+    StructType *strtype = StructType::get(cag->getContext(), types);
+    return ConstantStruct::get(strtype, consts);
+    
+  }
+  llvm_unreachable("a ConstantAggregate is not an array, vector or struct...");
 }
 
 
