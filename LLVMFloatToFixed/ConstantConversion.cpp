@@ -37,16 +37,7 @@ Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt)
       return ConstantArray::get(aty,consts);
     }
   } else if (ConstantDataSequential *cds = dyn_cast<ConstantDataSequential>(flt)) {
-    if (ConstantDataArray *cda = dyn_cast<ConstantDataArray>(cds)) {
-      std::vector<Constant*> consts;
-      std::vector<uint64_t > ltl;
-      for (int i=0;i<cda->getNumElements();i++) {
-        consts.push_back(convertConstant(cda->getElementAsConstant(i),fixpt));
-        ConstantFP *cfp = dyn_cast<ConstantFP>(consts[i]);
-        ltl.push_back(cfp->getValueAPF().convertToFloat());
-      }
-      return ConstantDataArray::get(cda->getContext(),ltl);
-    }
+    return convertConstantDataSequential(cds, fixpt);
   } else if (auto cag = dyn_cast<ConstantAggregateZero>(flt)) {
     Type *newt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
     return ConstantAggregateZero::get(newt);
@@ -105,16 +96,69 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointTy
 }
 
 
+template <class T> Constant *FloatToFixed::createConstantDataSequential(ConstantDataSequential *cds, const FixedPointType& fixpt)
+{
+  std::vector<T> newConsts;
+  
+  for (int i=0; i<cds->getNumElements(); i++) {
+    APFloat thiselem = cds->getElementAsAPFloat(i);
+    APSInt fixval;
+    if (!convertAPFloat(thiselem, fixval, nullptr, fixpt)) {
+      DEBUG(dbgs() << *cds << " conv failed because an apfloat cannot be converted to " << fixpt << "\n");
+      return nullptr;
+    }
+    newConsts.push_back(fixval.getExtValue());
+  }
+  
+  if (isa<ConstantDataArray>(cds)) {
+    return ConstantDataArray::get(cds->getContext(), newConsts);
+  }
+  return ConstantDataVector::get(cds->getContext(), newConsts);
+}
+
+
+Constant *FloatToFixed::convertConstantDataSequential(ConstantDataSequential *cds, const FixedPointType& fixpt)
+{
+  if (!isFloatType(cds->getElementType()))
+    return cds;
+  
+  if (fixpt.bitsAmt <= 8)
+    return createConstantDataSequential<uint8_t>(cds, fixpt);
+  else if (fixpt.bitsAmt <= 16)
+    return createConstantDataSequential<uint16_t>(cds, fixpt);
+  else if (fixpt.bitsAmt <= 32)
+    return createConstantDataSequential<uint32_t>(cds, fixpt);
+  else if (fixpt.bitsAmt <= 64)
+    return createConstantDataSequential<uint64_t>(cds, fixpt);
+  
+  DEBUG(dbgs() << fixpt << " too big for ConstantDataArray/Vector; 64 bit max\n");
+  return nullptr;
+}
+
+
 Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, const FixedPointType& fixpt)
 {
-  bool precise = false;
   APFloat val = fpc->getValueAPF();
+  APSInt fixval;
+  
+  if (convertAPFloat(val, fixval, context, fixpt)) {
+    Type *intty = fixpt.toLLVMType(fpc->getContext());
+    return ConstantInt::get(intty, fixval);
+  }
+  
+  return nullptr;
+}
+
+
+bool FloatToFixed::convertAPFloat(APFloat val, APSInt& fixval, Instruction *context, const FixedPointType& fixpt)
+{
+  bool precise = false;
 
   APFloat exp(pow(2.0, fixpt.fracBitsAmt));
   exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
   val.multiply(exp, APFloat::rmTowardNegative);
 
-  APSInt fixval(fixpt.bitsAmt, !fixpt.isSigned);
+  fixval = APSInt(fixpt.bitsAmt, !fixpt.isSigned);
   APFloat::opStatus cvtres = val.convertToInteger(fixval, APFloat::rmTowardNegative, &precise);
   
   if (cvtres != APFloat::opStatus::opOK && context) {
@@ -128,12 +172,12 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, co
     } else {
       ORE.emit(OptimizationRemark(DEBUG_TYPE, "ConstConversionFailed", context) <<
         "impossible to convert constant " << valstr2 << " to fixed point\n");
-      return nullptr;
+      return false;
     }
   }
-
-  Type *intty = fixpt.toLLVMType(fpc->getContext());
-  return ConstantInt::get(intty, fixval);
+  
+  return true;
 }
+
 
 
