@@ -176,9 +176,26 @@ void FloatToFixed::buildConversionQueueForRootValues(
       #endif
       
       for (Value *u: inst->operands()) {
+        if (!isa<User>(u) && !isa<Argument>(u)) {
+          #ifdef LOG_BACKTRACK
+          dbgs() << " - " ;
+          u->printAsOperand(dbgs());
+          dbgs() << " not a User or an Argument\n";
+          #endif
+          continue;
+        }
+        
+        if (isa<Function>(u) || isa<BlockAddress>(u)) {
+          #ifdef LOG_BACKTRACK
+          dbgs() << " - " ;
+          u->printAsOperand(dbgs());
+          dbgs() << " is a function/block address\n";
+          #endif
+          continue;
+        }
+        
         #ifdef LOG_BACKTRACK
-        dbgs() << " - ";
-        u->print(dbgs());
+        dbgs() << " - " << *u;
         #endif
         
         if (!isFloatType(u->getType())) {
@@ -335,8 +352,9 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
 void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global)
 {
   for (int i=0; i < vals.size(); i++) {
-    if (isa<CallInst>(vals[i]) || isa<InvokeInst>(vals[i])) {
-      CallSite *call = new CallSite(vals[i]);
+    Value *valsi = vals[i];
+    if (isa<CallInst>(valsi) || isa<InvokeInst>(valsi)) {
+      CallSite *call = new CallSite(valsi);
       if (Function *newF = createFixFun(call)){
         Function *oldF = call->getCalledFunction();
         
@@ -400,6 +418,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
 Function* FloatToFixed::createFixFun(CallSite* call)
 {
   Function *oldF = call->getCalledFunction();
+  assert(oldF && "bitcasted function pointers and such not handled atm");
   if(isSpecialFunction(oldF))
     return nullptr;
   
