@@ -9,6 +9,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "FixedPointType.h"
 #include "LLVMFloatToFixedPass.h"
+#include <sstream>
 
 
 using namespace llvm;
@@ -53,13 +54,21 @@ Type *FixedPointType::toLLVMType(LLVMContext& ctxt) const
 }
 
 
-raw_ostream& operator<<(raw_ostream& stm, const FixedPointType& f)
+std::string FixedPointType::toString() const
 {
-  if (f.isSigned)
+  std::stringstream stm;
+  if (isSigned)
     stm << "s";
   else
     stm << "u";
-  stm << f.bitsAmt - f.fracBitsAmt << "_" << f.fracBitsAmt << "fixp";
+  stm << bitsAmt - fracBitsAmt << "_" << fracBitsAmt << "fixp";
+  return stm.str();
+}
+
+
+raw_ostream& operator<<(raw_ostream& stm, const FixedPointType& f)
+{
+  stm << f.toString();
   return stm;
 }
 

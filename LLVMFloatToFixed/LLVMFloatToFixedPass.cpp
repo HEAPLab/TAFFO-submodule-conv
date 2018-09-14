@@ -96,8 +96,13 @@ void FloatToFixed::optimizeFixedPointTypes(std::vector<Value*>& queue)
   for (Value *v: queue) {
     if (StoreInst *store = dyn_cast<StoreInst>(v)) {
       if (std::find(queue.begin(), queue.end(), store->getPointerOperand()) != queue.end() &&
-          std::find(queue.begin(), queue.end(), store->getValueOperand()) != queue.end())
+          std::find(queue.begin(), queue.end(), store->getValueOperand()) != queue.end()) {
+        if (isa<CallInst>(store->getValueOperand())) {
+          /* prevent function conversion type mismatches later */
+          continue;
+        }
         fixPType(store->getValueOperand()) = fixPType(store->getPointerOperand());
+      }
     }
   }
 }
@@ -401,8 +406,14 @@ Function* FloatToFixed::createFixFun(CallSite* call)
   std::vector<Type*> typeArgs;
   std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function
   
-  if(isFloatType(oldF->getReturnType())) //ret value in signature
-    fixArgs.push_back(std::pair<int, FixedPointType>(-1, valueInfo(call->getInstruction())->fixpType));
+  std::string suffix;
+  if(isFloatType(oldF->getReturnType())) { //ret value in signature
+    FixedPointType retValType = valueInfo(call->getInstruction())->fixpType;
+    suffix = retValType.toString();
+    fixArgs.push_back(std::pair<int, FixedPointType>(-1, retValType));
+  } else {
+    suffix = "fixp";
+  }
   
   int i=0;
   for (auto arg = call->arg_begin(); arg != call->arg_end(); arg++,i++) { //detect fix argument
@@ -433,7 +444,15 @@ Function* FloatToFixed::createFixFun(CallSite* call)
     }
   }
   
-  newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_fixp", oldF->getParent());
+  DEBUG({
+    dbgs() << "creating function " << oldF->getName() << "_" << suffix << " with types ";
+    for (auto pair: fixArgs) {
+      dbgs() << "(" << pair.first << ", " << pair.second << ") ";
+    }
+    dbgs() << "\n";
+  });
+  
+  newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_" + suffix, oldF->getParent());
   FunInfo funInfo; //add to pool
   funInfo.newFun = newF;
   funInfo.fixArgs = fixArgs;
