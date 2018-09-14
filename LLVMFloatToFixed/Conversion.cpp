@@ -103,8 +103,13 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
     return res;
   }
 
-  if (Instruction *i = dyn_cast<Instruction>(flt))
-    ip = i->getNextNode();
+  if (Instruction *i = dyn_cast<Instruction>(flt)) {
+    Instruction *tentativeIp = i->getNextNode();
+    if (tentativeIp)
+      ip = tentativeIp;
+    else
+      DEBUG(dbgs() << "warning: genConvertFloatToFix on a BB-terminating inst\n");
+  }
   assert(ip && "ip is mandatory if not passing an instruction/constant value");
   
   if (!flt->getType()->isFloatingPointTy()) {
