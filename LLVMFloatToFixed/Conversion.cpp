@@ -44,7 +44,7 @@ void FloatToFixed::performConversion(
     
     Value *newv = convertSingleValue(m, v, valueInfo(v)->fixpType);
     if (newv) {
-      operandPool.insert({v, newv});
+      operandPool[v] = newv;
     }
     
     if (newv && newv != ConversionError) {
@@ -69,6 +69,11 @@ Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& f
     res = convertConstant(con, fixpt);
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) {
     res = convertInstruction(m, instr, fixpt);
+  } else if (Argument *argument = dyn_cast<Argument>(val)) {
+    if (isFloatType(argument->getType()))
+      res = translateOrMatchOperand(val, fixpt, nullptr);
+    else
+      res = val;
   }
   
   return res ? res : ConversionError;
@@ -109,6 +114,10 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
       ip = tentativeIp;
     else
       DEBUG(dbgs() << "warning: genConvertFloatToFix on a BB-terminating inst\n");
+  } else if (Argument *arg = dyn_cast<Argument>(flt)) {
+    Function *fun = arg->getParent();
+    BasicBlock& firstbb = fun->getEntryBlock();
+    ip = &(*firstbb.getFirstInsertionPt());
   }
   assert(ip && "ip is mandatory if not passing an instruction/constant value");
   
