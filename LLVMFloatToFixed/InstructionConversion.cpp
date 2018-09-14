@@ -237,7 +237,7 @@ Value *FloatToFixed::convertPhi(PHINode *load, FixedPointType& fixpt)
     }
     Instruction *inst2 = dyn_cast<Instruction>(newval);
     if (inst2) {
-      assert(inst2->getParent() == thisbb && "new phi value coming from wrong BB");
+      DEBUG(dbgs() << "warning: new phi value " << *inst2 << " not coming from the obviously correct BB\n");
     }
     newphi->addIncoming(newval, thisbb);
   }
