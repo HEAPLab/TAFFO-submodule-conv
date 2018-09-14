@@ -355,7 +355,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     Value *valsi = vals[i];
     if (isa<CallInst>(valsi) || isa<InvokeInst>(valsi)) {
       CallSite *call = new CallSite(valsi);
-      if (Function *newF = createFixFun(call)){
+      if (Function *newF = createFixFun(call)) {
         Function *oldF = call->getCalledFunction();
         
         DEBUG(dbgs() << "Converting function " << oldF->getName() << " : " << *oldF->getType()
@@ -376,14 +376,19 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         newIt = newF->arg_begin();
         for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
           if (oldIt->getType() != newIt->getType()){
+            FixedPointType fixtype = valueInfo(call->getInstruction()->getOperand(i))->fixpType;
+            
             // Mark the alloca used for the argument (in O0 opt lvl)
-            *valueInfo(newIt->user_begin()->getOperand(1)) = *valueInfo(call->getInstruction()->getOperand(i));
+            valueInfo(newIt->user_begin()->getOperand(1))->fixpType = fixtype;
+            valueInfo(newIt->user_begin()->getOperand(1))->fixpTypeRootDistance = 0;
             roots.push_back(newIt->user_begin()->getOperand(1));
             
-            std::string tmpstore; //append fixp info to arg name
-            raw_string_ostream tmp(tmpstore);
-            tmp << fixPType(newIt->user_begin()->getOperand(1));
-            newIt->setName(newIt->getName() + "." + tmp.str());
+            // Mark the argument itself
+            valueInfo(newIt)->fixpType = fixtype;
+            valueInfo(newIt)->fixpTypeRootDistance = 0;
+            
+            //append fixp info to arg name
+            newIt->setName(newIt->getName() + "." + fixtype.toString());
           }
         }
   

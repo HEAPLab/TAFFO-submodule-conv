@@ -135,14 +135,25 @@ Value *FloatToFixed::convertStore(StoreInst *store)
         bc->insertBefore(store);
         newval = bc;
       }
-      DEBUG(dbgs()<< "[Store] Detect pointer store :"<< *store << "\n";);
+      DEBUG(dbgs()<< "[Store] Detect pointer store :"<< *store << "\n");
       
     } else {
       return nullptr;
     }
     
+  } else if (isa<Argument>(val) && hasInfo(val)) {
+    /* converted function parameter in a cloned function */
+    if (val->getType()->isIntegerTy()) {
+      newval = genConvertFixedToFixed(val, fixPType(val), fixPType(newptr), store);
+    } else {
+      /* pointers */
+      newval = matchOp(val);
+      assert(fixPType(newval) == fixPType(newptr) && "mismatching types on argument");
+    }
+    
   } else {
     newval = matchOp(val);
+
   }
   if (!newval)
     return nullptr;
