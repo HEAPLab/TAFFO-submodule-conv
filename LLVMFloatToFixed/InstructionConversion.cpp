@@ -354,7 +354,8 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
     }
   }
 
-  v = translateOrMatchOperand(ret->getOperand(0), fixpt);
+  /* force the value returned to be of the correct type */
+  v = translateOrMatchOperandAndType(ret->getOperand(0), fixpt);
   
   ret->setOperand(0,v);
   newRet = ret->clone();
