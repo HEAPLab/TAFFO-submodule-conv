@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <sstream>
+#include <deque>
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ErrorOr.h"
@@ -14,6 +15,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/raw_os_ostream.h"
 
 using namespace llvm;
 
@@ -29,110 +31,152 @@ cl::opt<std::string> InputFilename(cl::Positional, cl::Required,
   cl::desc("<input file>"));
 
 
-bool analyze_function(Function *f, std::unordered_set<Function *>& funcs, std::map<std::string, int>& stat, int &eval, int &ninstr)
+struct block_eval_status {
+  BasicBlock *block;
+  int eval;
+  
+  block_eval_status(BasicBlock *bb, int e): block(bb), eval(e) {};
+};
+
+
+bool analyze_function(Function *, std::unordered_set<BasicBlock *>&, std::map<std::string, int>&, int &, int &);
+void analyze_basic_block(BasicBlock *, std::unordered_set<BasicBlock *>&, std::map<std::string, int>&, int &, int &);
+
+
+void analyze_basic_block(BasicBlock *bb, std::unordered_set<BasicBlock *>& countedbbs, std::map<std::string, int>& stat, int &eval, int &ninstr)
 {
-  if (funcs.find(f) != funcs.end()) {
+  if (Verbose) {
+    raw_os_ostream stm(std::cerr);
+    stm << "  BasicBlock: ";
+    bb->printAsOperand(stm, true);
+    stm << '\n';
+  }
+  countedbbs.insert(bb);
+  
+  for (auto iter3 = bb->begin(); iter3 != bb->end(); iter3++) {
+    Instruction &inst = *iter3;
+
+    Function *opnd = nullptr;
+    CallInst *call = dyn_cast<CallInst>(&inst);
+    if (call)
+      opnd = call->getCalledFunction();
+    InvokeInst *invoke = dyn_cast<InvokeInst>(&inst);
+    if (invoke)
+      opnd = invoke->getCalledFunction();
+    
+    if (opnd) {
+      if (opnd->getName() == "polybench_timer_start" ||
+          opnd->getName() == "timer_start") {
+        eval++;
+        continue;
+      } else if (opnd->getName() == "polybench_timer_stop" ||
+                 opnd->getName() == "timer_stop") {
+        eval--;
+      } else if (opnd->getName().contains("AxBenchTimer")) {
+        if (opnd->getName().contains("nanosecondsSinceInit")) {
+          eval--;
+        } else {
+          eval++;
+          continue;
+        }
+      } else if (opnd->getIntrinsicID() == Intrinsic::ID::annotation ||
+                 opnd->getIntrinsicID() == Intrinsic::ID::var_annotation ||
+                 opnd->getIntrinsicID() == Intrinsic::ID::ptr_annotation) {
+        continue;
+      } else {
+        bool success = analyze_function(opnd, countedbbs, stat, eval, ninstr);
+        if (success && !CountCallSite)
+          continue;
+      }
+    }
+
+    if (!eval)
+      continue;
+    
+    ninstr++;
+    stat[inst.getOpcodeName()]++;
+
+    if (isa<AllocaInst>(inst) || isa<LoadInst>(inst) || isa<StoreInst>(inst) || isa<GetElementPtrInst>(inst) ) {
+      stat["MemOp"]++;
+    } else if (isa<PHINode>(inst) || isa<SelectInst>(inst) || isa<FCmpInst>(inst) || isa<CmpInst>(inst) ) {
+      stat["CmpOp"]++;
+    } else if (isa<CastInst>(inst)) {
+      stat["CastOp"]++;
+    } else if (inst.isBinaryOp()) {
+      stat["MathOp"]++;
+      if (inst.getType()->isFloatingPointTy()) {
+        stat["FloatingPointOp"]++;
+        if (inst.getOpcode() == Instruction::FMul || inst.getOpcode() == Instruction::FDiv)
+          stat["FloatMulDivOp"]++;
+      } else
+        stat["IntegerOp"]++;
+    }
+    if (inst.isShift()) {
+      stat["Shift"]++;
+    }
+    
+    if (call || invoke) {
+      std::stringstream stm;
+      
+      if (call) {
+        stm << "call(";
+      } else {
+        stm << "invoke(";
+      }
+      
+      if (opnd) {
+        stm << opnd->getName().str();
+      } else {
+        stm << "%indirect";
+      }
+      
+      stm << ")";
+      stat[stm.str()]++;
+    }
+  }
+  
+  return;
+}
+
+
+bool analyze_function(Function *f, std::unordered_set<BasicBlock *>& countedbbs, std::map<std::string, int>& stat, int &eval, int &ninstr)
+{
+  if (Verbose)
+    std::cerr << " Function: " << f->getName().str() << std::endl;
+  
+  auto &bblist = f->getBasicBlockList();
+  if (bblist.empty()) {
+    return false;
+  }
+  
+  if (countedbbs.find(&(f->getEntryBlock())) != countedbbs.end()) {
     if (Verbose)
       std::cerr << "Recursion!" << std::endl;
     return true;
   }
-  if (Verbose)
-    std::cerr << " Function: " << f->getName().str() << std::endl;
-  funcs.insert(f);
   
-  auto &bblist = f->getBasicBlockList();
-  if (bblist.empty()) {
-    funcs.erase(f);
-    return false;
-  }
-  
-  for (auto iter2 = f->getBasicBlockList().begin(); iter2 != f->getBasicBlockList().end(); iter2++) {
-    BasicBlock &bb = *iter2;
+  std::deque<block_eval_status> queue;
+  queue.push_back(block_eval_status(&f->getEntryBlock(), eval));
+  while (queue.size() > 0) {
+    block_eval_status top = queue.front();
+    queue.pop_front();
     
-    for (auto iter3 = bb.begin(); iter3 != bb.end(); iter3++) {
-      Instruction &inst = *iter3;
-
-      Function *opnd = nullptr;
-      CallInst *call = dyn_cast<CallInst>(&inst);
-      if (call)
-        opnd = call->getCalledFunction();
-      InvokeInst *invoke = dyn_cast<InvokeInst>(&inst);
-      if (invoke)
-        opnd = invoke->getCalledFunction();
-      
-      if (opnd) {
-        if (opnd->getName() == "polybench_timer_start" ||
-            opnd->getName() == "timer_start") {
-          eval++;
-          continue;
-        } else if (opnd->getName() == "polybench_timer_stop" ||
-                   opnd->getName() == "timer_stop") {
-          eval--;
-        } else if (opnd->getName().contains("AxBenchTimer")) {
-          if (opnd->getName().contains("nanosecondsSinceInit")) {
-            eval--;
-          } else {
-            eval++;
-            continue;
-          }
-        } else if (opnd->getIntrinsicID() == Intrinsic::ID::annotation ||
-                   opnd->getIntrinsicID() == Intrinsic::ID::var_annotation ||
-                   opnd->getIntrinsicID() == Intrinsic::ID::ptr_annotation) {
-          continue;
-        } else {
-          bool success = analyze_function(opnd, funcs, stat, eval, ninstr);
-          if (success && !CountCallSite)
-            continue;
-        }
-      }
-
-      if (!eval)
+    analyze_basic_block(top.block, countedbbs, stat, top.eval, ninstr);
+    eval = top.eval;
+    
+    TerminatorInst *term = top.block->getTerminator();
+    assert(term && "denormal bb found; abort");
+    for (auto nextbb: term->successors()) {
+      if (countedbbs.find(nextbb) != countedbbs.end()) {
+        if (Verbose)
+          std::cerr << "Loop!" << std::endl;
         continue;
-      
-      ninstr++;
-      stat[inst.getOpcodeName()]++;
-
-      if (isa<AllocaInst>(inst) || isa<LoadInst>(inst) || isa<StoreInst>(inst) || isa<GetElementPtrInst>(inst) ) {
-        stat["MemOp"]++;
-      } else if (isa<PHINode>(inst) || isa<SelectInst>(inst) || isa<FCmpInst>(inst) || isa<CmpInst>(inst) ) {
-        stat["CmpOp"]++;
-      } else if (isa<CastInst>(inst)) {
-        stat["CastOp"]++;
-      } else if (inst.isBinaryOp()) {
-        stat["MathOp"]++;
-        if (inst.getType()->isFloatingPointTy()) {
-          stat["FloatingPointOp"]++;
-          if (inst.getOpcode() == Instruction::FMul || inst.getOpcode() == Instruction::FDiv)
-            stat["FloatMulDivOp"]++;
-        } else
-          stat["IntegerOp"]++;
-      }
-      if (inst.isShift()) {
-        stat["Shift"]++;
       }
       
-      if (call || invoke) {
-        std::stringstream stm;
-        
-        if (call) {
-          stm << "call(";
-        } else {
-          stm << "invoke(";
-        }
-        
-        if (opnd) {
-          stm << opnd->getName().str();
-        } else {
-          stm << "%indirect";
-        }
-        
-        stm << ")";
-        stat[stm.str()]++;
-      }
+      queue.push_back(block_eval_status(nextbb, top.eval));
     }
   }
   
-  funcs.erase(f);
   return true;
 }
 
@@ -154,13 +198,13 @@ int main(int argc, char *argv[])
   int eval = 0;
   int ninstr = 0;
   std::map<std::string, int> stat;
-  std::unordered_set<Function *> funcs;
+  std::unordered_set<BasicBlock *> bbs;
   
   Function *mainfunc = m->getFunction("main");
   if (!mainfunc) {
     std::cout << "No main function found!\n";
   } else {
-    analyze_function(mainfunc, funcs, stat, eval, ninstr);
+    analyze_function(mainfunc, bbs, stat, eval, ninstr);
   }
 
   for (auto iter1 = m->getFunctionList().begin();
@@ -169,7 +213,6 @@ int main(int argc, char *argv[])
     
     if (f.getName() != "main")
       continue;
-    
   }
 
   std::cout << "* " << ninstr << std::endl;
