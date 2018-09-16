@@ -162,7 +162,8 @@ struct FloatToFixed : public llvm::ModulePass {
     } else if (GlobalObject *from = dyn_cast<GlobalObject>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
-    } else if (target) {
+    }
+    if (!md && target) {
       md = target->getMetadata(INPUT_INFO_METADATA);
       targetMD = target->getMetadata(TARGET_METADATA);
     }
