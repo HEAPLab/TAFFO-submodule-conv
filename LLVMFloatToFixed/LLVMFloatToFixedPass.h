@@ -73,10 +73,10 @@ struct FloatToFixed : public llvm::ModulePass {
   void getAnalysisUsage(llvm::AnalysisUsage &) const override;
   bool runOnModule(llvm::Module &M) override;
 
-  void readGlobalAnnotations(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *>& res, bool functionAnnotation = false);
-  void readLocalAnnotations(llvm::Function &f, llvm::SmallPtrSetImpl<llvm::Value *>& res);
-  void readAllLocalAnnotations(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *>& res);
-  bool parseAnnotation(llvm::SmallPtrSetImpl<llvm::Value *>& variables, llvm::ConstantExpr *annoPtrInst, llvm::Value *instr);
+  void readGlobalMetadata(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *> &res, bool functionAnnotation = false);
+  void readLocalMetadata(llvm::Function &f, llvm::SmallPtrSetImpl<llvm::Value *> &res);
+  void readAllLocalMetadata(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *> &res);
+  bool parseMetaData(llvm::SmallPtrSetImpl<llvm::Value *> &variables, mdutils::FPType *fpInfo, llvm::Value *instr);
   void removeNoFloatTy(llvm::SmallPtrSetImpl<llvm::Value *>& res);
   void printAnnotatedObj(llvm::Module &m);
 
@@ -115,7 +115,7 @@ struct FloatToFixed : public llvm::ModulePass {
   bool isSpecialFunction(const llvm::Function* f) {
     llvm::StringRef fName = f->getName();
     return fName.startswith("llvm.") || f->getBasicBlockList().size() == 0;
-  }
+  };
 
   llvm::Value *matchOp(llvm::Value *val) {
     llvm::Value *res = operandPool[val];
@@ -151,7 +151,7 @@ struct FloatToFixed : public llvm::ModulePass {
   };
   bool hasInfo(llvm::Value *val) {
     return info.find(val) != info.end();
-  }
+  };
   llvm::Value *cpMetaData(llvm::Value* dst, llvm::Value* src, llvm::Instruction* target = nullptr) {
     using namespace llvm;
     MDNode *md = nullptr;

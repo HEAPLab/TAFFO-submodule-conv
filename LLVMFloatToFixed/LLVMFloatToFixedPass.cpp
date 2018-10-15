@@ -41,8 +41,8 @@ bool FloatToFixed::runOnModule(Module &m)
 
   llvm::SmallPtrSet<llvm::Value *, 32> local;
   llvm::SmallPtrSet<llvm::Value *, 32> global;
-  readAllLocalAnnotations(m, local);
-  readGlobalAnnotations(m, global);
+  readAllLocalMetadata(m, local);
+  readGlobalMetadata(m, global);
   
   std::vector<Value*> rootsa(local.begin(), local.end());
   rootsa.insert(rootsa.begin(), global.begin(), global.end());
@@ -403,7 +403,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         std::vector<Value*> newVals;
         roots.insert(roots.begin(), global.begin(), global.end());
         SmallPtrSet<Value*, 32> localFix;
-        readLocalAnnotations(*newF,localFix);
+        readLocalMetadata(*newF, localFix);
         roots.insert(roots.begin(), localFix.begin(), localFix.end());
         buildConversionQueueForRootValues(roots, newVals);
         
