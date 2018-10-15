@@ -44,21 +44,16 @@ bool FloatToFixed::runOnModule(Module &m)
   readAllLocalMetadata(m, local);
   readGlobalMetadata(m, global);
   
-  std::vector<Value*> rootsa(local.begin(), local.end());
-  rootsa.insert(rootsa.begin(), global.begin(), global.end());
-  AnnotationCount = rootsa.size();
+  std::vector<Value*> vals(local.begin(), local.end());
+  vals.insert(vals.begin(), global.begin(), global.end());
+  MetadataCount = vals.size();
 
-  std::vector<Value*> vals;
-  buildConversionQueueForRootValues(rootsa, vals);
   propagateCall(vals, global);
-  optimizeFixedPointTypes(vals);
-
+  sortQueue(vals);
   DEBUG(printConversionQueue(vals));
-
   ConversionCount = vals.size();
 
   performConversion(m, vals);
-
   cleanup(vals);
 
   return true;
@@ -253,6 +248,56 @@ void FloatToFixed::buildConversionQueueForRootValues(
       merge.insert(oldroots.begin(), oldroots.end());
       valueInfo(u)->roots = merge;
     }
+  }
+}
+
+
+void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals) {
+  size_t next = 0;
+  while (next < vals.size()) {
+    Value *v = vals.at(next);
+
+    for (auto *u: v->users()) {
+
+      /* Insert u at the end of the queue.
+       * If u exists already in the queue, *move* it to the end instead. */
+      for (int i=0; i<vals.size();) {
+        if (vals[i] == u) {
+          vals.erase(vals.begin() + i);
+          if (i < next)
+            next--;
+        } else {
+          i++;
+        }
+      }
+
+      if (Instruction *inst = dyn_cast<Instruction>(u)) {
+        if (inst->getMetadata(INPUT_INFO_METADATA)) {
+          vals.push_back(u);
+          if (!hasInfo(u)) {
+            dbgs() << "[WARNING] Find Value " << *u << " without fixp format!\n";
+            assert(false);
+          }
+        } else {
+          dbgs() << "[WARNING] Find Value " << *u << " without TAFFO info!\n";
+          vals.push_back(u);
+          valueInfo(u)->fixpType = valueInfo(v)->fixpType;
+        }
+
+      } else if (GlobalObject *go = dyn_cast<GlobalObject>(u)) {
+        if (go->getMetadata(INPUT_INFO_METADATA)) {
+          vals.push_back(u);
+          if (!hasInfo(u)) {
+            dbgs() << "[WARNING] Find GlobalObj " << *u << " without fixp format!\n";
+            assert(false);
+          }
+        } else {
+          dbgs() << "[WARNING] Find GlobalObj " << *u << " without TAFFO info!\n";
+        }
+      }
+
+    }
+    next++;
   }
 }
 

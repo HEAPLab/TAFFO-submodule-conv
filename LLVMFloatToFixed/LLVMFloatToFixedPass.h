@@ -10,6 +10,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 #include "FixedPointType.h"
+#include "InputInfo.h"
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
 #define __LLVM_FLOAT_TO_FIXED_PASS_H__
@@ -29,7 +30,7 @@ STATISTIC(FloatToFixWeight, "Number of generic floating point to fixed point val
   " weighted by the loop depth");
 STATISTIC(FallbackCount, "Number of instructions not replaced by a fixed-point-native equivalent");
 STATISTIC(ConversionCount, "Number of instructions affected by flttofix");
-STATISTIC(AnnotationCount, "Number of valid annotations found");
+STATISTIC(MetadataCount, "Number of valid Metadata found");
 STATISTIC(FunctionCreated, "Number of fixed point function inserted");
 
 
@@ -82,6 +83,7 @@ struct FloatToFixed : public llvm::ModulePass {
 
   void optimizeFixedPointTypes(std::vector<llvm::Value*>& queue);
   void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res);
+  void sortQueue(std::vector<llvm::Value*> &vals);
   void cleanup(const std::vector<llvm::Value*>& queue);
   void propagateCall(std::vector<llvm::Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global);
   llvm::Function *createFixFun(llvm::CallSite* call);
