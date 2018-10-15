@@ -416,7 +416,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         SmallVector<ReturnInst*,100> returns;
         CloneFunctionInto(newF, oldF, mapArgs, true, returns);
         
-        std::vector<Value*> roots; //propagate fixp conversion
+        std::vector<Value*> newVals; //propagate fixp conversion
         oldIt = oldF->arg_begin();
         newIt = newF->arg_begin();
         for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
@@ -426,7 +426,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
             // Mark the alloca used for the argument (in O0 opt lvl)
             valueInfo(newIt->user_begin()->getOperand(1))->fixpType = fixtype;
             valueInfo(newIt->user_begin()->getOperand(1))->fixpTypeRootDistance = 0;
-            roots.push_back(newIt->user_begin()->getOperand(1));
+            newVals.push_back(newIt->user_begin()->getOperand(1));
             
             // Mark the argument itself
             valueInfo(newIt)->fixpType = fixtype;
@@ -440,18 +440,17 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         // If return a float, all the return inst should have a fix point (independently from the conv queue)
         if (oldF->getReturnType()->isFloatingPointTy()) {
           for (ReturnInst *v : returns) {
-            roots.push_back(v);
+            newVals.push_back(v);
             valueInfo(v)->fixpType = valueInfo(call->getInstruction())->fixpType;
             valueInfo(v)->fixpTypeRootDistance = 0;
           }
         }
-        std::vector<Value*> newVals;
-        roots.insert(roots.begin(), global.begin(), global.end());
+
+        newVals.insert(newVals.begin(), global.begin(), global.end());
         SmallPtrSet<Value*, 32> localFix;
         readLocalMetadata(*newF, localFix);
-        roots.insert(roots.begin(), localFix.begin(), localFix.end());
-        buildConversionQueueForRootValues(roots, newVals);
-        
+        newVals.insert(newVals.begin(), localFix.begin(), localFix.end());
+
         for (Value *val : newVals){
           if (Instruction *inst = dyn_cast<Instruction>(val)) {
             if (inst->getFunction()==newF){
@@ -496,23 +495,20 @@ Function* FloatToFixed::createFixFun(CallSite* call)
     }
     typeArgs.push_back(newTy);
   }
-  
-  Function *newF;
+
+  Function *newF = functionPool[oldF]; //check if is previously converted
+  if (newF) {
+    DEBUG(dbgs() << *(call->getInstruction()) <<  " use already converted function : " <<
+                 newF->getName() << " " << *newF->getType() << "\n";);
+    return nullptr;
+  }
+
   FunctionType *newFunTy = FunctionType::get(
       isFloatType(oldF->getReturnType()) ?
       getLLVMFixedPointTypeForFloatValue(call->getInstruction()) :
       oldF->getReturnType(),
       typeArgs, oldF->isVarArg());
-  
-  for (FunInfo f : functionPool[oldF]) { //check if is previously converted
-    if (f.fixArgs == fixArgs) {
-      newF = f.newFun;
-      DEBUG(dbgs() << *(call->getInstruction()) <<  " use already converted function : " <<
-                   newF->getName() << " " << *newF->getType() << "\n";);
-      return nullptr;
-    }
-  }
-  
+
   DEBUG({
     dbgs() << "creating function " << oldF->getName() << "_" << suffix << " with types ";
     for (auto pair: fixArgs) {
@@ -522,10 +518,7 @@ Function* FloatToFixed::createFixFun(CallSite* call)
   });
   
   newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_" + suffix, oldF->getParent());
-  FunInfo funInfo; //add to pool
-  funInfo.newFun = newF;
-  funInfo.fixArgs = fixArgs;
-  functionPool[oldF].push_back(funInfo);
+  functionPool[oldF] = newF; //add to pool
   FunctionCreated++;
   return newF;
 }

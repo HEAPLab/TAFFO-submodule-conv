@@ -54,18 +54,12 @@ struct ValueInfo {
   llvm::Type *origType;
 };
 
-struct FunInfo {
-  llvm::Function* newFun;
-  std::vector<std::pair<int,FixedPointType>> fixArgs;
-};
-
-
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
   FixedPointType defaultFixpType;
   
   llvm::DenseMap<llvm::Value *, llvm::Value *> operandPool;
-  llvm::DenseMap<llvm::Function*, std::vector<FunInfo>> functionPool;
+  llvm::DenseMap<llvm::Function*, llvm::Function*> functionPool;
   
   /* to not be accessed directly, use valueInfo() */
   llvm::DenseMap<llvm::Value *, std::shared_ptr<ValueInfo>> info;

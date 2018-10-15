@@ -307,28 +307,26 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
     typeArgs.push_back(convArgs[i]->getType());
   }
 
-  Function *newF;
-  for (FunInfo f : functionPool[oldF]) { //get right function
-    if (f.fixArgs == fixArgs) {
-      newF = f.newFun;
-      DEBUG(dbgs() << *(call->getInstruction()) <<  " use converted function : " <<
-                   newF->getName() << " " << *newF->getType() << "\n";);
-      
-      if (call->isCall()) {
-        CallInst *newCall = CallInst::Create(newF, convArgs);
-        newCall->insertBefore(call->getInstruction());
-        return newCall;
-      } else if (call->isInvoke()) {
-        InvokeInst *invk = dyn_cast<InvokeInst>(call->getInstruction());
-        InvokeInst *newInvk = InvokeInst::Create(newF, invk->getNormalDest(), invk->getUnwindDest(), convArgs);
-        newInvk->insertBefore(invk);
-        return newInvk;
-      } else {
-        assert("Unknown CallSite type");
-      }
+  Function *newF = functionPool[oldF];
+  if (newF) {
+    DEBUG(dbgs() << *(call->getInstruction()) <<  " use converted function : " <<
+                 newF->getName() << " " << *newF->getType() << "\n";);
+
+    if (call->isCall()) {
+      CallInst *newCall = CallInst::Create(newF, convArgs);
+      newCall->insertBefore(call->getInstruction());
+      return newCall;
+    } else if (call->isInvoke()) {
+      InvokeInst *invk = dyn_cast<InvokeInst>(call->getInstruction());
+      InvokeInst *newInvk = InvokeInst::Create(newF, invk->getNormalDest(), invk->getUnwindDest(), convArgs);
+      newInvk->insertBefore(invk);
+      return newInvk;
+    } else {
+      assert("Unknown CallSite type");
     }
   }
-  
+
+
   dbgs() << "[Error]" << *(call->getInstruction()) << " doesn't find a function to call!\n";
   dbgs() << "new types should have been ";
   for (auto pair: fixArgs) {
