@@ -16,7 +16,7 @@
 #define __LLVM_FLOAT_TO_FIXED_PASS_H__
 
 
-#define DEBUG_TYPE "flttofix"
+#define DEBUG_TYPE "taffo-conversion"
 #define DEBUG_ANNOTATION "annotation"
 
 #define INPUT_INFO_METADATA "taffo.info"
