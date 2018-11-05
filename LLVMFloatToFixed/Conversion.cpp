@@ -40,7 +40,7 @@ void FloatToFixed::performConversion(
       }
     }
     
-    DEBUG(dbgs() << "performConversion " << *v << "\n");
+    LLVM_DEBUG(dbgs() << "performConversion " << *v << "\n");
     
     Value *newv = convertSingleValue(m, v, valueInfo(v)->fixpType);
     if (newv) {
@@ -51,7 +51,7 @@ void FloatToFixed::performConversion(
       cpMetaData(newv,v);
       *valueInfo(newv) = *valueInfo(v);
     } else {
-      DEBUG(dbgs() << "warning: ";
+      LLVM_DEBUG(dbgs() << "warning: ";
             v->print(dbgs());
             dbgs() << " not converted\n";);
     }
@@ -113,7 +113,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
     if (tentativeIp)
       ip = tentativeIp;
     else
-      DEBUG(dbgs() << "warning: genConvertFloatToFix on a BB-terminating inst\n");
+      LLVM_DEBUG(dbgs() << "warning: genConvertFloatToFix on a BB-terminating inst\n");
   } else if (Argument *arg = dyn_cast<Argument>(flt)) {
     Function *fun = arg->getParent();
     BasicBlock& firstbb = fun->getEntryBlock();
@@ -122,7 +122,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
   assert(ip && "ip is mandatory if not passing an instruction/constant value");
   
   if (!flt->getType()->isFloatingPointTy()) {
-    DEBUG(errs() << "can't wrap-convert to fixp non float value ";
+    LLVM_DEBUG(errs() << "can't wrap-convert to fixp non float value ";
           flt->print(errs());
           errs() << "\n");
     return nullptr;
@@ -207,7 +207,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
 
 Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixpt, Type *destt)
 {
-  DEBUG(dbgs() << "******** trace: genConvertFixToFloat ";
+  LLVM_DEBUG(dbgs() << "******** trace: genConvertFixToFloat ";
   fix->print(dbgs());
   dbgs() << " -> ";
   destt->print(dbgs());
@@ -220,7 +220,7 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
   FixToFloatWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(fix)));
   
   if (!fix->getType()->isIntegerTy()) {
-    DEBUG(errs() << "can't wrap-convert to flt non integer value ";
+    LLVM_DEBUG(errs() << "can't wrap-convert to flt non integer value ";
           fix->print(errs());
           errs() << "\n");
     return nullptr;
@@ -257,7 +257,7 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPoi
     return baset.toLLVMType(srct->getContext());
     
   }
-  DEBUG(
+  LLVM_DEBUG(
     dbgs() << "getLLVMFixedPointTypeForFloatType given non-float type ";
     srct->print(dbgs());
     dbgs() << "\n";

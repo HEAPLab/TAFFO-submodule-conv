@@ -135,7 +135,7 @@ Value *FloatToFixed::convertStore(StoreInst *store)
         bc->insertBefore(store);
         newval = bc;
       }
-      DEBUG(dbgs()<< "[Store] Detect pointer store :"<< *store << "\n");
+      LLVM_DEBUG(dbgs()<< "[Store] Detect pointer store :"<< *store << "\n");
       
     } else {
       return nullptr;
@@ -237,7 +237,7 @@ Value *FloatToFixed::convertPhi(PHINode *load, FixedPointType& fixpt)
     }
     Instruction *inst2 = dyn_cast<Instruction>(newval);
     if (inst2) {
-      DEBUG(dbgs() << "warning: new phi value " << *inst2 << " not coming from the obviously correct BB\n");
+      LLVM_DEBUG(dbgs() << "warning: new phi value " << *inst2 << " not coming from the obviously correct BB\n");
     }
     newphi->addIncoming(newval, thisbb);
   }
@@ -309,7 +309,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 
   Function *newF = functionPool[oldF];
   if (newF) {
-    DEBUG(dbgs() << *(call->getInstruction()) <<  " use converted function : " <<
+    LLVM_DEBUG(dbgs() << *(call->getInstruction()) <<  " use converted function : " <<
                  newF->getName() << " " << *newF->getType() << "\n";);
 
     if (call->isCall()) {
@@ -577,7 +577,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
   Instruction *fixval;
   std::vector<Value *> newops;
 
-  DEBUG(dbgs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n");
+  LLVM_DEBUG(dbgs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n");
   FallbackCount++;
 
   for (int i=0,n=unsupp->getNumOperands();i<n;i++) {
@@ -585,7 +585,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
 
     Value *cvtfallval = operandPool[fallval];
     if (cvtfallval == ConversionError) {
-      DEBUG(dbgs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
+      LLVM_DEBUG(dbgs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
       return nullptr;
     }
 
@@ -604,7 +604,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
                  ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval, fixPType(cvtfallval), fallval->getType()))
                  : dyn_cast<Instruction>(cvtfallval);
       }
-      DEBUG(dbgs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
+      LLVM_DEBUG(dbgs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
       newops.push_back(fixval);
     } else {
       newops.push_back(fallval);
@@ -619,7 +619,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
   for (int i=0, n=tmp->getNumOperands(); i<n; i++) {
     tmp->setOperand(i, newops[i]);
   }
-  DEBUG(dbgs() << "  mutated operands to:\n" << *tmp << "\n");
+  LLVM_DEBUG(dbgs() << "  mutated operands to:\n" << *tmp << "\n");
   if (tmp->getType()->isFloatingPointTy()) {
     Value *fallbackv = genConvertFloatToFix(tmp, fixpt, tmp);
     if (tmp->hasName())

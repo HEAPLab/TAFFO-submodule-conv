@@ -93,7 +93,7 @@ void FloatToFixed::removeNoFloatTy(SmallPtrSetImpl<Value *> &res)
     } else if ((global = dyn_cast<GlobalVariable>(it))) {
       ty = global->getType();
     } else {
-      DEBUG(dbgs() << "annotated instruction " << *it <<
+      LLVM_DEBUG(dbgs() << "annotated instruction " << *it <<
         " not an alloca or a global, ignored\n");
       res.erase(it);
       continue;
@@ -106,7 +106,7 @@ void FloatToFixed::removeNoFloatTy(SmallPtrSetImpl<Value *> &res)
         ty = ty->getArrayElementType();
     }
     if (!ty->isFloatingPointTy()) {
-      DEBUG(dbgs() << "annotated instruction " << *it << " does not allocate a"
+      LLVM_DEBUG(dbgs() << "annotated instruction " << *it << " does not allocate a"
         " kind of float; ignored\n");
       res.erase(it);
     }

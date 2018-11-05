@@ -133,7 +133,7 @@ struct FloatToFixed : public llvm::ModulePass {
   std::shared_ptr<ValueInfo> valueInfo(llvm::Value *val) {
     auto vi = info.find(val);
     if (vi == info.end()) {
-      DEBUG(llvm::dbgs() << "new valueinfo for " << *val << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "new valueinfo for " << *val << "\n");
       info[val] = std::make_shared<ValueInfo>(ValueInfo());
       return info[val];
     } else {
@@ -170,9 +170,9 @@ struct FloatToFixed : public llvm::ModulePass {
       else if (GlobalObject *to = dyn_cast<GlobalObject>(dst))
         to->setMetadata(INPUT_INFO_METADATA, md);
       else
-        DEBUG(llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n");
+        LLVM_DEBUG(llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n");
     } else {
-      DEBUG(llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n");
     }
 
     if (targetMD) {
