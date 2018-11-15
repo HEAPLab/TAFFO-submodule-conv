@@ -1,9 +1,0 @@
-_tmp*
-*_out
-*_out._not_opt
-*.output.csv
-*.dSYM
-*.log
-raw-times
-raw-times-64
-raw-times-32
