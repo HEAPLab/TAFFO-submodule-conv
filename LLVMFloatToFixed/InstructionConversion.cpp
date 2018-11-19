@@ -316,11 +316,13 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
       
       if (call->isCall()) {
         CallInst *newCall = CallInst::Create(newF, convArgs);
+        newCall->setCallingConv(call->getCallingConv());
         newCall->insertBefore(call->getInstruction());
         return newCall;
       } else if (call->isInvoke()) {
         InvokeInst *invk = dyn_cast<InvokeInst>(call->getInstruction());
         InvokeInst *newInvk = InvokeInst::Create(newF, invk->getNormalDest(), invk->getUnwindDest(), convArgs);
+        newInvk->setCallingConv(call->getCallingConv());
         newInvk->insertBefore(invk);
         return newInvk;
       } else {
