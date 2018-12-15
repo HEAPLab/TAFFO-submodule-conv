@@ -366,7 +366,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         Function::arg_iterator oldIt = oldF->arg_begin();
         for (; oldIt != oldF->arg_end() ; oldIt++, newIt++) {
           newIt->setName(oldIt->getName());
-          mapArgs.insert(std::make_pair(oldIt, newIt));
+          mapArgs.insert(std::make_pair(&(*oldIt), &(*newIt)));
         }
         SmallVector<ReturnInst*,100> returns;
         CloneFunctionInto(newF, oldF, mapArgs, true, returns);
@@ -384,8 +384,8 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
             roots.push_back(newIt->user_begin()->getOperand(1));
             
             // Mark the argument itself
-            valueInfo(newIt)->fixpType = fixtype;
-            valueInfo(newIt)->fixpTypeRootDistance = 0;
+            valueInfo(&(*newIt))->fixpType = fixtype;
+            valueInfo(&(*newIt))->fixpTypeRootDistance = 0;
             
             //append fixp info to arg name
             newIt->setName(newIt->getName() + "." + fixtype.toString());

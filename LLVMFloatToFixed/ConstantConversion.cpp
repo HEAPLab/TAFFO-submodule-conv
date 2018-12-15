@@ -10,7 +10,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include <cmath>
 #include <cassert>
 #include "LLVMFloatToFixedPass.h"
