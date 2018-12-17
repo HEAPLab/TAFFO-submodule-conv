@@ -15,3 +15,5 @@ if (NOT LLVM_ENABLE_RTTI)
   target_compile_options(istr_type PRIVATE -fno-rtti)
 endif()
 
+install(TARGETS istr_type DESTINATION bin)
+
