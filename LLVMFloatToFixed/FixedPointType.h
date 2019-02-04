@@ -17,23 +17,57 @@
 namespace flttofix {
 
 
-struct FixedPointType {
-  bool isSigned;
-  int fracBitsAmt;
-  int bitsAmt;
+class FixedPointType {
+private:
+  struct Primitive {
+    bool isSigned;
+    int fracBitsAmt;
+    int bitsAmt;
+    
+    bool operator==(const Primitive& rhs) const {
+      return this->isSigned == rhs.isSigned &&
+        this->fracBitsAmt == rhs.fracBitsAmt &&
+        this->bitsAmt == rhs.bitsAmt;
+    };
+    
+    std::string toString() const;
+  };
+  std::vector<Primitive> elements;
   
+public:
   FixedPointType();
-  FixedPointType(bool s, int f, int b) : isSigned(s), fracBitsAmt(f), bitsAmt(b) {};
+  FixedPointType(bool s, int f, int b);
   FixedPointType(llvm::Type *llvmtype, bool signd = true);
-  llvm::Type *toLLVMType(llvm::LLVMContext& ctxt) const;
+  
   std::string toString() const;
   
-  bool operator==(const FixedPointType& rhs) const {
-    return this->isSigned == rhs.isSigned &&
-      this->fracBitsAmt == rhs.fracBitsAmt &&
-      this->bitsAmt == rhs.bitsAmt;
+  llvm::Type *scalarToLLVMType(llvm::LLVMContext& ctxt) const;
+  inline bool& scalarIsSigned(void) {
+    assert(elements.size() == 1 && "fixed point type not a scalar");
+    return elements[0].isSigned;
+  };
+  inline bool scalarIsSigned(void) const {
+    assert(elements.size() == 1 && "fixed point type not a scalar");
+    return elements[0].isSigned;
+  };
+  inline int& scalarFracBitsAmt(void) {
+    assert(elements.size() == 1 && "fixed point type not a scalar");
+    return elements[0].fracBitsAmt;
+  };
+  inline int scalarFracBitsAmt(void) const {
+    assert(elements.size() == 1 && "fixed point type not a scalar");
+    return elements[0].fracBitsAmt;
+  };
+  inline int& scalarBitsAmt(void) {
+    assert(elements.size() == 1 && "fixed point type not a scalar");
+    return elements[0].bitsAmt;
+  };
+  inline int scalarBitsAmt(void) const {
+    assert(elements.size() == 1 && "fixed point type not a scalar");
+    return elements[0].bitsAmt;
   };
   
+  bool operator==(const FixedPointType& rhs) const;
 };
 
 

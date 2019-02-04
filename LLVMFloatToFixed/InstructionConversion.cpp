@@ -224,7 +224,7 @@ Value *FloatToFixed::convertPhi(PHINode *load, FixedPointType& fixpt)
   /* if we have to do a type change, create a new phi node. The new type is for
    * sure that of a fixed point value; because the original type was a float
    * and thus all of its incoming values were floats */
-  PHINode *newphi = PHINode::Create(fixpt.toLLVMType(load->getContext()),
+  PHINode *newphi = PHINode::Create(fixpt.scalarToLLVMType(load->getContext()),
     load->getNumIncomingValues());
 
   for (int i=0; i<load->getNumIncomingValues(); i++) {
@@ -403,7 +403,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
       return builder.CreateBinOp(Instruction::Sub, val1, val2);
     
     else if (opc == Instruction::FRem) {
-      if (fixpt.isSigned)
+      if (fixpt.scalarIsSigned())
         return builder.CreateBinOp(Instruction::SRem, val1, val2);
       else
         return builder.CreateBinOp(Instruction::URem, val1, val2);
@@ -411,33 +411,33 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
 
   } else if (opc == Instruction::FMul || opc == Instruction::FDiv) {
     FixedPointType intermtype(
-      fixpt.isSigned,
-      intype1.fracBitsAmt + intype2.fracBitsAmt,
-      intype1.bitsAmt + intype2.bitsAmt);
-    Type *dbfxt = intermtype.toLLVMType(instr->getContext());
+      fixpt.scalarIsSigned(),
+      intype1.scalarFracBitsAmt() + intype2.scalarFracBitsAmt(),
+      intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
+    Type *dbfxt = intermtype.scalarToLLVMType(instr->getContext());
   
     if (opc == Instruction::FMul) {
-      Value *ext1 = intype1.isSigned ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
-      Value *ext2 = intype2.isSigned ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+      Value *ext1 = intype1.scalarIsSigned() ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
+      Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
       Value *fixop = builder.CreateMul(ext1, ext2);
       cpMetaData(ext1,val1);
       cpMetaData(ext2,val2);
       cpMetaData(fixop,ext1);
       cpMetaData(fixop,ext2);
-      updateFPTypeMetadata(fixop, intermtype.isSigned, intype1.fracBitsAmt, intermtype.bitsAmt);
+      updateFPTypeMetadata(fixop, intermtype.scalarIsSigned(), intype1.scalarFracBitsAmt(), intermtype.scalarBitsAmt());
       return genConvertFixedToFixed(fixop, intermtype, fixpt);
       
     } else {
       FixedPointType fixoptype(
-        fixpt.isSigned,
-        intype1.fracBitsAmt,
-        intype1.bitsAmt + intype2.bitsAmt);
+        fixpt.scalarIsSigned(),
+        intype1.scalarFracBitsAmt(),
+        intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
       Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype, instr);
-      Value *ext2 = intype1.isSigned ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
-      Value *fixop = fixpt.isSigned ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
+      Value *ext2 = intype1.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+      Value *fixop = fixpt.scalarIsSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
       cpMetaData(ext2,val2);
       cpMetaData(fixop,ext2);
-      updateFPTypeMetadata(fixop, fixoptype.isSigned, fixoptype.fracBitsAmt, fixoptype.bitsAmt);
+      updateFPTypeMetadata(fixop, fixoptype.scalarIsSigned(), fixoptype.scalarFracBitsAmt(), fixoptype.scalarBitsAmt());
       return genConvertFixedToFixed(fixop, fixoptype, fixpt);
     }
   }
@@ -460,18 +460,18 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
   } else if (hasinfo1) {
     t1 = fixPType(op1);
     t2 = t1;
-    t2.isSigned = true;
+    t2.scalarIsSigned() = true;
   } else if (hasinfo2) {
     t2 = fixPType(op2);
     t1 = t2;
-    t1.isSigned = true;
+    t1.scalarIsSigned() = true;
   }
-  bool mixedsign = t1.isSigned != t2.isSigned;
-  int intpart1 = t1.bitsAmt - t1.fracBitsAmt + (mixedsign ? t1.isSigned : 0);
-  int intpart2 = t2.bitsAmt - t2.fracBitsAmt + (mixedsign ? t2.isSigned : 0);
-  cmptype.isSigned = t1.isSigned || t2.isSigned;
-  cmptype.fracBitsAmt = std::max(t1.fracBitsAmt, t2.fracBitsAmt);
-  cmptype.bitsAmt = std::max(intpart1, intpart2) + cmptype.fracBitsAmt;
+  bool mixedsign = t1.scalarIsSigned() != t2.scalarIsSigned();
+  int intpart1 = t1.scalarBitsAmt() - t1.scalarFracBitsAmt() + (mixedsign ? t1.scalarIsSigned() : 0);
+  int intpart2 = t2.scalarBitsAmt() - t2.scalarFracBitsAmt() + (mixedsign ? t2.scalarIsSigned() : 0);
+  cmptype.scalarIsSigned() = t1.scalarIsSigned() || t2.scalarIsSigned();
+  cmptype.scalarFracBitsAmt() = std::max(t1.scalarFracBitsAmt(), t2.scalarFracBitsAmt());
+  cmptype.scalarBitsAmt() = std::max(intpart1, intpart2) + cmptype.scalarFracBitsAmt();
   
   Value *val1 = translateOrMatchOperandAndType(op1, cmptype, fcmp);
   Value *val2 = translateOrMatchOperandAndType(op2, cmptype, fcmp);
@@ -492,13 +492,13 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
   } else if (pr == CmpInst::FCMP_ONE) {
     ty = CmpInst::ICMP_NE;
   } else if (pr == CmpInst::FCMP_OGT) {
-    ty = cmptype.isSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
+    ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
   } else if (pr == CmpInst::FCMP_OGE) {
-    ty = cmptype.isSigned ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
+    ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
   } else if (pr == CmpInst::FCMP_OLE) {
-    ty = cmptype.isSigned ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
+    ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
   } else if (pr == CmpInst::FCMP_OLT) {
-    ty = cmptype.isSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
+    ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
   } else if (pr == CmpInst::FCMP_ORD) {
     ;
     //TODO gestione NaN

@@ -139,18 +139,18 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
     Value *intparam = instr->getOperand(0);
     return cpMetaData(builder.CreateShl(
               cpMetaData(builder.CreateIntCast(intparam, destt, true),flt,ip),
-            fixpt.fracBitsAmt),flt,ip);
+            fixpt.scalarFracBitsAmt()),flt,ip);
   } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(flt)) {
     Value *intparam = instr->getOperand(0);
     return cpMetaData(builder.CreateShl(
               cpMetaData(builder.CreateIntCast(intparam, destt, false),flt,ip),
-            fixpt.fracBitsAmt),flt,ip);
+            fixpt.scalarFracBitsAmt()),flt,ip);
   } else {
-    double twoebits = pow(2.0, fixpt.fracBitsAmt);
+    double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
     Value *interm = cpMetaData(builder.CreateFMul(
           cpMetaData(ConstantFP::get(flt->getType(), twoebits),flt,ip),
         flt),flt,ip);
-    if (fixpt.isSigned) {
+    if (fixpt.scalarIsSigned()) {
       return cpMetaData(builder.CreateFPToSI(interm, destt),flt,ip);
     } else {
       return cpMetaData(builder.CreateFPToUI(interm, destt),flt,ip);
@@ -168,7 +168,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");
   assert(llvmsrct->isIntegerTy() && "cannot change fixed point format of a float");
   
-  Type *llvmdestt = destt.toLLVMType(fix->getContext());
+  Type *llvmdestt = destt.scalarToLLVMType(fix->getContext());
   
   Instruction *fixinst = dyn_cast<Instruction>(fix);
   if (fixinst)
@@ -178,7 +178,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   IRBuilder<> builder(ip);
 
   auto genSizeChange = [&](Value *fix) -> Value* {
-    if (destt.isSigned) {
+    if (destt.scalarIsSigned()) {
       return cpMetaData(builder.CreateSExtOrTrunc(fix, llvmdestt),fix);
     } else {
       return cpMetaData(builder.CreateZExtOrTrunc(fix, llvmdestt),fix);
@@ -186,11 +186,11 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   };
   
   auto genPointMovement = [&](Value *fix) -> Value* {
-    int deltab = destt.fracBitsAmt - srct.fracBitsAmt;
+    int deltab = destt.scalarFracBitsAmt() - srct.scalarFracBitsAmt();
     if (deltab > 0) {
       return cpMetaData(builder.CreateShl(fix, deltab),fix);
     } else if (deltab < 0) {
-      if (srct.isSigned) {
+      if (srct.scalarIsSigned()) {
         return cpMetaData(builder.CreateAShr(fix, -deltab),fix);
       } else {
         return cpMetaData(builder.CreateLShr(fix, -deltab),fix);
@@ -199,7 +199,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
     return fix;
   };
   
-  if (destt.bitsAmt > srct.bitsAmt)
+  if (destt.scalarBitsAmt() > srct.scalarBitsAmt())
     return genPointMovement(genSizeChange(fix));
   return genSizeChange(genPointMovement(fix));
 }
@@ -228,9 +228,9 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
 
   IRBuilder<> builder(i->getNextNode());
   
-  Value *floattmp = fixpt.isSigned ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
+  Value *floattmp = fixpt.scalarIsSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
   cpMetaData(floattmp,fix);
-  double twoebits = pow(2.0, fixpt.fracBitsAmt);
+  double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
   return cpMetaData(builder.CreateFDiv(floattmp,
                                        cpMetaData(ConstantFP::get(destt, twoebits), fix)),fix);
 }
@@ -254,7 +254,7 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPoi
   } else if (srct->isFloatingPointTy()) {
     if (hasfloats)
       *hasfloats = true;
-    return baset.toLLVMType(srct->getContext());
+    return baset.scalarToLLVMType(srct->getContext());
     
   }
   DEBUG(

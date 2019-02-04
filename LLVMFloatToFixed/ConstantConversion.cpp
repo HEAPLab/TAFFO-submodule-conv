@@ -151,13 +151,13 @@ Constant *FloatToFixed::convertConstantDataSequential(ConstantDataSequential *cd
   if (!isFloatType(cds->getElementType()))
     return cds;
   
-  if (fixpt.bitsAmt <= 8)
+  if (fixpt.scalarBitsAmt() <= 8)
     return createConstantDataSequential<uint8_t>(cds, fixpt);
-  else if (fixpt.bitsAmt <= 16)
+  else if (fixpt.scalarBitsAmt() <= 16)
     return createConstantDataSequential<uint16_t>(cds, fixpt);
-  else if (fixpt.bitsAmt <= 32)
+  else if (fixpt.scalarBitsAmt() <= 32)
     return createConstantDataSequential<uint32_t>(cds, fixpt);
-  else if (fixpt.bitsAmt <= 64)
+  else if (fixpt.scalarBitsAmt() <= 64)
     return createConstantDataSequential<uint64_t>(cds, fixpt);
   
   DEBUG(dbgs() << fixpt << " too big for ConstantDataArray/Vector; 64 bit max\n");
@@ -171,7 +171,7 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, co
   APSInt fixval;
   
   if (convertAPFloat(val, fixval, context, fixpt)) {
-    Type *intty = fixpt.toLLVMType(fpc->getContext());
+    Type *intty = fixpt.scalarToLLVMType(fpc->getContext());
     return ConstantInt::get(intty, fixval);
   }
   
@@ -183,11 +183,11 @@ bool FloatToFixed::convertAPFloat(APFloat val, APSInt& fixval, Instruction *cont
 {
   bool precise = false;
 
-  APFloat exp(pow(2.0, fixpt.fracBitsAmt));
+  APFloat exp(pow(2.0, fixpt.scalarFracBitsAmt()));
   exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
   val.multiply(exp, APFloat::rmTowardNegative);
 
-  fixval = APSInt(fixpt.bitsAmt, !fixpt.isSigned);
+  fixval = APSInt(fixpt.scalarBitsAmt(), !fixpt.scalarIsSigned());
   APFloat::opStatus cvtres = val.convertToInteger(fixval, APFloat::rmTowardNegative, &precise);
   
   if (cvtres != APFloat::opStatus::opOK && context) {

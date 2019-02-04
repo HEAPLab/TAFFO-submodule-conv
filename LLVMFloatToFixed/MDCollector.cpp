@@ -82,9 +82,9 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> &variables, FPType *fp
 
   vi.isBacktrackingNode = false;
   vi.fixpTypeRootDistance = 0;
-  vi.fixpType.bitsAmt = fpInfo->getWidth();
-  vi.fixpType.fracBitsAmt = fpInfo->getPointPos();
-  vi.fixpType.isSigned = fpInfo->isSigned();
+  vi.fixpType.scalarBitsAmt() = fpInfo->getWidth();
+  vi.fixpType.scalarFracBitsAmt() = fpInfo->getPointPos();
+  vi.fixpType.scalarIsSigned() = fpInfo->isSigned();
 
   variables.insert(instr);
   *valueInfo(instr) = vi;
