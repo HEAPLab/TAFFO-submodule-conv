@@ -60,16 +60,20 @@ bool FloatToFixed::runOnModule(Module &m)
 }
 
 
-bool flttofix::isFloatType(Type *srct)
+Type *flttofix::fullyUnwrapPointerOrArrayType(Type *srct)
 {
   if (srct->isPointerTy()) {
-    return isFloatType(srct->getPointerElementType());
+    return fullyUnwrapPointerOrArrayType(srct->getPointerElementType());
   } else if (srct->isArrayTy()) {
-    return isFloatType(srct->getArrayElementType());
-  } else if (srct->isFloatingPointTy()) {
-    return true;
+    return fullyUnwrapPointerOrArrayType(srct->getArrayElementType());
   }
-  return false;
+  return srct;
+}
+
+
+bool flttofix::isFloatType(Type *srct)
+{
+  return fullyUnwrapPointerOrArrayType(srct)->isFloatingPointTy();
 }
 
 

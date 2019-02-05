@@ -18,41 +18,46 @@ using namespace flttofix;
 
 FixedPointType::FixedPointType()
 {
-  Primitive element = {false, 0, 0};
-  elements.push_back(element);
+  structData = nullptr;
+  scalarData = {false, 0, 0};
 }
 
 
 FixedPointType::FixedPointType(bool s, int f, int b)
 {
-  Primitive element = {s, f, b};
-  elements.push_back(element);
+  structData = nullptr;
+  scalarData = {s, f, b};
 }
 
 
 FixedPointType::FixedPointType(Type *llvmtype, bool signd)
 {
-  Primitive element;
-  element.isSigned = signd;
+  structData = nullptr;
+  scalarData.isSigned = signd;
   if (isFloatType(llvmtype)) {
-    element.fracBitsAmt = 0;
-    element.bitsAmt = 0;
+    scalarData.fracBitsAmt = 0;
+    scalarData.bitsAmt = 0;
   } else if (llvmtype->isIntegerTy()) {
-    element.fracBitsAmt = 0;
-    element.bitsAmt = llvmtype->getIntegerBitWidth();
+    scalarData.fracBitsAmt = 0;
+    scalarData.bitsAmt = llvmtype->getIntegerBitWidth();
   } else {
-    element.isSigned = false;
-    element.fracBitsAmt = 0;
-    element.bitsAmt = 0;
+    scalarData.isSigned = false;
+    scalarData.fracBitsAmt = 0;
+    scalarData.bitsAmt = 0;
   }
-  elements.push_back(element);
+}
+
+
+FixedPointType::FixedPointType(const llvm::ArrayRef<FixedPointType>& elems)
+{
+  structData.reset(new SmallVector<FixedPointType, 2>(elems.begin(), elems.end()));
 }
 
 
 Type *FixedPointType::scalarToLLVMType(LLVMContext& ctxt) const
 {
-  assert(elements.size() == 1 && "fixed point type not a scalar");
-  return Type::getIntNTy(ctxt, elements[0].bitsAmt);
+  assert(!structData && "fixed point type not a scalar");
+  return Type::getIntNTy(ctxt, scalarData.bitsAmt);
 }
 
 
@@ -72,17 +77,17 @@ std::string FixedPointType::toString() const
 {
   std::stringstream stm;
   
-  if (elements.size() > 1)
+  if (!structData) {
+    stm << scalarData.toString();
+  } else {
     stm << '<';
-  
-  for (int i=0; i<elements.size(); i++) {
-    stm << elements[i].toString();
-    if (elements.size() > 1 && i != elements.size()-1)
-      stm << ',';
-  }
-  
-  if (elements.size() > 1)
+    for (int i=0; i<structData->size(); i++) {
+      stm << (*structData)[i].toString();
+      if (i != structData->size()-1)
+        stm << ',';
+    }
     stm << '>';
+  }
   
   return stm.str();
 }
@@ -97,11 +102,15 @@ raw_ostream& operator<<(raw_ostream& stm, const FixedPointType& f)
 
 bool FixedPointType::operator==(const FixedPointType& rhs) const
 {
-  if (rhs.elements.size() != elements.size())
-    return false;
-  for (int i=0; i<elements.size(); i++) {
-    if (!(rhs.elements[i] == elements[i]))
+  if (!structData) {
+    return scalarData == rhs.scalarData;
+  } else {
+    if (structData->size() != rhs.structData->size())
       return false;
+    for (int i=0; i<structData->size(); i++) {
+      if (!((*structData)[i] == (*rhs.structData)[i]))
+        return false;
+    }
   }
   return true;
 }

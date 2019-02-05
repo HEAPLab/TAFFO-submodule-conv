@@ -251,6 +251,21 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPoi
       return ArrayType::get(enc, nel);
     return nullptr;
     
+  } else if (srct->isStructTy()) {
+    SmallVector<Type *, 2> elems;
+    for (int i=0; i<srct->getStructNumElements(); i++) {
+      const FixedPointType& fpelemt = baset.structItem(i);
+      Type *baseelemt = srct->getStructElementType(i);
+      Type *newelemt;
+      if (!fpelemt.isInvalid()) {
+        newelemt = getLLVMFixedPointTypeForFloatType(baseelemt, fpelemt);
+      } else {
+        newelemt = baseelemt;
+      }
+      elems.push_back(newelemt);
+    }
+    return StructType::get(srct->getContext(), elems, dyn_cast<StructType>(srct)->isPacked());
+    
   } else if (srct->isFloatingPointTy()) {
     if (hasfloats)
       *hasfloats = true;
@@ -258,7 +273,7 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPoi
     
   }
   DEBUG(
-    dbgs() << "getLLVMFixedPointTypeForFloatType given non-float type ";
+    dbgs() << "getLLVMFixedPointTypeForFloatType given unexpected non-float type ";
     srct->print(dbgs());
     dbgs() << "\n";
   );

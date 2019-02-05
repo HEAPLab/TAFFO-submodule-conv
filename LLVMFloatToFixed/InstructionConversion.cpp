@@ -182,16 +182,31 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
   Value *newval = matchOp(gep->getPointerOperand());
   if (!newval)
     return nullptr;
-  fixpt = fixPType(newval);
+  FixedPointType tempFixpt = fixPType(newval);
 
-  std::vector<Value*> vals;
-  for (auto a : gep->operand_values()) {
-    vals.push_back(a);
+  Type *resolvedType = gep->getPointerOperand()->getType();
+  std::vector<Value*> idxlist;
+  for (Value *a : gep->indices()) {
+    if (resolvedType->isPointerTy()) {
+      resolvedType = resolvedType->getPointerElementType();
+    } else if (resolvedType->isArrayTy()) {
+      resolvedType = resolvedType->getArrayElementType();
+    } else if (resolvedType->isVectorTy()) {
+      resolvedType = resolvedType->getVectorElementType();
+    } else if (resolvedType->isStructTy()) {
+      ConstantInt *val = dyn_cast<ConstantInt>(a);
+      assert(val && "non-constant index for struct in GEP");
+      int n = val->getZExtValue();
+      resolvedType = resolvedType->getStructElementType(n);
+      tempFixpt = tempFixpt.structItem(n);
+    } else {
+      assert("unsupported type in GEP");
+    }
+    idxlist.push_back(a);
   }
-  vals.erase(vals.begin());
+  fixpt = tempFixpt;
 
-  ArrayRef <Value*> idxlist(vals);
-  return builder.CreateInBoundsGEP(newval,idxlist);
+  return builder.CreateInBoundsGEP(newval, idxlist);
 }
 
 

@@ -32,40 +32,71 @@ private:
     
     std::string toString() const;
   };
-  std::vector<Primitive> elements;
+  
+  std::shared_ptr<llvm::SmallVector<FixedPointType, 2>> structData;
+  Primitive scalarData;
   
 public:
+  /** Default scalar type (invalid 0/0 parameters default) */
   FixedPointType();
+  /** Scalar type (also used for arrays)
+   *  @param s true for signed types, false for unsigned types
+   *  @param f Size of the fractional part in bits
+   *  @param b Size of the type in bits */
   FixedPointType(bool s, int f, int b);
+  /** Struct type
+   *  @param elems List of types, one for each struct field. Use a type with
+   *    zero bitsAmt for non-fixed-point elements */
+  FixedPointType(const llvm::ArrayRef<FixedPointType>& elems);
+  /** Scalar type from integer type (invalid when llvmtype is a float)
+   *  @param llvmtype An integer type
+   *  @param signd If the resulting fixed point type is signed */
   FixedPointType(llvm::Type *llvmtype, bool signd = true);
   
   std::string toString() const;
   
   llvm::Type *scalarToLLVMType(llvm::LLVMContext& ctxt) const;
   inline bool& scalarIsSigned(void) {
-    assert(elements.size() == 1 && "fixed point type not a scalar");
-    return elements[0].isSigned;
+    assert(!structData && "fixed point type not a scalar");
+    return scalarData.isSigned;
   };
   inline bool scalarIsSigned(void) const {
-    assert(elements.size() == 1 && "fixed point type not a scalar");
-    return elements[0].isSigned;
+    assert(!structData && "fixed point type not a scalar");
+    return scalarData.isSigned;
   };
   inline int& scalarFracBitsAmt(void) {
-    assert(elements.size() == 1 && "fixed point type not a scalar");
-    return elements[0].fracBitsAmt;
+    assert(!structData && "fixed point type not a scalar");
+    return scalarData.fracBitsAmt;
   };
   inline int scalarFracBitsAmt(void) const {
-    assert(elements.size() == 1 && "fixed point type not a scalar");
-    return elements[0].fracBitsAmt;
+    assert(!structData && "fixed point type not a scalar");
+    return scalarData.fracBitsAmt;
   };
   inline int& scalarBitsAmt(void) {
-    assert(elements.size() == 1 && "fixed point type not a scalar");
-    return elements[0].bitsAmt;
+    assert(!structData && "fixed point type not a scalar");
+    return scalarData.bitsAmt;
   };
   inline int scalarBitsAmt(void) const {
-    assert(elements.size() == 1 && "fixed point type not a scalar");
-    return elements[0].bitsAmt;
+    assert(!structData && "fixed point type not a scalar");
+    return scalarData.bitsAmt;
   };
+  
+  inline int structSize(void) const {
+    assert(structData && "fixed point type not a struct");
+    return structData->size();
+  }
+  inline FixedPointType& structItem(int n) {
+    assert(structData && "fixed point type not a struct");
+    return (*structData)[n];
+  }
+  inline FixedPointType structItem(int n) const {
+    assert(structData && "fixed point type not a struct");
+    return (*structData)[n];
+  }
+  
+  inline bool isInvalid(void) const {
+    return !structData && (scalarData.bitsAmt == 0);
+  }
   
   bool operator==(const FixedPointType& rhs) const;
 };

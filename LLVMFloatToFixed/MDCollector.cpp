@@ -82,9 +82,24 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> &variables, FPType *fp
 
   vi.isBacktrackingNode = false;
   vi.fixpTypeRootDistance = 0;
-  vi.fixpType.scalarBitsAmt() = fpInfo->getWidth();
-  vi.fixpType.scalarFracBitsAmt() = fpInfo->getPointPos();
-  vi.fixpType.scalarIsSigned() = fpInfo->isSigned();
+  
+  Type *unwrapTy = fullyUnwrapPointerOrArrayType(instr->getType());
+  if (!(unwrapTy->isStructTy())) {
+    vi.fixpType.scalarBitsAmt() = fpInfo->getWidth();
+    vi.fixpType.scalarFracBitsAmt() = fpInfo->getPointPos();
+    vi.fixpType.scalarIsSigned() = fpInfo->isSigned();
+  } else {
+    DEBUG(dbgs() << "HACK! making up a fixed point type for struct type " << *unwrapTy << "\n");
+    FixedPointType elem(fpInfo->isSigned(), fpInfo->getPointPos(), fpInfo->getWidth());
+    SmallVector<FixedPointType, 2> subtypes;
+    for (int i=0; i<unwrapTy->getStructNumElements(); i++) {
+      if (isFloatType(unwrapTy->getStructElementType(i)))
+        subtypes.push_back(elem);
+      else
+        subtypes.push_back(FixedPointType());
+    }
+    vi.fixpType = FixedPointType(subtypes);
+  }
 
   variables.insert(instr);
   *valueInfo(instr) = vi;
