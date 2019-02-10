@@ -258,7 +258,7 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPoi
       Type *baseelemt = srct->getStructElementType(i);
       Type *newelemt;
       if (!fpelemt.isInvalid()) {
-        newelemt = getLLVMFixedPointTypeForFloatType(baseelemt, fpelemt);
+        newelemt = getLLVMFixedPointTypeForFloatType(baseelemt, fpelemt, hasfloats);
       } else {
         newelemt = baseelemt;
       }
