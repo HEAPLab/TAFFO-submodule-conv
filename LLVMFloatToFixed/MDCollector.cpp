@@ -23,10 +23,13 @@ void FloatToFixed::readGlobalMetadata(Module &m, SmallPtrSetImpl<Value *> &varia
   
   for (GlobalVariable &gv : m.globals()) {
     InputInfo *II = MDManager.retrieveInputInfo(gv);
+    StructInfo *SI;
     if (II != nullptr && II->IType != nullptr) {
       if (FPType *fpInfo  = dyn_cast<FPType>(II->IType)) {
         parseMetaData(variables, fpInfo, &gv);
       }
+    } else if ((SI = MDManager.retrieveStructInfo(gv))) {
+      parseStructMetaData(variables, SI, &gv);
     }
   }
   if (functionAnnotation)
@@ -52,11 +55,13 @@ void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &vari
 
   for (inst_iterator iIt = inst_begin(&f), iItEnd = inst_end(&f); iIt != iItEnd; iIt++) {
     InputInfo *II = MDManager.retrieveInputInfo(*iIt);
-
+    StructInfo *SI;
     if (II != nullptr && II->IType != nullptr) {
       if (FPType *fpInfo  = dyn_cast<FPType>(II->IType)) {
         parseMetaData(variables, fpInfo, &(*iIt));
       }
+    } else if ((SI = MDManager.retrieveStructInfo(*iIt))) {
+      parseStructMetaData(variables, SI, &(*iIt));
     }
   }
 }
@@ -83,27 +88,29 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> &variables, FPType *fp
   vi.isBacktrackingNode = false;
   vi.fixpTypeRootDistance = 0;
   
-  Type *unwrapTy = fullyUnwrapPointerOrArrayType(instr->getType());
-  if (!(unwrapTy->isStructTy())) {
-    vi.fixpType.scalarBitsAmt() = fpInfo->getWidth();
-    vi.fixpType.scalarFracBitsAmt() = fpInfo->getPointPos();
-    vi.fixpType.scalarIsSigned() = fpInfo->isSigned();
-  } else {
-    DEBUG(dbgs() << "HACK! making up a fixed point type for struct type " << *unwrapTy << "\n");
-    FixedPointType elem(fpInfo->isSigned(), fpInfo->getPointPos(), fpInfo->getWidth());
-    SmallVector<FixedPointType, 2> subtypes;
-    for (int i=0; i<unwrapTy->getStructNumElements(); i++) {
-      if (isFloatType(unwrapTy->getStructElementType(i)))
-        subtypes.push_back(elem);
-      else
-        subtypes.push_back(FixedPointType());
-    }
-    vi.fixpType = FixedPointType(subtypes);
-  }
+  assert(!(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy()) && "input info / actual type mismatch");
+  vi.fixpType = FixedPointType(fpInfo);
 
   variables.insert(instr);
   *valueInfo(instr) = vi;
 
+  return true;
+}
+
+
+bool FloatToFixed::parseStructMetaData(SmallPtrSetImpl<Value *> &variables, StructInfo *fpInfo, Value *instr)
+{
+  ValueInfo vi;
+
+  vi.isBacktrackingNode = false;
+  vi.fixpTypeRootDistance = 0;
+  
+  assert(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy() && "input info / actual type mismatch");
+  vi.fixpType = FixedPointType::get(fpInfo);
+  
+  variables.insert(instr);
+  *valueInfo(instr) = vi;
+  
   return true;
 }
 

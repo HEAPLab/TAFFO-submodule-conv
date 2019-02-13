@@ -14,6 +14,7 @@
 
 using namespace llvm;
 using namespace flttofix;
+using namespace mdutils;
 
 
 FixedPointType::FixedPointType()
@@ -48,9 +49,43 @@ FixedPointType::FixedPointType(Type *llvmtype, bool signd)
 }
 
 
-FixedPointType::FixedPointType(const llvm::ArrayRef<FixedPointType>& elems)
+FixedPointType::FixedPointType(const ArrayRef<FixedPointType>& elems)
 {
   structData.reset(new SmallVector<FixedPointType, 2>(elems.begin(), elems.end()));
+}
+
+
+FixedPointType::FixedPointType(TType *mdtype)
+{
+  structData = nullptr;
+  if (FPType *fpt = dyn_cast<FPType>(mdtype)) {
+    scalarData.bitsAmt = fpt->getWidth();
+    scalarData.fracBitsAmt = fpt->getPointPos();
+    scalarData.isSigned = fpt->isSigned();
+  } else {
+    scalarData = {false, 0, 0};
+  }
+}
+
+
+FixedPointType FixedPointType::get(MDInfo *mdnfo)
+{
+  if (mdnfo == nullptr) {
+    return FixedPointType();
+    
+  } else if (InputInfo *ii = dyn_cast<InputInfo>(mdnfo)) {
+    return FixedPointType(ii->IType);
+    
+  } else if (StructInfo *si = dyn_cast<StructInfo>(mdnfo)) {
+    SmallVector<FixedPointType, 2> elems;
+    for (auto i = si->begin(); i != si->end(); i++) {
+      elems.push_back(FixedPointType::get(*i));
+    }
+    return FixedPointType(elems);
+    
+  }
+  assert("unknown type of MDInfo");
+  return FixedPointType();
 }
 
 

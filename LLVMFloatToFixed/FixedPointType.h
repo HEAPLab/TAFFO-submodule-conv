@@ -8,6 +8,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
+#include "InputInfo.h"
 
 
 #ifndef __FIXED_POINT_TYPE_H__
@@ -52,6 +53,9 @@ public:
    *  @param llvmtype An integer type
    *  @param signd If the resulting fixed point type is signed */
   FixedPointType(llvm::Type *llvmtype, bool signd = true);
+  
+  FixedPointType(mdutils::TType *mdtype);
+  static FixedPointType get(mdutils::MDInfo *mdnfo);
   
   std::string toString() const;
   
