@@ -34,6 +34,10 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
     res = convertStore(store);
   } else if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(val)) {
     res = convertGep(gep, fixpt);
+  } else if (ExtractValueInst *ev = dyn_cast<ExtractValueInst>(val)) {
+    res = convertExtractValue(ev, fixpt);
+  } else if (InsertValueInst *iv = dyn_cast<InsertValueInst>(val)) {
+    res = convertInsertValue(iv, fixpt);
   } else if (PHINode *phi = dyn_cast<PHINode>(val)) {
     res = convertPhi(phi, fixpt);
   } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
@@ -184,29 +188,57 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
     return nullptr;
   FixedPointType tempFixpt = fixPType(newval);
 
-  Type *resolvedType = gep->getPointerOperand()->getType();
-  std::vector<Value*> idxlist;
-  for (Value *a : gep->indices()) {
-    if (resolvedType->isPointerTy()) {
-      resolvedType = resolvedType->getPointerElementType();
-    } else if (resolvedType->isArrayTy()) {
-      resolvedType = resolvedType->getArrayElementType();
-    } else if (resolvedType->isVectorTy()) {
-      resolvedType = resolvedType->getVectorElementType();
-    } else if (resolvedType->isStructTy()) {
-      ConstantInt *val = dyn_cast<ConstantInt>(a);
-      assert(val && "non-constant index for struct in GEP");
-      int n = val->getZExtValue();
-      resolvedType = resolvedType->getStructElementType(n);
-      tempFixpt = tempFixpt.structItem(n);
-    } else {
-      assert("unsupported type in GEP");
-    }
-    idxlist.push_back(a);
-  }
-  fixpt = tempFixpt;
+  Type *type = gep->getPointerOperand()->getType();
+  fixpt = tempFixpt.unwrapIndexList(type, gep->indices());
 
+  std::vector<Value*> idxlist(gep->indices().begin(), gep->indices().end());
   return builder.CreateInBoundsGEP(newval, idxlist);
+}
+
+
+Value *FloatToFixed::convertExtractValue(ExtractValueInst *exv, FixedPointType& fixpt)
+{
+  IRBuilder<> builder(exv);
+  
+  Value *oldval = exv->getAggregateOperand();
+  Value *newval = matchOp(oldval);
+  if (!newval)
+    return nullptr;
+  
+  FixedPointType baset = fixPType(newval).unwrapIndexList(oldval->getType(), exv->getIndices());
+
+  std::vector<unsigned> idxlist(exv->indices().begin(), exv->indices().end());
+  Value *newi = builder.CreateExtractValue(newval, idxlist);
+  if (!baset.isInvalid() && newi->getType()->isIntegerTy())
+    return genConvertFixedToFixed(newi, baset, fixpt);
+  fixpt = baset;
+  return newi;
+}
+
+
+Value *FloatToFixed::convertInsertValue(InsertValueInst *inv, FixedPointType& fixpt)
+{
+  IRBuilder<> builder(inv);
+  
+  Value *oldAggVal = inv->getAggregateOperand();
+  Value *newAggVal = matchOp(oldAggVal);
+  if (!newAggVal)
+    return nullptr;
+  
+  FixedPointType baset = fixPType(newAggVal).unwrapIndexList(oldAggVal->getType(), inv->getIndices());
+  
+  Value *oldInsertVal = inv->getInsertedValueOperand();
+  Value *newInsertVal;
+  if (!baset.isInvalid())
+    newInsertVal = translateOrMatchOperandAndType(oldInsertVal, baset);
+  else
+    newInsertVal = oldInsertVal;
+  if (!newInsertVal)
+    return nullptr;
+  
+  fixpt = fixPType(newAggVal);
+  std::vector<unsigned> idxlist(inv->indices().begin(), inv->indices().end());
+  return builder.CreateInsertValue(newAggVal, newInsertVal, idxlist);
 }
 
 

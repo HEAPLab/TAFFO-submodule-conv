@@ -101,6 +101,8 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *convertLoad(llvm::LoadInst *load, FixedPointType& fixpt);
   llvm::Value *convertStore(llvm::StoreInst *load);
   llvm::Value *convertGep(llvm::GetElementPtrInst *gep, FixedPointType& fixpt);
+  llvm::Value *convertExtractValue(llvm::ExtractValueInst *exv, FixedPointType& fixpt);
+  llvm::Value *convertInsertValue(llvm::InsertValueInst *inv, FixedPointType& fixpt);
   llvm::Value *convertPhi(llvm::PHINode *load, FixedPointType& fixpt);
   llvm::Value *convertSelect(llvm::SelectInst *sel, FixedPointType& fixpt);
   llvm::Value *convertCall(llvm::CallSite *call, FixedPointType& fixpt);

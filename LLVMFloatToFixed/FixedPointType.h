@@ -2,6 +2,7 @@
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/User.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -101,6 +102,9 @@ public:
   inline bool isInvalid(void) const {
     return !structData && (scalarData.bitsAmt == 0);
   }
+  
+  FixedPointType unwrapIndexList(llvm::Type *valType, const llvm::iterator_range<const llvm::Use*> indices);
+  FixedPointType unwrapIndexList(llvm::Type *valType, llvm::ArrayRef<unsigned> indices);
   
   bool operator==(const FixedPointType& rhs) const;
 };

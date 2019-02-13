@@ -128,6 +128,53 @@ std::string FixedPointType::toString() const
 }
 
 
+FixedPointType FixedPointType::unwrapIndexList(Type *valType, const iterator_range<const Use *> indices)
+{
+  Type *resolvedType = valType;
+  FixedPointType tempFixpt = *this;
+  for (Value *a : indices) {
+    if (resolvedType->isPointerTy()) {
+      resolvedType = resolvedType->getPointerElementType();
+    } else if (resolvedType->isArrayTy()) {
+      resolvedType = resolvedType->getArrayElementType();
+    } else if (resolvedType->isVectorTy()) {
+      resolvedType = resolvedType->getVectorElementType();
+    } else if (resolvedType->isStructTy()) {
+      ConstantInt *val = dyn_cast<ConstantInt>(a);
+      assert(val && "non-constant index for struct in GEP");
+      int n = val->getZExtValue();
+      resolvedType = resolvedType->getStructElementType(n);
+      tempFixpt = tempFixpt.structItem(n);
+    } else {
+      assert("unsupported type in GEP");
+    }
+  }
+  return tempFixpt;
+}
+
+
+FixedPointType FixedPointType::unwrapIndexList(Type *valType, ArrayRef<unsigned> indices)
+{
+  Type *resolvedType = valType;
+  FixedPointType tempFixpt = *this;
+  for (unsigned n : indices) {
+    if (resolvedType->isPointerTy()) {
+      resolvedType = resolvedType->getPointerElementType();
+    } else if (resolvedType->isArrayTy()) {
+      resolvedType = resolvedType->getArrayElementType();
+    } else if (resolvedType->isVectorTy()) {
+      resolvedType = resolvedType->getVectorElementType();
+    } else if (resolvedType->isStructTy()) {
+      resolvedType = resolvedType->getStructElementType(n);
+      tempFixpt = tempFixpt.structItem(n);
+    } else {
+      assert("unsupported type in GEP");
+    }
+  }
+  return tempFixpt;
+}
+
+
 raw_ostream& operator<<(raw_ostream& stm, const FixedPointType& f)
 {
   stm << f.toString();
@@ -149,5 +196,4 @@ bool FixedPointType::operator==(const FixedPointType& rhs) const
   }
   return true;
 }
-
 
