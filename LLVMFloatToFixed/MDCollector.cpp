@@ -41,13 +41,19 @@ void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &vari
 {
   MetadataManager &MDManager = MetadataManager::getMetadataManager();
 
-  SmallVector<mdutils::InputInfo*, 5> argsII;
+  SmallVector<mdutils::MDInfo*, 5> argsII;
   MDManager.retrieveArgumentInputInfo(f, argsII);
   auto arg = f.arg_begin();
   for (auto itII = argsII.begin(); itII != argsII.end(); itII++) {
-    if (*itII != nullptr && (*itII)->IType != nullptr) {
-      if (FPType *fpInfo  = dyn_cast<FPType>((*itII)->IType)) {
-        parseMetaData(variables, fpInfo, arg);
+    if (*itII != nullptr) {
+      if (InputInfo *ii = dyn_cast<InputInfo>(*itII)) {
+        if (ii->IType) {
+          FPType *fpInfo  = dyn_cast<FPType>(ii->IType);
+          if (fpInfo)
+            parseMetaData(variables, fpInfo, arg);
+        }
+      } else if (StructInfo *si = dyn_cast<StructInfo>(*itII)) {
+        parseStructMetaData(variables, si, arg);
       }
     }
     arg++;
