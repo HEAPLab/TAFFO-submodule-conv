@@ -286,7 +286,7 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
       }
 
       if (Instruction *inst = dyn_cast<Instruction>(u)) {
-        if (inst->getMetadata(INPUT_INFO_METADATA)) {
+        if (inst->getMetadata(INPUT_INFO_METADATA) || inst->getMetadata(STRUCT_INFO_METADATA)) {
           if (!hasInfo(u)) {
             dbgs() << "[WARNING] Find Value " << *u << " without fixp format!\n";
             assert(false);
@@ -297,7 +297,7 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
         }
 
       } else if (GlobalObject *go = dyn_cast<GlobalObject>(u)) {
-        if (go->getMetadata(INPUT_INFO_METADATA)) {
+        if (go->getMetadata(INPUT_INFO_METADATA) || go->getMetadata(STRUCT_INFO_METADATA)) {
           if (!hasInfo(u)) {
             dbgs() << "[WARNING] Find GlobalObj " << *u << " without fixp format!\n";
             assert(false);

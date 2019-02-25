@@ -9,6 +9,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
+#include "Metadata.h"
 #include "FixedPointType.h"
 #include "InputInfo.h"
 
@@ -19,8 +20,6 @@
 #define DEBUG_TYPE "taffo-conversion"
 #define DEBUG_ANNOTATION "annotation"
 
-#define INPUT_INFO_METADATA "taffo.info"
-#define TARGET_METADATA     "taffo.target"
 
 STATISTIC(FixToFloatCount, "Number of generic fixed point to floating point value conversion operations inserted");
 STATISTIC(FloatToFixCount, "Number of generic floating point to fixed point value conversion operations inserted");
