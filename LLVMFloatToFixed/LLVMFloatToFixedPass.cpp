@@ -289,7 +289,6 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
         if (inst->getMetadata(INPUT_INFO_METADATA) || inst->getMetadata(STRUCT_INFO_METADATA)) {
           if (!hasInfo(u)) {
             dbgs() << "[WARNING] Find Value " << *u << " without fixp format!\n";
-            assert(false);
           }
         } else {
           dbgs() << "[WARNING] Find Value " << *u << " without TAFFO info!\n";
@@ -300,7 +299,6 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
         if (go->getMetadata(INPUT_INFO_METADATA) || go->getMetadata(STRUCT_INFO_METADATA)) {
           if (!hasInfo(u)) {
             dbgs() << "[WARNING] Find GlobalObj " << *u << " without fixp format!\n";
-            assert(false);
           }
         } else {
           dbgs() << "[WARNING] Find GlobalObj " << *u << " without TAFFO info!\n";
