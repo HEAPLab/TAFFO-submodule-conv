@@ -74,12 +74,12 @@ FixedPointType FixedPointType::get(MDInfo *mdnfo)
     return FixedPointType();
     
   } else if (InputInfo *ii = dyn_cast<InputInfo>(mdnfo)) {
-    return FixedPointType(ii->IType);
+    return FixedPointType(ii->IType.get());
     
   } else if (StructInfo *si = dyn_cast<StructInfo>(mdnfo)) {
     SmallVector<FixedPointType, 2> elems;
     for (auto i = si->begin(); i != si->end(); i++) {
-      elems.push_back(FixedPointType::get(*i));
+      elems.push_back(FixedPointType::get(i->get()));
     }
     return FixedPointType(elems);
     
