@@ -58,7 +58,8 @@ FixedPointType::FixedPointType(const ArrayRef<FixedPointType>& elems)
 FixedPointType::FixedPointType(TType *mdtype)
 {
   structData = nullptr;
-  if (FPType *fpt = dyn_cast<FPType>(mdtype)) {
+  FPType *fpt;
+  if (mdtype && (fpt = dyn_cast<FPType>(mdtype))) {
     scalarData.bitsAmt = fpt->getWidth();
     scalarData.fracBitsAmt = fpt->getPointPos();
     scalarData.isSigned = fpt->isSigned();
