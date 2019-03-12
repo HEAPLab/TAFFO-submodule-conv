@@ -1,3 +1,4 @@
+#include <sstream>
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
@@ -7,14 +8,15 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
+#include "TypeUtils.h"
 #include "FixedPointType.h"
 #include "LLVMFloatToFixedPass.h"
-#include <sstream>
 
 
 using namespace llvm;
 using namespace flttofix;
 using namespace mdutils;
+using namespace taffo;
 
 
 FixedPointType::FixedPointType()

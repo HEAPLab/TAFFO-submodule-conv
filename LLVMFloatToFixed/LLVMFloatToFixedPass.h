@@ -41,10 +41,6 @@ extern llvm::Value *Unsupported;
 namespace flttofix {
 
 
-bool isFloatType(llvm::Type *srct);
-llvm::Type *fullyUnwrapPointerOrArrayType(llvm::Type *srct);
-
-
 struct ValueInfo {
   bool isBacktrackingNode;
   bool isRoot;

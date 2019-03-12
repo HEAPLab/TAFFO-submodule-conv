@@ -9,12 +9,14 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include "LLVMFloatToFixedPass.h"
-
+#include "TypeUtils.h"
 #include "Metadata.h"
+
 
 using namespace llvm;
 using namespace flttofix;
 using namespace mdutils;
+using namespace taffo;
 
 
 void FloatToFixed::readGlobalMetadata(Module &m, SmallPtrSetImpl<Value *> &variables, bool functionAnnotation)

@@ -11,12 +11,14 @@
 #include <llvm/Transforms/Utils/ValueMapper.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include "LLVMFloatToFixedPass.h"
+#include "TypeUtils.h"
 
 //#define LOG_BACKTRACK
 
 
 using namespace llvm;
 using namespace flttofix;
+using namespace taffo;
 
 
 char FloatToFixed::ID = 0;
@@ -57,23 +59,6 @@ bool FloatToFixed::runOnModule(Module &m)
   cleanup(vals);
 
   return true;
-}
-
-
-Type *flttofix::fullyUnwrapPointerOrArrayType(Type *srct)
-{
-  if (srct->isPointerTy()) {
-    return fullyUnwrapPointerOrArrayType(srct->getPointerElementType());
-  } else if (srct->isArrayTy()) {
-    return fullyUnwrapPointerOrArrayType(srct->getArrayElementType());
-  }
-  return srct;
-}
-
-
-bool flttofix::isFloatType(Type *srct)
-{
-  return fullyUnwrapPointerOrArrayType(srct)->isFloatingPointTy();
 }
 
 
