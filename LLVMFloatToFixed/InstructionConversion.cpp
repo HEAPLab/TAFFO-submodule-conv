@@ -393,7 +393,6 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
 {
   Value *v;
   Value *oldv = ret->getReturnValue();
-  Instruction *newRet;
   
   if (oldv->getType()->isIntegerTy()) {
     //if return an int we shouldn't return a fix point, go into fallback
@@ -404,13 +403,15 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
       //the function doesn't return a fixp, don't convert the ret
       Value *newval = operandPool[oldv];
       v = oldv->getType()->isFloatingPointTy()
-          ? dyn_cast<Instruction>(genConvertFixToFloat(newval, fixPType(newval), oldv->getType()))
-          : dyn_cast<Instruction>(newval);
+          ? genConvertFixToFloat(newval, fixPType(newval), oldv->getType())
+          : newval;
+      
+      // check return type
+      if (f->getReturnType() != v->getType())
+        return nullptr;
       
       ret->setOperand(0,v);
-      newRet = ret->clone();
-      newRet->insertAfter(ret);
-      return newRet;
+      return ret;
     }
   }
 
@@ -418,9 +419,7 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
   v = translateOrMatchOperandAndType(ret->getOperand(0), fixpt);
   
   ret->setOperand(0,v);
-  newRet = ret->clone();
-  newRet->insertAfter(ret);
-  return newRet;
+  return ret;
 }
 
 

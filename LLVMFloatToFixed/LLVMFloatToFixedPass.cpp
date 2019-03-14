@@ -394,7 +394,6 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
   clear(isa<StoreInst>);
   clear(isa<CallInst>);
   clear(isa<InvokeInst>);
-  clear(isa<ReturnInst>);
   clear(isa<BranchInst>);
   
   for (Instruction *v: toErase) {
