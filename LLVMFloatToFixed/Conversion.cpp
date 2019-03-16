@@ -50,6 +50,11 @@ void FloatToFixed::performConversion(
     }
     
     if (newv && newv != ConversionError) {
+      if (newv != v && isa<Instruction>(newv) && isa<Instruction>(v)) {
+        Instruction *newinst = dyn_cast<Instruction>(newv);
+        Instruction *oldinst = dyn_cast<Instruction>(v);
+        newinst->setDebugLoc(oldinst->getDebugLoc());
+      }
       cpMetaData(newv,v);
       *valueInfo(newv) = *valueInfo(v);
     } else {
