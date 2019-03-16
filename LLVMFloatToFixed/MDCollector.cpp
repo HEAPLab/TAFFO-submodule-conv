@@ -27,6 +27,8 @@ void FloatToFixed::readGlobalMetadata(Module &m, SmallPtrSetImpl<Value *> &varia
     InputInfo *II = MDManager.retrieveInputInfo(gv);
     StructInfo *SI;
     if (II != nullptr && II->IType != nullptr) {
+      if (!II->IEnableConversion)
+        continue;
       if (FPType *fpInfo = dyn_cast<FPType>(II->IType.get())) {
         parseMetaData(variables, fpInfo, &gv);
       }
@@ -49,7 +51,7 @@ void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &vari
   for (auto itII = argsII.begin(); itII != argsII.end(); itII++) {
     if (*itII != nullptr) {
       if (InputInfo *ii = dyn_cast<InputInfo>(*itII)) {
-        if (ii->IType) {
+        if (ii->IEnableConversion && ii->IType) {
           FPType *fpInfo = dyn_cast<FPType>(ii->IType.get());
           if (fpInfo)
             parseMetaData(variables, fpInfo, arg);
@@ -65,6 +67,8 @@ void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &vari
     InputInfo *II = MDManager.retrieveInputInfo(*iIt);
     StructInfo *SI;
     if (II != nullptr && II->IType != nullptr) {
+      if (!II->IEnableConversion)
+        continue;
       if (FPType *fpInfo = dyn_cast<FPType>(II->IType.get())) {
         parseMetaData(variables, fpInfo, &(*iIt));
       }
