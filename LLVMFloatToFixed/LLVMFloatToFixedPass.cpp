@@ -353,6 +353,8 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
         continue;
       }
       DEBUG(qi->print(errs());
+            if (Instruction *i = dyn_cast<Instruction>(qi))
+              errs() << " in function " << i->getFunction()->getName();
             errs() << " not converted; invalidates roots ");
       const auto& rootsaffected = valueInfo(qi)->roots;
       for (Value *root: rootsaffected) {
@@ -476,8 +478,13 @@ Function* FloatToFixed::createFixFun(CallSite* call)
 {
   Function *oldF = call->getCalledFunction();
   assert(oldF && "bitcasted function pointers and such not handled atm");
-  if(isSpecialFunction(oldF))
+  if (isSpecialFunction(oldF))
     return nullptr;
+  
+  if (!oldF->getMetadata(SOURCE_FUN_METADATA)) {
+    DEBUG(dbgs() << "createFixFun: function " << oldF->getName() << " not a clone; ignoring\n");
+    return nullptr;
+  }
   
   std::vector<Type*> typeArgs;
   std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function

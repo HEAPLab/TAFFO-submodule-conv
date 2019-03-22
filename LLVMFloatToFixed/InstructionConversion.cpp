@@ -377,14 +377,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
     }
   }
 
-
-  dbgs() << "[Error]" << *(call->getInstruction()) << " doesn't find a function to call!\n";
-  dbgs() << "new types should have been ";
-  for (auto pair: fixArgs) {
-    dbgs() << "(" << pair.first << ", " << pair.second << ") ";
-  }
-  dbgs() << "\n";
-  assert(!newF && "Every function should have been already cloned!");
+  dbgs() << "[Info] no function clone for instruction" << *(call->getInstruction()) << ", engaging fallback\n";
   return Unsupported;
 }
 
