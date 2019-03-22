@@ -557,7 +557,7 @@ void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
                   }
                   errs() << "\n\n";
   } else {
-    errs() << "not printing the conversion queue because it exceeds 1000 items";
+    errs() << "not printing the conversion queue because it exceeds 1000 items\n";
   }
 }
 
