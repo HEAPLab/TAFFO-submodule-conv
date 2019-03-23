@@ -100,8 +100,12 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> &variables, FPType *fp
   vi.isBacktrackingNode = false;
   vi.fixpTypeRootDistance = 0;
   
-  assert(!(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy()) && "input info / actual type mismatch");
-  vi.fixpType = FixedPointType(fpInfo);
+  if (!instr->getType()->isVoidTy()) {
+    assert(!(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy()) && "input info / actual type mismatch");
+    vi.fixpType = FixedPointType(fpInfo);
+  } else {
+    vi.fixpType = FixedPointType();
+  }
 
   variables.insert(instr);
   *valueInfo(instr) = vi;
@@ -117,8 +121,12 @@ bool FloatToFixed::parseStructMetaData(SmallPtrSetImpl<Value *> &variables, Stru
   vi.isBacktrackingNode = false;
   vi.fixpTypeRootDistance = 0;
   
-  assert(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy() && "input info / actual type mismatch");
-  vi.fixpType = FixedPointType::get(fpInfo);
+  if (!instr->getType()->isVoidTy()) {
+    assert(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy() && "input info / actual type mismatch");
+    vi.fixpType = FixedPointType::get(fpInfo);
+  } else {
+    vi.fixpType = FixedPointType();
+  }
   
   variables.insert(instr);
   *valueInfo(instr) = vi;
