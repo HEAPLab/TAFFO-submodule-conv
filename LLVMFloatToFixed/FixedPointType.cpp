@@ -71,16 +71,18 @@ FixedPointType::FixedPointType(TType *mdtype)
 }
 
 
-FixedPointType FixedPointType::get(MDInfo *mdnfo)
+FixedPointType FixedPointType::get(MDInfo *mdnfo, int *enableConversion)
 {
   if (mdnfo == nullptr) {
     return FixedPointType();
     
   } else if (InputInfo *ii = dyn_cast<InputInfo>(mdnfo)) {
-    if (ii->IEnableConversion)
+    if (ii->IEnableConversion) {
+      if (enableConversion) (*enableConversion)++;
       return FixedPointType(ii->IType.get());
-    else
+    } else {
       return FixedPointType();
+    }
     
   } else if (StructInfo *si = dyn_cast<StructInfo>(mdnfo)) {
     SmallVector<FixedPointType, 2> elems;

@@ -123,7 +123,10 @@ bool FloatToFixed::parseStructMetaData(SmallPtrSetImpl<Value *> &variables, Stru
   
   if (!instr->getType()->isVoidTy()) {
     assert(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy() && "input info / actual type mismatch");
-    vi.fixpType = FixedPointType::get(fpInfo);
+    int enableConversion = 0;
+    vi.fixpType = FixedPointType::get(fpInfo, &enableConversion);
+    if (enableConversion == 0)
+      return false;
   } else {
     vi.fixpType = FixedPointType();
   }

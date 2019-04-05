@@ -56,7 +56,7 @@ public:
   FixedPointType(llvm::Type *llvmtype, bool signd = true);
   
   FixedPointType(mdutils::TType *mdtype);
-  static FixedPointType get(mdutils::MDInfo *mdnfo);
+  static FixedPointType get(mdutils::MDInfo *mdnfo, int *enableConversion = nullptr);
   
   std::string toString() const;
   
