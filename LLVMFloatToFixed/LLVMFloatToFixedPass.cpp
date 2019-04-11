@@ -499,7 +499,7 @@ Function* FloatToFixed::createFixFun(CallSite* call)
   }
   
   int i=0;
-  for (auto arg = call->arg_begin(); arg != call->arg_end(); arg++,i++) { //detect fix argument
+  for (auto arg = oldF->arg_begin(); arg != oldF->arg_end(); arg++, i++) {
     Value *v = dyn_cast<Value>(arg);
     Type* newTy;
     if (hasInfo(v)) {
