@@ -45,7 +45,7 @@ bool FloatToFixed::runOnModule(Module &m)
   llvm::SmallPtrSet<llvm::Value *, 32> global;
   readAllLocalMetadata(m, local);
   readGlobalMetadata(m, global);
-  
+
   std::vector<Value*> vals(local.begin(), local.end());
   vals.insert(vals.begin(), global.begin(), global.end());
   MetadataCount = vals.size();
@@ -67,7 +67,7 @@ int FloatToFixed::getLoopNestingLevelOfValue(llvm::Value *v)
   Instruction *inst = dyn_cast<Instruction>(v);
   if (!inst)
     return -1;
-  
+
   Function *fun = inst->getFunction();
   LoopInfo &li = this->getAnalysis<LoopInfoWrapperPass>(*fun).getLoopInfo();
   BasicBlock *bb = inst->getParent();
@@ -100,7 +100,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
   for (auto i = queue.begin(); i != queue.end(); i++) {
     valueInfo(*i)->isRoot = true;
   }
-  
+
   auto completeInfo = [this](Value *v, Value *u) {
     ValueInfo vinfo = *valueInfo(v);
     ValueInfo &uinfo = *valueInfo(u);
@@ -121,7 +121,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
       Value *v = queue.at(next);
 
       for (auto *u: v->users()) {
-        
+
         /* Insert u at the end of the queue.
          * If u exists already in the queue, *move* it to the end instead. */
         for (int i=0; i<queue.size();) {
@@ -142,23 +142,23 @@ void FloatToFixed::buildConversionQueueForRootValues(
       }
       next++;
     }
-    
+
     next = queue.size();
     for (next = queue.size(); next != 0; next--) {
       Value *v = queue.at(next-1);
       if (!(valueInfo(v)->isBacktrackingNode))
         continue;
-      
+
       Instruction *inst = dyn_cast<Instruction>(v);
       if (!inst)
         continue;
-      
+
       #ifdef LOG_BACKTRACK
       dbgs() << "BACKTRACK ";
       v->print(dbgs());
       dbgs() << "\n";
       #endif
-      
+
       for (Value *u: inst->operands()) {
         if (!isa<User>(u) && !isa<Argument>(u)) {
           #ifdef LOG_BACKTRACK
@@ -168,7 +168,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
           #endif
           continue;
         }
-        
+
         if (isa<Function>(u) || isa<BlockAddress>(u)) {
           #ifdef LOG_BACKTRACK
           dbgs() << " - " ;
@@ -177,11 +177,11 @@ void FloatToFixed::buildConversionQueueForRootValues(
           #endif
           continue;
         }
-        
+
         #ifdef LOG_BACKTRACK
         dbgs() << " - " << *u;
         #endif
-        
+
         if (!isFloatType(u->getType())) {
           #ifdef LOG_BACKTRACK
           dbgs() << " not a float\n";
@@ -189,9 +189,9 @@ void FloatToFixed::buildConversionQueueForRootValues(
           continue;
         }
         valueInfo(v)->isRoot = false;
-        
+
         valueInfo(u)->isBacktrackingNode = true;
-        
+
         bool alreadyIn = false;
         for (int i=0; i<queue.size() && !alreadyIn;) {
           if (queue[i] == u) {
@@ -215,17 +215,17 @@ void FloatToFixed::buildConversionQueueForRootValues(
           dbgs() << " already in\n";
           #endif
         }
-        
+
         completeInfo(v, u);
       }
     }
   }
-  
+
   for (Value *v: queue) {
     if (valueInfo(v)->isRoot) {
       valueInfo(v)->roots = {v};
     }
-    
+
     SmallPtrSet<Value*, 5> newroots = valueInfo(v)->roots;
     for (Value *u: v->users()) {
       auto oldrootsi = info.find(u);
@@ -273,30 +273,30 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
       if (Instruction *inst = dyn_cast<Instruction>(u)) {
         if (inst->getMetadata(INPUT_INFO_METADATA) || inst->getMetadata(STRUCT_INFO_METADATA)) {
           if (!hasInfo(u)) {
-            dbgs() << "[WARNING] Find Value " << *u << " without fixp format!\n";
+            DEBUG(dbgs() << "[WARNING] Find Value " << *u << " without fixp format!\n");
           }
         } else {
-          dbgs() << "[WARNING] Find Value " << *u << " without TAFFO info!\n";
+          DEBUG(dbgs() << "[WARNING] Find Value " << *u << " without TAFFO info!\n");
           continue;
         }
 
       } else if (GlobalObject *go = dyn_cast<GlobalObject>(u)) {
         if (go->getMetadata(INPUT_INFO_METADATA) || go->getMetadata(STRUCT_INFO_METADATA)) {
           if (!hasInfo(u)) {
-            dbgs() << "[WARNING] Find GlobalObj " << *u << " without fixp format!\n";
+            DEBUG(dbgs() << "[WARNING] Find GlobalObj " << *u << " without fixp format!\n");
           }
         } else {
-          dbgs() << "[WARNING] Find GlobalObj " << *u << " without TAFFO info!\n";
+          DEBUG(dbgs() << "[WARNING] Find GlobalObj " << *u << " without TAFFO info!\n");
           continue;
         }
       }
-      
+
       vals.push_back(u);
       valueInfo(u)->roots.insert(roots.begin(), roots.end());
     }
     next++;
   }
-  
+
   for (Value *v: vals) {
     SmallPtrSetImpl<Value *> &roots = valueInfo(v)->roots;
     if (roots.empty()) {
@@ -340,7 +340,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
     if (valueInfo(v)->isRoot == true)
       roots.push_back(v);
   }
-  
+
   DenseMap<Value*, bool> isrootok;
   for (Value *root: roots)
     isrootok[root] = true;
@@ -364,7 +364,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       DEBUG(errs() << '\n');
     }
   }
-  
+
   std::vector<Instruction *> toErase;
 
   auto clear = [&] (bool (*toDelete) (const Instruction &Y)) {
@@ -373,7 +373,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       if (!i || (!toDelete(*i)))
         continue;
       const auto &roots = valueInfo(v)->roots;
-    
+
       bool allok = true;
       for (Value *root: roots) {
         if (!isrootok[root]) {
@@ -392,12 +392,12 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       }
     }
   };
-  
+
   clear(isa<StoreInst>);
   clear(isa<CallInst>);
   clear(isa<InvokeInst>);
   clear(isa<BranchInst>);
-  
+
   for (Instruction *v: toErase) {
     v->eraseFromParent();
   }
@@ -412,10 +412,10 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
       CallSite *call = new CallSite(valsi);
       if (Function *newF = createFixFun(call)) {
         Function *oldF = call->getCalledFunction();
-        
+
         DEBUG(dbgs() << "Converting function " << oldF->getName() << " : " << *oldF->getType()
                      << " into " << newF->getName() << " : " << *newF->getType() << "\n");
-        
+
         ValueToValueMapTy mapArgs; // Create Val2Val mapping and clone function
         Function::arg_iterator newIt = newF->arg_begin();
         Function::arg_iterator oldIt = oldF->arg_begin();
@@ -425,28 +425,28 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         }
         SmallVector<ReturnInst*,100> returns;
         CloneFunctionInto(newF, oldF, mapArgs, true, returns);
-        
+
         std::vector<Value*> newVals; //propagate fixp conversion
         oldIt = oldF->arg_begin();
         newIt = newF->arg_begin();
         for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
           if (oldIt->getType() != newIt->getType()){
             FixedPointType fixtype = valueInfo(call->getInstruction()->getOperand(i))->fixpType;
-            
+
             // Mark the alloca used for the argument (in O0 opt lvl)
             valueInfo(newIt->user_begin()->getOperand(1))->fixpType = fixtype;
             valueInfo(newIt->user_begin()->getOperand(1))->fixpTypeRootDistance = 0;
             newVals.push_back(newIt->user_begin()->getOperand(1));
-            
+
             // Mark the argument itself
             valueInfo(newIt)->fixpType = fixtype;
             valueInfo(newIt)->fixpTypeRootDistance = 0;
-            
+
             //append fixp info to arg name
             newIt->setName(newIt->getName() + "." + fixtype.toString());
           }
         }
-  
+
         // If return a float, all the return inst should have a fix point (independently from the conv queue)
         if (oldF->getReturnType()->isFloatingPointTy()) {
           for (ReturnInst *v : returns) {
@@ -480,15 +480,15 @@ Function* FloatToFixed::createFixFun(CallSite* call)
   assert(oldF && "bitcasted function pointers and such not handled atm");
   if (isSpecialFunction(oldF))
     return nullptr;
-  
+
   if (!oldF->getMetadata(SOURCE_FUN_METADATA)) {
     DEBUG(dbgs() << "createFixFun: function " << oldF->getName() << " not a clone; ignoring\n");
     return nullptr;
   }
-  
+
   std::vector<Type*> typeArgs;
   std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function
-  
+
   std::string suffix;
   if(isFloatType(oldF->getReturnType())) { //ret value in signature
     FixedPointType retValType = valueInfo(call->getInstruction())->fixpType;
@@ -497,7 +497,7 @@ Function* FloatToFixed::createFixFun(CallSite* call)
   } else {
     suffix = "fixp";
   }
-  
+
   int i=0;
   for (auto arg = oldF->arg_begin(); arg != oldF->arg_end(); arg++, i++) {
     Value *v = dyn_cast<Value>(arg);
@@ -531,7 +531,7 @@ Function* FloatToFixed::createFixFun(CallSite* call)
     }
     dbgs() << "\n";
   });
-  
+
   newF = Function::Create(newFunTy, oldF->getLinkage(), oldF->getName() + "_" + suffix, oldF->getParent());
   functionPool[oldF] = newF; //add to pool
   FunctionCreated++;
@@ -560,5 +560,3 @@ void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
     errs() << "not printing the conversion queue because it exceeds 1000 items\n";
   }
 }
-
-
