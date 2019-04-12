@@ -474,7 +474,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
         intype1.scalarFracBitsAmt(),
         intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
       Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype, instr);
-      Value *ext2 = intype1.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+      Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
       Value *fixop = fixpt.scalarIsSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
       cpMetaData(ext2,val2);
       cpMetaData(fixop,ext2);
