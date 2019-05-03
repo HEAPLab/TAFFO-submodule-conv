@@ -164,9 +164,11 @@ bool analyze_function(Function *f, std::unordered_set<BasicBlock *>& countedbbs,
     analyze_basic_block(top.block, countedbbs, stat, top.eval, ninstr);
     eval = top.eval;
     
-    TerminatorInst *term = top.block->getTerminator();
+    Instruction *term = top.block->getTerminator();
     assert(term && "denormal bb found; abort");
-    for (auto nextbb: term->successors()) {
+    int numbb = term->getNumSuccessors();
+    for (int bbi = 0; bbi < numbb; bbi++) {
+      BasicBlock *nextbb = term->getSuccessor(bbi);
       if (countedbbs.find(nextbb) != countedbbs.end()) {
         if (Verbose)
           std::cerr << "Loop!" << std::endl;
