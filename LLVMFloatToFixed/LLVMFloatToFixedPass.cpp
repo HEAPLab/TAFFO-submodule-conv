@@ -273,20 +273,20 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
       if (Instruction *inst = dyn_cast<Instruction>(u)) {
         if (inst->getMetadata(INPUT_INFO_METADATA) || inst->getMetadata(STRUCT_INFO_METADATA)) {
           if (!hasInfo(u)) {
-            DEBUG(dbgs() << "[WARNING] Find Value " << *u << " without fixp format!\n");
+            LLVM_DEBUG(dbgs() << "[WARNING] Find Value " << *u << " without fixp format!\n");
           }
         } else {
-          DEBUG(dbgs() << "[WARNING] Find Value " << *u << " without TAFFO info!\n");
+          LLVM_DEBUG(dbgs() << "[WARNING] Find Value " << *u << " without TAFFO info!\n");
           continue;
         }
 
       } else if (GlobalObject *go = dyn_cast<GlobalObject>(u)) {
         if (go->getMetadata(INPUT_INFO_METADATA) || go->getMetadata(STRUCT_INFO_METADATA)) {
           if (!hasInfo(u)) {
-            DEBUG(dbgs() << "[WARNING] Find GlobalObj " << *u << " without fixp format!\n");
+            LLVM_DEBUG(dbgs() << "[WARNING] Find GlobalObj " << *u << " without fixp format!\n");
           }
         } else {
-          DEBUG(dbgs() << "[WARNING] Find GlobalObj " << *u << " without TAFFO info!\n");
+          LLVM_DEBUG(dbgs() << "[WARNING] Find GlobalObj " << *u << " without TAFFO info!\n");
           continue;
         }
       }
@@ -482,7 +482,7 @@ Function* FloatToFixed::createFixFun(CallSite* call)
     return nullptr;
 
   if (!oldF->getMetadata(SOURCE_FUN_METADATA)) {
-    DEBUG(dbgs() << "createFixFun: function " << oldF->getName() << " not a clone; ignoring\n");
+    LLVM_DEBUG(dbgs() << "createFixFun: function " << oldF->getName() << " not a clone; ignoring\n");
     return nullptr;
   }
 
