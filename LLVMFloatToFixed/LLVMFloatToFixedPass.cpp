@@ -52,7 +52,7 @@ bool FloatToFixed::runOnModule(Module &m)
 
   propagateCall(vals, global);
   sortQueue(vals);
-  DEBUG(printConversionQueue(vals));
+  LLVM_DEBUG(printConversionQueue(vals));
   ConversionCount = vals.size();
 
   performConversion(m, vals);
@@ -113,7 +113,7 @@ void FloatToFixed::buildConversionQueueForRootValues(
 
   size_t prevQueueSize = 0;
   while (prevQueueSize < queue.size()) {
-    DEBUG(dbgs() << "***** buildConversionQueueForRootValues iter " << prevQueueSize << " < " << queue.size() << "\n";);
+    LLVM_DEBUG(dbgs() << "***** buildConversionQueueForRootValues iter " << prevQueueSize << " < " << queue.size() << "\n";);
     prevQueueSize = queue.size();
 
     size_t next = 0;
@@ -352,16 +352,16 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       if (!potentiallyUsesMemory(qi)) {
         continue;
       }
-      DEBUG(qi->print(errs());
+      LLVM_DEBUG(qi->print(errs());
             if (Instruction *i = dyn_cast<Instruction>(qi))
               errs() << " in function " << i->getFunction()->getName();
             errs() << " not converted; invalidates roots ");
       const auto& rootsaffected = valueInfo(qi)->roots;
       for (Value *root: rootsaffected) {
         isrootok[root] = false;
-        DEBUG(root->print(errs()));
+        LLVM_DEBUG(root->print(errs()));
       }
-      DEBUG(errs() << '\n');
+      LLVM_DEBUG(errs() << '\n');
     }
   }
 
@@ -377,7 +377,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       bool allok = true;
       for (Value *root: roots) {
         if (!isrootok[root]) {
-          DEBUG(i->print(errs());
+          LLVM_DEBUG(i->print(errs());
                     errs() << " not deleted: involves root ";
                     root->print(errs());
                     errs() << '\n');
@@ -413,7 +413,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
       if (Function *newF = createFixFun(call)) {
         Function *oldF = call->getCalledFunction();
 
-        DEBUG(dbgs() << "Converting function " << oldF->getName() << " : " << *oldF->getType()
+        LLVM_DEBUG(dbgs() << "Converting function " << oldF->getName() << " : " << *oldF->getType()
                      << " into " << newF->getName() << " : " << *newF->getType() << "\n");
 
         ValueToValueMapTy mapArgs; // Create Val2Val mapping and clone function
@@ -513,7 +513,7 @@ Function* FloatToFixed::createFixFun(CallSite* call)
 
   Function *newF = functionPool[oldF]; //check if is previously converted
   if (newF) {
-    DEBUG(dbgs() << *(call->getInstruction()) <<  " use already converted function : " <<
+    LLVM_DEBUG(dbgs() << *(call->getInstruction()) <<  " use already converted function : " <<
                  newF->getName() << " " << *newF->getType() << "\n";);
     return nullptr;
   }
@@ -524,7 +524,7 @@ Function* FloatToFixed::createFixFun(CallSite* call)
       oldF->getReturnType(),
       typeArgs, oldF->isVarArg());
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "creating function " << oldF->getName() << "_" << suffix << " with types ";
     for (auto pair: fixArgs) {
       dbgs() << "(" << pair.first << ", " << pair.second << ") ";

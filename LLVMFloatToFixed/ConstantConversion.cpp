@@ -135,7 +135,7 @@ template <class T> Constant *FloatToFixed::createConstantDataSequential(Constant
     APFloat thiselem = cds->getElementAsAPFloat(i);
     APSInt fixval;
     if (!convertAPFloat(thiselem, fixval, nullptr, fixpt)) {
-      DEBUG(dbgs() << *cds << " conv failed because an apfloat cannot be converted to " << fixpt << "\n");
+      LLVM_DEBUG(dbgs() << *cds << " conv failed because an apfloat cannot be converted to " << fixpt << "\n");
       return nullptr;
     }
     newConsts.push_back(fixval.getExtValue());
@@ -162,7 +162,7 @@ Constant *FloatToFixed::convertConstantDataSequential(ConstantDataSequential *cd
   else if (fixpt.scalarBitsAmt() <= 64)
     return createConstantDataSequential<uint64_t>(cds, fixpt);
   
-  DEBUG(dbgs() << fixpt << " too big for ConstantDataArray/Vector; 64 bit max\n");
+  LLVM_DEBUG(dbgs() << fixpt << " too big for ConstantDataArray/Vector; 64 bit max\n");
   return nullptr;
 }
 
