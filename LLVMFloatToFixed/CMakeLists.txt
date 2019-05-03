@@ -1,4 +1,4 @@
-add_llvm_loadable_module(LLVMFloatToFixed
+add_llvm_library(LLVMFloatToFixed MODULE
   FixedPointType.h
   FixedPointType.cpp
   LLVMFloatToFixedPass.cpp
