@@ -54,7 +54,12 @@ struct FloatToFixed : public llvm::ModulePass {
   static char ID;
   FixedPointType defaultFixpType;
   
+  /** Map from original values to converted values.
+   *  Values not to be converted do not appear in the map.
+   *  Values which have not been converted successfully are mapped to
+   *  one of two sentinel values, ConversionError or Unsupported. */
   llvm::DenseMap<llvm::Value *, llvm::Value *> operandPool;
+  
   llvm::DenseMap<llvm::Function*, llvm::Function*> functionPool;
   
   /* to not be accessed directly, use valueInfo() */
@@ -107,27 +112,101 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *convertCast(llvm::CastInst *cast, const FixedPointType& fixpt);
   llvm::Value *fallback(llvm::Instruction *unsupp, FixedPointType& fixpt);
   
+  /** Returns if a function is a library function which shall not
+   *  be cloned.
+   *  @param f The function to check */
   bool isSpecialFunction(const llvm::Function* f) {
     llvm::StringRef fName = f->getName();
     return fName.startswith("llvm.") || f->getBasicBlockList().size() == 0;
   };
 
+  /** Returns the converted Value matching a non-converted Value.
+   *  @param val The non-converted value to match.
+   *  @returns nullptr if the value has not been converted properly,
+   *    the converted value if the original value was converted,
+   *    or the original value itself if it does not require conversion. */
   llvm::Value *matchOp(llvm::Value *val) {
     llvm::Value *res = operandPool[val];
     return res == ConversionError ? nullptr : (res ? res : val);
   };
+  
+  /** Returns a fixed point Value from any Value, whether it should be
+   *  converted or not.
+   *  @param val The non-converted value. Must be of a primitive floating-point
+   *    non-reference LLVM type (in other words, ints, pointers, arrays, struct are
+   *    not allowed); use matchOp() for values of those types.
+   *  @param iofixpt A reference to a fixed point type. On input,
+   *    it must contain the preferred fixed point type required
+   *    for the returned Value. On output, it will contain the
+   *    actual fixed point type of the returned Value (which may or
+   *    may not be different than the input type).
+   *  @param ip The instruction which will use the returned value.
+   *    Used for placing generated fixed point runtime conversion code in
+   *    case val was not to be converted statically. Not required if val
+   *    is an instruction or a constant.
+   *  @returns A fixed point value corresponding to val or nullptr if
+   *    val was to be converted but its conversion failed. */
   llvm::Value *translateOrMatchOperand(llvm::Value *val, FixedPointType& iofixpt, llvm::Instruction *ip = nullptr);
+  /** Returns a fixed point Value of a specified fixed point type from any
+   *  Value, whether it should be converted or not.
+   *  @param val The non-converted value. Must be of a primitive floating-point
+   *    non-reference LLVM type (in other words, ints, pointers, arrays, struct are
+   *    not allowed); use matchOp() for values of those types.
+   *  @param fixpt The fixed point type of the value returned.
+   *  @param ip The instruction which will use the returned value.
+   *    Used for placing generated fixed point runtime conversion code in
+   *    case val was not to be converted statically. Not required if val
+   *    is an instruction or a constant.
+   *  @returns A fixed point value corresponding to val of type fixpt
+   *    or nullptr if val was to be converted but its conversion failed.  */
   llvm::Value *translateOrMatchOperandAndType(llvm::Value *val, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr) {
     FixedPointType iofixpt = fixpt;
     llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip);
     return genConvertFixedToFixed(tmp, iofixpt, fixpt, ip);
   };
   
+  /** Generate code for converting the value of a scalar from floating point to
+   *  fixed point.
+   *  @param flt A floating point scalar value.
+   *  @param fixpt The fixed point type of the output
+   *  @param ip The instruction which will use the returned value.
+   *    Used for placing generated fixed point runtime conversion code in
+   *    case val was not to be converted statically. Not required if val
+   *    is an instruction or a constant.
+   *  @returns The converted value. */
   llvm::Value *genConvertFloatToFix(llvm::Value *flt, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr);
+  /** Generate code for converting the value of a scalar from fixed point to
+   *  floating point.
+   *  @param flt A fixed point scalar value.
+   *  @param fixpt The fixed point type of the input
+   *  @param ip The instruction which will use the returned value.
+   *    Used for placing generated fixed point runtime conversion code in
+   *    case val was not to be converted statically. Not required if val
+   *    is an instruction or a constant.
+   *  @returns The converted value. */
   llvm::Value *genConvertFixToFloat(llvm::Value *fix, const FixedPointType& fixpt, llvm::Type *destt);
+  /** Generate code for converting between two fixed point formats.
+   *  @param flt A fixed point scalar value.
+   *  @param scrt The fixed point type of the input
+   *  @param destt The fixed point type of the output
+   *  @param ip The instruction which will use the returned value.
+   *    Used for placing generated fixed point runtime conversion code in
+   *    case val was not to be converted statically. Not required if val
+   *    is an instruction or a constant.
+   *  @returns The converted value. */
   llvm::Value *genConvertFixedToFixed(llvm::Value *fix, const FixedPointType& srct, const FixedPointType& destt, llvm::Instruction *ip = nullptr);
 
+  /** Transforms a pre-existing LLVM type to a new LLVM
+   *  type with integers instead of floating point depending on a
+   *  fixed point type specification.
+   *  @param fptype The original type
+   *  @param baset The fixed point type
+   *  @param hasfloats If non-null, points to a bool which, on return,
+   *    will be true if at least one floating point type to transform to
+   *    fixed point was encountered.
+   *  @returns The new LLVM type.  */
   llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, const FixedPointType& baset, bool *hasfloats = nullptr);
+  
   llvm::Type *getLLVMFixedPointTypeForFloatValue(llvm::Value *val);
   std::shared_ptr<ValueInfo> valueInfo(llvm::Value *val) {
     auto vi = info.find(val);
