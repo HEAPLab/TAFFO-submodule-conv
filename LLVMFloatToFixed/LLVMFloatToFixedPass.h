@@ -77,8 +77,6 @@ struct FloatToFixed : public llvm::ModulePass {
   void removeNoFloatTy(llvm::SmallPtrSetImpl<llvm::Value *>& res);
   void printAnnotatedObj(llvm::Module &m);
 
-  void optimizeFixedPointTypes(std::vector<llvm::Value*>& queue);
-  void buildConversionQueueForRootValues(const llvm::ArrayRef<llvm::Value*>& val, std::vector<llvm::Value*>& res);
   void sortQueue(std::vector<llvm::Value*> &vals);
   void cleanup(const std::vector<llvm::Value*>& queue);
   void propagateCall(std::vector<llvm::Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global);
