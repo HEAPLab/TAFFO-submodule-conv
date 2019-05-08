@@ -24,16 +24,9 @@ void FloatToFixed::readGlobalMetadata(Module &m, SmallPtrSetImpl<Value *> &varia
   MetadataManager &MDManager = MetadataManager::getMetadataManager();
   
   for (GlobalVariable &gv : m.globals()) {
-    InputInfo *II = MDManager.retrieveInputInfo(gv);
-    StructInfo *SI;
-    if (II != nullptr && II->IType != nullptr) {
-      if (!II->IEnableConversion)
-        continue;
-      if (FPType *fpInfo = dyn_cast<FPType>(II->IType.get())) {
-        parseMetaData(variables, fpInfo, &gv);
-      }
-    } else if ((SI = MDManager.retrieveStructInfo(gv))) {
-      parseStructMetaData(variables, SI, &gv);
+    MDInfo *MDI = MDManager.retrieveMDInfo(&gv);
+    if (MDI) {
+      parseMetaData(&variables, MDI, &gv);
     }
   }
   if (functionAnnotation)
@@ -50,30 +43,17 @@ void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &vari
   auto arg = f.arg_begin();
   for (auto itII = argsII.begin(); itII != argsII.end(); itII++) {
     if (*itII != nullptr) {
-      if (InputInfo *ii = dyn_cast<InputInfo>(*itII)) {
-        if (ii->IEnableConversion && ii->IType) {
-          FPType *fpInfo = dyn_cast<FPType>(ii->IType.get());
-          if (fpInfo)
-            parseMetaData(variables, fpInfo, arg);
-        }
-      } else if (StructInfo *si = dyn_cast<StructInfo>(*itII)) {
-        parseStructMetaData(variables, si, arg);
-      }
+      /* Don't enqueue function arguments because they will be handled by
+       * the function cloning step */
+      parseMetaData(nullptr, *itII, arg);
     }
     arg++;
   }
 
   for (inst_iterator iIt = inst_begin(&f), iItEnd = inst_end(&f); iIt != iItEnd; iIt++) {
-    InputInfo *II = MDManager.retrieveInputInfo(*iIt);
-    StructInfo *SI;
-    if (II != nullptr && II->IType != nullptr) {
-      if (!II->IEnableConversion)
-        continue;
-      if (FPType *fpInfo = dyn_cast<FPType>(II->IType.get())) {
-        parseMetaData(variables, fpInfo, &(*iIt));
-      }
-    } else if ((SI = MDManager.retrieveStructInfo(*iIt))) {
-      parseStructMetaData(variables, SI, &(*iIt));
+    MDInfo *MDI = MDManager.retrieveMDInfo(&(*iIt));
+    if (MDI) {
+      parseMetaData(&variables, MDI, &(*iIt));
     }
   }
 }
@@ -93,47 +73,45 @@ void FloatToFixed::readAllLocalMetadata(Module &m, SmallPtrSetImpl<Value *> &res
 }
 
 
-bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> &variables, FPType *fpInfo, Value *instr)
+bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *raw, Value *instr)
 {
   ValueInfo vi;
 
   vi.isBacktrackingNode = false;
   vi.fixpTypeRootDistance = 0;
   
-  if (!instr->getType()->isVoidTy()) {
-    assert(!(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy()) && "input info / actual type mismatch");
-    vi.fixpType = FixedPointType(fpInfo);
-  } else {
-    vi.fixpType = FixedPointType();
-  }
-
-  variables.insert(instr);
-  *valueInfo(instr) = vi;
-
-  return true;
-}
-
-
-bool FloatToFixed::parseStructMetaData(SmallPtrSetImpl<Value *> &variables, StructInfo *fpInfo, Value *instr)
-{
-  ValueInfo vi;
-
-  vi.isBacktrackingNode = false;
-  vi.fixpTypeRootDistance = 0;
-  
-  if (!instr->getType()->isVoidTy()) {
-    assert(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy() && "input info / actual type mismatch");
-    int enableConversion = 0;
-    vi.fixpType = FixedPointType::get(fpInfo, &enableConversion);
-    if (enableConversion == 0)
+  if (InputInfo *fpInfo = dyn_cast<InputInfo>(raw)) {
+    if (!fpInfo->IEnableConversion)
       return false;
+    if (!instr->getType()->isVoidTy()) {
+      assert(!(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy()) && "input info / actual type mismatch");
+      FPType *fpt = dyn_cast_or_null<FPType>(fpInfo->IType.get());
+      if (!fpt)
+        return false;
+      vi.fixpType = FixedPointType(fpt);
+    } else {
+      vi.fixpType = FixedPointType();
+    }
+    
+  } else if (StructInfo *fpInfo = dyn_cast<StructInfo>(raw)) {
+    if (!instr->getType()->isVoidTy()) {
+      assert(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy() && "input info / actual type mismatch");
+      int enableConversion = 0;
+      vi.fixpType = FixedPointType::get(fpInfo, &enableConversion);
+      if (enableConversion == 0)
+        return false;
+    } else {
+      vi.fixpType = FixedPointType();
+    }
+    
   } else {
-    vi.fixpType = FixedPointType();
+    assert(false && "MDInfo type unrecognized");
   }
-  
-  variables.insert(instr);
+
+  if (variables)
+    variables->insert(instr);
   *valueInfo(instr) = vi;
-  
+
   return true;
 }
 
