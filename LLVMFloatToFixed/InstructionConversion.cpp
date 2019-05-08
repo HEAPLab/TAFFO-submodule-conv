@@ -133,15 +133,16 @@ Value *FloatToFixed::convertStore(StoreInst *store)
       valtype = fixPType(newptr);
       newval = translateOrMatchOperandAndType(val, valtype, store);
       
-    } else if (peltype->isPointerTy()){
-      newval = translateOrMatchOperand(val, valtype, store);
+    } else if (peltype->isPointerTy()) {
+      LLVM_DEBUG(dbgs()<< "[Store] Pointer store: "<< *store << "\n");
+      newval = matchOp(val);
       if (!newval || newval->getType() != peltype) {
+        LLVM_DEBUG(dbgs()<< "[Store] HACK: bitcasting operands of wrong type to new type\n");
         BitCastInst *bc = new BitCastInst(!newval ? val : newval,peltype);
         cpMetaData(bc,!newval ? val : newval);
         bc->insertBefore(store);
         newval = bc;
       }
-      LLVM_DEBUG(dbgs()<< "[Store] Detect pointer store :"<< *store << "\n");
       
     } else {
       return nullptr;
@@ -337,47 +338,71 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 
   if(isSpecialFunction(oldF))
     return Unsupported;
+  
+  Function *newF = functionPool[oldF];
+  if (!newF) {
+    dbgs() << "[Info] no function clone for instruction" << *(call->getInstruction()) << ", engaging fallback\n";
+    return Unsupported;
+  }
+  
+  LLVM_DEBUG(dbgs() << *(call->getInstruction()) <<  " will use converted function " <<
+               newF->getName() << " " << *newF->getType() << "\n";);
 
   std::vector<Value*> convArgs;
   std::vector<Type*> typeArgs;
   std::vector<std::pair<int, FixedPointType>> fixArgs; //for match right function
   
-  if(isFloatType(oldF->getReturnType()))
+  if (isFloatType(oldF->getReturnType())) {
     fixArgs.push_back(std::pair<int, FixedPointType>(-1, fixpt)); //ret value in signature
+  }
 
   int i=0;
-  for (auto *it = call->arg_begin(); it != call->arg_end(); it++,i++) {
-    if (hasInfo(*it)) {
-      convArgs.push_back(translateOrMatchOperand(*it, fixPType(*it), call->getInstruction()));
-      fixArgs.push_back(std::pair<int, FixedPointType>(i, fixPType(*it)));
+  auto *call_arg = call->arg_begin();
+  auto *f_arg = newF->arg_begin();
+  while (call_arg != call->arg_end()) {
+    if (hasInfo(*call_arg)) {
+       if (!hasInfo(f_arg)) {
+        LLVM_DEBUG(dbgs() << "DTA BUG: actual argument " << i << " not converted, but formal arguments converted\n");
+        return nullptr;
+      }
+      FixedPointType& argfpt = fixPType(*call_arg);
+      FixedPointType& funfpt = fixPType(&(*f_arg));
+      if (!(argfpt == funfpt)) {
+        LLVM_DEBUG(dbgs() << "DTA BUG: fixed point type mismatch in actual argument " << i << " vs. formal argument\n");
+        return nullptr;
+      }
+      Value *newarg = matchOp(*call_arg);
+      convArgs.push_back(newarg);
+      fixArgs.push_back(std::pair<int, FixedPointType>(i, argfpt));
     } else {
-      convArgs.push_back(dyn_cast<Value>(it));
+      convArgs.push_back(dyn_cast<Value>(call_arg));
     }
     typeArgs.push_back(convArgs[i]->getType());
-  }
-
-  Function *newF = functionPool[oldF];
-  if (newF) {
-    LLVM_DEBUG(dbgs() << *(call->getInstruction()) <<  " use converted function : " <<
-                 newF->getName() << " " << *newF->getType() << "\n";);
-
-    if (call->isCall()) {
-      CallInst *newCall = CallInst::Create(newF, convArgs);
-      newCall->setCallingConv(call->getCallingConv());
-      newCall->insertBefore(call->getInstruction());
-      return newCall;
-    } else if (call->isInvoke()) {
-      InvokeInst *invk = dyn_cast<InvokeInst>(call->getInstruction());
-      InvokeInst *newInvk = InvokeInst::Create(newF, invk->getNormalDest(), invk->getUnwindDest(), convArgs);
-      newInvk->setCallingConv(call->getCallingConv());
-      newInvk->insertBefore(invk);
-      return newInvk;
-    } else {
-      assert("Unknown CallSite type");
+    
+    if (convArgs[i]->getType() != f_arg->getType()) {
+      LLVM_DEBUG(dbgs() << "DTA BUG: type mismatch in actual argument " << i << " vs. formal argument\n");
+      return nullptr;
     }
+    
+    i++;
+    call_arg++;
+    f_arg++;
   }
 
-  dbgs() << "[Info] no function clone for instruction" << *(call->getInstruction()) << ", engaging fallback\n";
+  if (call->isCall()) {
+    CallInst *newCall = CallInst::Create(newF, convArgs);
+    newCall->setCallingConv(call->getCallingConv());
+    newCall->insertBefore(call->getInstruction());
+    return newCall;
+  } else if (call->isInvoke()) {
+    InvokeInst *invk = dyn_cast<InvokeInst>(call->getInstruction());
+    InvokeInst *newInvk = InvokeInst::Create(newF, invk->getNormalDest(), invk->getUnwindDest(), convArgs);
+    newInvk->setCallingConv(call->getCallingConv());
+    newInvk->insertBefore(invk);
+    return newInvk;
+  }
+  
+  assert(false && "Unknown CallSite type");
   return Unsupported;
 }
 

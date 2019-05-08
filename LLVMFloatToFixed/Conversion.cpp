@@ -90,6 +90,7 @@ Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& f
 /* do not use on pointer operands */
 Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt, Instruction *ip)
 {
+  assert(val->getType()->getNumContainedTypes() == 0 && "translateOrMatchOperand val is not a scalar value");
   Value *res = operandPool[val];
   if (res) {
     if (res != ConversionError) {
@@ -101,13 +102,15 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
       return nullptr;
   }
 
-  assert(val->getType()->isPointerTy() || val->getType()->isFloatingPointTy());
+  assert(val->getType()->isFloatingPointTy());
   return genConvertFloatToFix(val, iofixpt, ip);
 }
 
 
 Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixpt, Instruction *ip)
 {
+  assert(flt->getType()->isFloatingPointTy() && "genConvertFloatToFixed called on a non-float scalar");
+  
   if (Constant *c = dyn_cast<Constant>(flt)) {
     FixedPointType fixptcopy = fixpt;
     Value *res = convertConstant(c, fixptcopy);
@@ -127,13 +130,6 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
     ip = &(*firstbb.getFirstInsertionPt());
   }
   assert(ip && "ip is mandatory if not passing an instruction/constant value");
-  
-  if (!flt->getType()->isFloatingPointTy()) {
-    LLVM_DEBUG(errs() << "can't wrap-convert to fixp non float value ";
-          flt->print(errs());
-          errs() << "\n");
-    return nullptr;
-  }
   
   FloatToFixCount++;
   FloatToFixWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(flt)));
