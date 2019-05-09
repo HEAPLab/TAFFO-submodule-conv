@@ -453,7 +453,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
   /*le istruzioni Instruction::
     [Add,Sub,Mul,SDiv,UDiv,SRem,URem,Shl,LShr,AShr,And,Or,Xor]
     vengono gestite dalla fallback e non in questa funzione */
-  if (!instr->getType()->isFloatingPointTy())
+  if (!instr->getType()->isFloatingPointTy() || valueInfo(instr)->operation == ValueInfo::MatchOperands)
     return Unsupported;
   
   IRBuilder<> builder(instr->getNextNode());
