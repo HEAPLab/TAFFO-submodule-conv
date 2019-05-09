@@ -42,12 +42,22 @@ namespace flttofix {
 
 
 struct ValueInfo {
+  typedef enum {
+    Convert,
+    MatchOperands
+  } Operation;
+
   bool isBacktrackingNode;
   bool isRoot;
   llvm::SmallPtrSet<llvm::Value*, 5> roots;
-  FixedPointType fixpType;  // significant iff origType is a float or a pointer to a float
   unsigned int fixpTypeRootDistance = UINT_MAX;
-  llvm::Type *origType;
+  
+  Operation operation = Convert;
+  bool isOperationProduct = false;
+  
+  // significant iff origType is a float or a pointer to a float
+  // and if operation == Convert
+  FixedPointType fixpType;
 };
 
 struct FloatToFixed : public llvm::ModulePass {
@@ -84,6 +94,8 @@ struct FloatToFixed : public llvm::ModulePass {
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, FixedPointType& fixpt);
 
+  /* convert* functions return nullptr if the conversion cannot be
+   * recovered, and Unsupported to trigger the fallback behavior */
   llvm::Constant *convertConstant(llvm::Constant *flt, FixedPointType& fixpt);
   llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob, FixedPointType& fixpt);
   llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, FixedPointType& fixpt);
@@ -208,6 +220,37 @@ struct FloatToFixed : public llvm::ModulePass {
     }
     return res;
   };
+  
+  llvm::Value *fallbackMatchValue(llvm::Value *cvtfallval, llvm::Type *origType, llvm::Instruction *ip = nullptr) {
+    if (cvtfallval == ConversionError) {
+      LLVM_DEBUG(llvm::dbgs() << "error: bail out reverse match of " << *cvtfallval << "\n");
+      return nullptr;
+    }
+    if (!hasInfo(cvtfallval))
+      return cvtfallval;
+    if (valueInfo(cvtfallval)->operation == ValueInfo::MatchOperands)
+      return cvtfallval;
+    
+    if (!ip) {
+      ip = llvm::dyn_cast<llvm::Instruction>(cvtfallval);
+      if (ip)
+        ip = ip->getNextNode();
+      assert(ip && "ip mandatory for non-instruction values");
+    }
+    
+    /*Nel caso in cui la chiave (valore rimosso in precedenze) è un float
+      il rispettivo value è un fix che deve essere convertito in float per retrocompatibilità.
+      Se la chiave non è un float allora uso il rispettivo value associato così com'è.*/
+    if (cvtfallval->getType()->isPointerTy()) {
+      llvm::BitCastInst *bc = new llvm::BitCastInst(cvtfallval, origType);
+      cpMetaData(bc,cvtfallval);
+      bc->insertBefore(ip);
+      return bc;
+    }
+    if (origType->isFloatingPointTy())
+      return genConvertFixToFloat(cvtfallval, fixPType(cvtfallval), origType);
+    return cvtfallval;
+  }
   
   /** Generate code for converting the value of a scalar from floating point to
    *  fixed point.

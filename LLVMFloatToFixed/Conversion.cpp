@@ -93,13 +93,22 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
   assert(val->getType()->getNumContainedTypes() == 0 && "translateOrMatchOperand val is not a scalar value");
   Value *res = operandPool[val];
   if (res) {
-    if (res != ConversionError) {
-      /* the value has been successfully converted in a previous step */
-      iofixpt = fixPType(res);
-      return res;
-    } else
+    if (res == ConversionError)
       /* the value should have been converted but it hasn't; bail out */
       return nullptr;
+    
+    if (valueInfo(val)->operation == ValueInfo::Operation::Convert) {
+      /* the value has been successfully converted to fixed point in a previous step */
+      iofixpt = fixPType(res);
+      return res;
+    }
+    
+    /* The value has changed but may not a fixed point */
+    if (!res->getType()->isFloatingPointTy())
+      /* Don't attempt to convert ints/pointers to fixed point */
+      return res;
+    /* Otherwise convert to fixed point the value */
+    val = res;
   }
 
   assert(val->getType()->isFloatingPointTy());

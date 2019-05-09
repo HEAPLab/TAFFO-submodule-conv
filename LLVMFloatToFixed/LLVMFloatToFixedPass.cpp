@@ -13,8 +13,6 @@
 #include "LLVMFloatToFixedPass.h"
 #include "TypeUtils.h"
 
-//#define LOG_BACKTRACK
-
 
 using namespace llvm;
 using namespace flttofix;
@@ -104,27 +102,7 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
         }
       }
 
-      if (Instruction *inst = dyn_cast<Instruction>(u)) {
-        if (inst->getMetadata(INPUT_INFO_METADATA) || inst->getMetadata(STRUCT_INFO_METADATA)) {
-          if (!hasInfo(u)) {
-            LLVM_DEBUG(dbgs() << "[WARNING] Find Value " << *u << " without fixp format!\n");
-          }
-        } else {
-          LLVM_DEBUG(dbgs() << "[WARNING] Find Value " << *u << " without TAFFO info!\n");
-          continue;
-        }
-
-      } else if (GlobalObject *go = dyn_cast<GlobalObject>(u)) {
-        if (go->getMetadata(INPUT_INFO_METADATA) || go->getMetadata(STRUCT_INFO_METADATA)) {
-          if (!hasInfo(u)) {
-            LLVM_DEBUG(dbgs() << "[WARNING] Find GlobalObj " << *u << " without fixp format!\n");
-          }
-        } else {
-          LLVM_DEBUG(dbgs() << "[WARNING] Find GlobalObj " << *u << " without TAFFO info!\n");
-          continue;
-        }
-      }
-
+      dbgs() << "[U] " << *u << "\n";
       vals.push_back(u);
       valueInfo(u)->roots.insert(roots.begin(), roots.end());
     }
@@ -132,6 +110,14 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
   }
 
   for (Value *v: vals) {
+    if (!hasInfo(v)) {
+      LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because it has no metadata\n");
+      valueInfo(v)->operation = ValueInfo::Operation::MatchOperands;
+    } else if (fixPType(v).isInvalid()) {
+      LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because its metadata is incomplete\n");
+      valueInfo(v)->operation = ValueInfo::Operation::MatchOperands;
+    }
+    
     SmallPtrSetImpl<Value *> &roots = valueInfo(v)->roots;
     if (roots.empty()) {
       valueInfo(v)->isRoot = true;

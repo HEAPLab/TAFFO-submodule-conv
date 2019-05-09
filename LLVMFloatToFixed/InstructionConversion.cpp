@@ -63,15 +63,26 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
     res = fallback(dyn_cast<Instruction>(val), fixpt);
   }
   
-  if (res && res != Unsupported && !(res->getType()->isVoidTy()) && isFloatType(val->getType())) {
-    std::string tmpstore;
-    raw_string_ostream tmp(tmpstore);
-    if (res->hasName())
-      tmp << res->getName().str() << ".";
-    else if (val->hasName())
-      tmp << val->getName().str() << ".";
-    tmp << fixPType(val);
-    res->setName(tmp.str());
+  if (res && res != Unsupported && !(res->getType()->isVoidTy())) {
+    if (isFloatType(val->getType()) && valueInfo(val)->operation == ValueInfo::Convert) {
+      std::string tmpstore;
+      raw_string_ostream tmp(tmpstore);
+      if (res->hasName())
+        tmp << res->getName().str() << ".";
+      else if (val->hasName())
+        tmp << val->getName().str() << ".";
+      tmp << fixPType(val);
+      res->setName(tmp.str());
+    } else if (valueInfo(val)->operation == ValueInfo::MatchOperands) {
+      std::string tmpstore;
+      raw_string_ostream tmp(tmpstore);
+      if (res->hasName())
+        tmp << res->getName().str() << ".";
+      else if (val->hasName())
+        tmp << val->getName().str() << ".";
+      tmp << "matchop";
+      res->setName(tmp.str());
+    }
   }
 
   return res ? res : ConversionError;
@@ -642,7 +653,7 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
 Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
 {
   Value *fallval;
-  Instruction *fixval;
+  Value *fixval;
   std::vector<Value *> newops;
 
   LLVM_DEBUG(dbgs() << "[Fallback] attempt to wrap not supported operation:\n" << *unsupp << "\n");
@@ -659,19 +670,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
 
     //se è stato precedentemente sostituito e non è un puntatore
     if (cvtfallval) {
-      /*Nel caso in cui la chiave (valore rimosso in precedenze) è un float
-        il rispettivo value è un fix che deve essere convertito in float per retrocompatibilità.
-        Se la chiave non è un float allora uso il rispettivo value associato così com'è.*/
-      if (cvtfallval->getType()->isPointerTy()) {
-        BitCastInst *bc = new BitCastInst(cvtfallval,unsupp->getOperand(i)->getType());
-        cpMetaData(bc,cvtfallval);
-        bc->insertBefore(unsupp);
-        fixval = bc;
-      } else {
-        fixval = fallval->getType()->isFloatingPointTy()
-                 ? dyn_cast<Instruction>(genConvertFixToFloat(cvtfallval, fixPType(cvtfallval), fallval->getType()))
-                 : dyn_cast<Instruction>(cvtfallval);
-      }
+      fixval = fallbackMatchValue(cvtfallval, fallval->getType(), unsupp);
       LLVM_DEBUG(dbgs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
       newops.push_back(fixval);
     } else {
@@ -679,16 +678,21 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
     }
   }
   
-  Instruction *tmp = unsupp->clone();
-  if (!tmp->getType()->isVoidTy())
-    tmp->setName(unsupp->getName() + ".flt");
-  tmp->insertAfter(unsupp);
+  Instruction *tmp;
+  if (!unsupp->isTerminator()) {
+    tmp = unsupp->clone();
+    if (!tmp->getType()->isVoidTy())
+      tmp->setName(unsupp->getName() + ".flt");
+    tmp->insertAfter(unsupp);
+  } else {
+    tmp = unsupp;
+  }
   
   for (int i=0, n=tmp->getNumOperands(); i<n; i++) {
     tmp->setOperand(i, newops[i]);
   }
   LLVM_DEBUG(dbgs() << "  mutated operands to:\n" << *tmp << "\n");
-  if (tmp->getType()->isFloatingPointTy()) {
+  if (tmp->getType()->isFloatingPointTy() && valueInfo(unsupp)->operation == ValueInfo::Convert) {
     Value *fallbackv = genConvertFloatToFix(tmp, fixpt, tmp);
     if (tmp->hasName())
       fallbackv->setName(tmp->getName() + ".fallback");
