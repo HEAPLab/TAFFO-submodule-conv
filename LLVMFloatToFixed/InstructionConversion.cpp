@@ -419,7 +419,7 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
   Value *v;
   Value *oldv = ret->getReturnValue();
   
-  if (oldv->getType()->isIntegerTy()) {
+  if (oldv->getType()->isIntegerTy() || valueInfo(ret)->operation == ValueInfo::MatchOperands) {
     //if return an int we shouldn't return a fix point, go into fallback
     return Unsupported;
   }
