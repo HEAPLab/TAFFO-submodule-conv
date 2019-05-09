@@ -256,9 +256,9 @@ Value *FloatToFixed::convertInsertValue(InsertValueInst *inv, FixedPointType& fi
 }
 
 
-Value *FloatToFixed::convertPhi(PHINode *load, FixedPointType& fixpt)
+Value *FloatToFixed::convertPhi(PHINode *phi, FixedPointType& fixpt)
 {
-  if (!load->getType()->isFloatingPointTy()) {
+  if (!phi->getType()->isFloatingPointTy() || valueInfo(phi)->operation == ValueInfo::MatchOperands) {
     /* in the conversion chain the floating point number was converted to
      * an int at some point; we just upgrade the incoming values in place */
 
@@ -266,31 +266,27 @@ Value *FloatToFixed::convertPhi(PHINode *load, FixedPointType& fixpt)
      * that information across the phi. If at least one of them was converted
      * the phi is converted as well; otherwise it is not. */
     bool donesomething = false;
-    
-    if (isFloatType(load->getType())) {
-      dbgs() << "warning: pointer phi + multiple fixed point types are tricky";
-    }
 
-    for (int i=0; i<load->getNumIncomingValues(); i++) {
-      Value *thisval = load->getIncomingValue(i);
-      Value *newval = operandPool[thisval];
+    for (int i=0; i<phi->getNumIncomingValues(); i++) {
+      Value *thisval = phi->getIncomingValue(i);
+      Value *newval = fallbackMatchValue(operandPool[thisval], thisval->getType(), phi);
       if (newval && newval != ConversionError) {
-        load->setIncomingValue(i, newval);
+        phi->setIncomingValue(i, newval);
         donesomething = true;
       }
     }
-    return donesomething ? load : nullptr;
+    return donesomething ? phi : nullptr;
   }
 
   /* if we have to do a type change, create a new phi node. The new type is for
    * sure that of a fixed point value; because the original type was a float
    * and thus all of its incoming values were floats */
-  PHINode *newphi = PHINode::Create(fixpt.scalarToLLVMType(load->getContext()),
-    load->getNumIncomingValues());
+  PHINode *newphi = PHINode::Create(fixpt.scalarToLLVMType(phi->getContext()),
+    phi->getNumIncomingValues());
 
-  for (int i=0; i<load->getNumIncomingValues(); i++) {
-    Value *thisval = load->getIncomingValue(i);
-    BasicBlock *thisbb = load->getIncomingBlock(i);
+  for (int i=0; i<phi->getNumIncomingValues(); i++) {
+    Value *thisval = phi->getIncomingValue(i);
+    BasicBlock *thisbb = phi->getIncomingBlock(i);
     Value *newval = translateOrMatchOperandAndType(thisval, fixpt, thisbb->getFirstNonPHI());
     if (!newval) {
       delete newphi;
@@ -302,7 +298,7 @@ Value *FloatToFixed::convertPhi(PHINode *load, FixedPointType& fixpt)
     }
     newphi->addIncoming(newval, thisbb);
   }
-  newphi->insertAfter(load);
+  newphi->insertAfter(phi);
   return newphi;
 }
 
