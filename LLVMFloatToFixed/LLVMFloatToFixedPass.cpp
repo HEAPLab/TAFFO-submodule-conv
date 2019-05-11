@@ -64,7 +64,7 @@ int FloatToFixed::getLoopNestingLevelOfValue(llvm::Value *v)
 {
   Instruction *inst = dyn_cast<Instruction>(v);
   if (!inst)
-    return -1;
+    return 0;
 
   Function *fun = inst->getFunction();
   LoopInfo &li = this->getAnalysis<LoopInfoWrapperPass>(*fun).getLoopInfo();
