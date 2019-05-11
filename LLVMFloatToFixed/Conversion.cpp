@@ -225,26 +225,34 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
   destt->print(dbgs());
   dbgs() << "\n";);
   
-  Instruction *i = dyn_cast<Instruction>(fix);
-  if (!i)
-    return nullptr;
-  FixToFloatCount++;
-  FixToFloatWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(fix)));
-  
   if (!fix->getType()->isIntegerTy()) {
     LLVM_DEBUG(errs() << "can't wrap-convert to flt non integer value ";
           fix->print(errs());
           errs() << "\n");
     return nullptr;
   }
-
-  IRBuilder<> builder(i->getNextNode());
   
-  Value *floattmp = fixpt.scalarIsSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
-  cpMetaData(floattmp,fix);
-  double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
-  return cpMetaData(builder.CreateFDiv(floattmp,
-                                       cpMetaData(ConstantFP::get(destt, twoebits), fix)),fix);
+  FixToFloatCount++;
+  FixToFloatWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(fix)));
+  
+  if (Instruction *i = dyn_cast<Instruction>(fix)) {
+    IRBuilder<> builder(i->getNextNode());
+    
+    Value *floattmp = fixpt.scalarIsSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
+    cpMetaData(floattmp,fix);
+    double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
+    return cpMetaData(builder.CreateFDiv(floattmp,
+                                         cpMetaData(ConstantFP::get(destt, twoebits), fix)),fix);
+    
+  } else if (Constant *cst = dyn_cast<Constant>(fix)) {
+    Constant *floattmp = fixpt.scalarIsSigned() ?
+      ConstantExpr::getSIToFP(cst, destt) :
+      ConstantExpr::getUIToFP(cst, destt);
+    double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
+    return ConstantExpr::getFDiv(floattmp, ConstantFP::get(destt, twoebits));
+  }
+  
+  llvm_unreachable("unrecognized value type passed to genConvertFixToFloat");
 }
 
 
