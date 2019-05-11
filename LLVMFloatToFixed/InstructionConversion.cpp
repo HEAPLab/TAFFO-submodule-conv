@@ -456,7 +456,6 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
   if (!instr->getType()->isFloatingPointTy() || valueInfo(instr)->operation == ValueInfo::MatchOperands)
     return Unsupported;
   
-  IRBuilder<> builder(instr->getNextNode());
   int opc = instr->getOpcode();
 
   FixedPointType intype1 = fixpt, intype2 = fixpt;
@@ -466,8 +465,9 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
     return nullptr;
 
   if (opc == Instruction::FAdd || opc == Instruction::FSub || opc == Instruction::FRem) {
-    val1 = genConvertFixedToFixed(val1, intype1, fixpt);
-    val2 = genConvertFixedToFixed(val2, intype2, fixpt);
+    val1 = genConvertFixedToFixed(val1, intype1, fixpt, instr);
+    val2 = genConvertFixedToFixed(val2, intype2, fixpt, instr);
+    IRBuilder<> builder(instr);
     
     if (opc == Instruction::FAdd)
       return builder.CreateBinOp(Instruction::Add, val1, val2);
@@ -490,6 +490,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
     Type *dbfxt = intermtype.scalarToLLVMType(instr->getContext());
   
     if (opc == Instruction::FMul) {
+      IRBuilder<> builder(instr);
       Value *ext1 = intype1.scalarIsSigned() ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
       Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
       Value *fixop = builder.CreateMul(ext1, ext2);
@@ -498,7 +499,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
       cpMetaData(fixop,ext1);
       cpMetaData(fixop,ext2);
       updateFPTypeMetadata(fixop, intermtype.scalarIsSigned(), intype1.scalarFracBitsAmt(), intermtype.scalarBitsAmt());
-      return genConvertFixedToFixed(fixop, intermtype, fixpt);
+      return genConvertFixedToFixed(fixop, intermtype, fixpt, instr);
       
     } else {
       FixedPointType fixoptype(
@@ -506,12 +507,13 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
         intype1.scalarFracBitsAmt(),
         intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
       Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype, instr);
+      IRBuilder<> builder(instr);
       Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
       Value *fixop = fixpt.scalarIsSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
       cpMetaData(ext2,val2);
       cpMetaData(fixop,ext2);
       updateFPTypeMetadata(fixop, fixoptype.scalarIsSigned(), fixoptype.scalarFracBitsAmt(), fixoptype.scalarBitsAmt());
-      return genConvertFixedToFixed(fixop, fixoptype, fixpt);
+      return genConvertFixedToFixed(fixop, fixoptype, fixpt, instr);
     }
   }
   
