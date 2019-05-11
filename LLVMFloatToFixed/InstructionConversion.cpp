@@ -638,10 +638,10 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
     Value *val = matchOp(operand);
     
     if (cast->getOpcode() == Instruction::SIToFP) {
-      return genConvertFixedToFixed(val, FixedPointType(val->getType(), true), fixpt);
+      return genConvertFixedToFixed(val, FixedPointType(val->getType(), true), fixpt, cast);
 
     } else if (cast->getOpcode() == Instruction::UIToFP) {
-      return genConvertFixedToFixed(val, FixedPointType(val->getType(), false), fixpt);
+      return genConvertFixedToFixed(val, FixedPointType(val->getType(), false), fixpt, cast);
     }
   }
 
