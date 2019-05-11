@@ -618,6 +618,9 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
     }
   }
   
+  if (valueInfo(cast)->operation == ValueInfo::MatchOperands)
+    return Unsupported;
+  
   if (operand->getType()->isFloatingPointTy()) {
     /* fptosi, fptoui, fptrunc, fpext */
     if (cast->getOpcode() == Instruction::FPToSI) {
