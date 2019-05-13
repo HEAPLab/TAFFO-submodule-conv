@@ -343,7 +343,9 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
    * otherwise the return type is left unchanged.*/
   Function *oldF = call->getCalledFunction();
 
-  if(isSpecialFunction(oldF))
+  if (isSpecialFunction(oldF))
+    return Unsupported;
+  if (valueInfo(call->getInstruction())->operation == ValueInfo::MatchOperands)
     return Unsupported;
   
   Function *newF = functionPool[oldF];
@@ -367,27 +369,46 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
   auto *call_arg = call->arg_begin();
   auto *f_arg = newF->arg_begin();
   while (call_arg != call->arg_end()) {
-    if (hasInfo(*call_arg)) {
-       if (!hasInfo(f_arg)) {
-        LLVM_DEBUG(dbgs() << "DTA BUG: actual argument " << i << " not converted, but formal arguments converted\n");
-        return nullptr;
+    Value *thisArgument;
+    
+    if (!hasInfo(f_arg)) {
+      if (!hasInfo(*call_arg)) {
+        thisArgument = *call_arg;
+      } else {
+        thisArgument = operandPool[*call_arg];
+        thisArgument = fallbackMatchValue(thisArgument, f_arg->getType());
       }
-      FixedPointType& argfpt = fixPType(*call_arg);
-      FixedPointType& funfpt = fixPType(&(*f_arg));
+      
+    } else if (hasInfo(*call_arg) && valueInfo(*call_arg)->operation == ValueInfo::Convert) {
+      FixedPointType argfpt, funfpt;
+      argfpt = fixPType(*call_arg);
+      funfpt = fixPType(&(*f_arg));
       if (!(argfpt == funfpt)) {
-        LLVM_DEBUG(dbgs() << "DTA BUG: fixed point type mismatch in actual argument " << i << " vs. formal argument\n");
-        return nullptr;
+        LLVM_DEBUG(dbgs() << "CALL: fixed point type mismatch in actual argument " << i << " vs. formal argument\n");
+        LLVM_DEBUG(dbgs() << "      (actual " << argfpt.toString() << ", vs. formal " << funfpt.toString() << ")\n");
+        LLVM_DEBUG(dbgs() << "      making an attempt to ignore the issue because mem2reg can interfere\n");
       }
-      Value *newarg = matchOp(*call_arg);
-      convArgs.push_back(newarg);
-      fixArgs.push_back(std::pair<int, FixedPointType>(i, argfpt));
+      thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt);
+      fixArgs.push_back(std::pair<int, FixedPointType>(i, funfpt));
+      
     } else {
-      convArgs.push_back(dyn_cast<Value>(call_arg));
+      FixedPointType funfpt;
+      funfpt = fixPType(&(*f_arg));
+      LLVM_DEBUG(dbgs() << "CALL: formal argument " << i << " converted but not actual argument\n");
+      LLVM_DEBUG(dbgs() << "      making an attempt to ignore the issue because mem2reg can interfere\n");
+      thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt);
     }
-    typeArgs.push_back(convArgs[i]->getType());
+    
+    if (!thisArgument) {
+      LLVM_DEBUG(dbgs() << "CALL: match of argument " << i << " failed\n");
+      return Unsupported;
+    }
+    
+    convArgs.push_back(thisArgument);
+    typeArgs.push_back(thisArgument->getType());
     
     if (convArgs[i]->getType() != f_arg->getType()) {
-      LLVM_DEBUG(dbgs() << "DTA BUG: type mismatch in actual argument " << i << " vs. formal argument\n");
+      LLVM_DEBUG(dbgs() << "CALL: type mismatch in actual argument " << i << " vs. formal argument\n");
       return nullptr;
     }
     
