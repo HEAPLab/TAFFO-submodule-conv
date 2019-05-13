@@ -70,6 +70,14 @@ void FloatToFixed::performConversion(
 }
 
 
+Value *FloatToFixed::createPlaceholder(Type *type, BasicBlock *where, StringRef name)
+{
+  IRBuilder<> builder(where, where->begin());
+  AllocaInst *alloca = builder.CreateAlloca(type);
+  return builder.CreateLoad(type, alloca, name);
+}
+
+
 /* also inserts the new value in the basic blocks, alongside the old one */
 Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& fixpt)
 {

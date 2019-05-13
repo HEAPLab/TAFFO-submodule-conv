@@ -252,18 +252,24 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
           if (oldIt->getType() != newIt->getType()){
             FixedPointType fixtype = valueInfo(call->getInstruction()->getOperand(i))->fixpType;
-
-            // Mark the alloca used for the argument (in O0 opt lvl)
-            valueInfo(newIt->user_begin()->getOperand(1))->fixpType = fixtype;
-            valueInfo(newIt->user_begin()->getOperand(1))->fixpTypeRootDistance = 0;
-            newVals.push_back(newIt->user_begin()->getOperand(1));
+            
+            //append fixp info to arg name
+            newIt->setName(newIt->getName() + "." + fixtype.toString());
+            
+            /* Create a fake value to maintain type consistency because
+             * createFixFun has RAUWed all arguments */
+            std::string name("placeholder");
+            if (newIt->hasName())
+              name = newIt->getName().str() + "." + name;
+            Value *placehValue = createPlaceholder(newIt->getType(), &newF->getEntryBlock(), name);
+            newIt->replaceAllUsesWith(placehValue);
+            valueInfo(placehValue)->fixpType = fixtype;
+            valueInfo(placehValue)->fixpTypeRootDistance = 0;
+            operandPool[placehValue] = newIt;
 
             // Mark the argument itself
             valueInfo(newIt)->fixpType = fixtype;
             valueInfo(newIt)->fixpTypeRootDistance = 0;
-
-            //append fixp info to arg name
-            newIt->setName(newIt->getName() + "." + fixtype.toString());
           }
         }
 
