@@ -334,10 +334,6 @@ struct FloatToFixed : public llvm::ModulePass {
         to->setMetadata(INPUT_INFO_METADATA, md);
       else if (GlobalObject *to = dyn_cast<GlobalObject>(dst))
         to->setMetadata(INPUT_INFO_METADATA, md);
-      else
-        LLVM_DEBUG(llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n");
-    } else {
-      LLVM_DEBUG(llvm::dbgs() << "No Metadata propagated from" << *src << " to" << *dst << "\n");
     }
 
     if (targetMD) {

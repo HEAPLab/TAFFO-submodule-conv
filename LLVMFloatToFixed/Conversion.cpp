@@ -42,7 +42,11 @@ void FloatToFixed::performConversion(
       }
     }
     
-    LLVM_DEBUG(dbgs() << "performConversion " << *v << "\n");
+    LLVM_DEBUG(dbgs() << "* performConversion *\n");
+    LLVM_DEBUG(dbgs() << "  [op      ] " << valueInfo(v)->operation << "\n");
+    LLVM_DEBUG(dbgs() << "  [value   ] " << *v << "\n");
+    if (Instruction *i = dyn_cast<Instruction>(v))
+      LLVM_DEBUG(dbgs() << "  [function] " << i->getFunction()->getName() << "\n");
     
     Value *newv = convertSingleValue(m, v, valueInfo(v)->fixpType);
     if (newv) {
@@ -50,6 +54,7 @@ void FloatToFixed::performConversion(
     }
     
     if (newv && newv != ConversionError) {
+      LLVM_DEBUG(dbgs() << "  [output  ] " << *newv << "\n");
       if (newv != v && isa<Instruction>(newv) && isa<Instruction>(v)) {
         Instruction *newinst = dyn_cast<Instruction>(newv);
         Instruction *oldinst = dyn_cast<Instruction>(v);
@@ -58,9 +63,7 @@ void FloatToFixed::performConversion(
       cpMetaData(newv,v);
       *valueInfo(newv) = *valueInfo(v);
     } else {
-      LLVM_DEBUG(dbgs() << "warning: ";
-            v->print(dbgs());
-            dbgs() << " not converted\n";);
+      LLVM_DEBUG(dbgs() << "  [output  ] CONVERSION ERROR\n");
     }
     i++;
   }
