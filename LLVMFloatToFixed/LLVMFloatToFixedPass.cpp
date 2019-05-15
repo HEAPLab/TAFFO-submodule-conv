@@ -73,7 +73,7 @@ int FloatToFixed::getLoopNestingLevelOfValue(llvm::Value *v)
 }
 
 
-void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
+void FloatToFixed::sortQueue(std::vector<Value *> &vals)
 {
   size_t next = 0;
   while (next < vals.size()) {
@@ -91,9 +91,6 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
     }
 
     for (auto *u: v->users()) {
-      if (PHINode *phi = dyn_cast<PHINode>(u)) {
-        
-      }
       /* Insert u at the end of the queue.
        * If u exists already in the queue, *move* it to the end instead. */
       for (int i=0; i<vals.size();) {
@@ -105,6 +102,11 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
           i++;
         }
       }
+      
+      if (!hasInfo(v)) {
+        LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because it has no metadata\n");
+        valueInfo(v)->operation = ValueInfo::Operation::MatchOperands;
+      }
 
       dbgs() << "[U] " << *u << "\n";
       vals.push_back(u);
@@ -114,10 +116,8 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
   }
 
   for (Value *v: vals) {
-    if (!hasInfo(v)) {
-      LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because it has no metadata\n");
-      valueInfo(v)->operation = ValueInfo::Operation::MatchOperands;
-    } else if (fixPType(v).isInvalid()) {
+    assert(hasInfo(v) && "all values in the queue should have a valueInfo by now");
+    if (fixPType(v).isInvalid() && !(v->getType()->isVoidTy() && !isa<ReturnInst>(v))) {
       LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because its metadata is incomplete\n");
       valueInfo(v)->operation = ValueInfo::Operation::MatchOperands;
     }
@@ -250,7 +250,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         SmallVector<ReturnInst*,100> returns;
         CloneFunctionInto(newF, oldF, mapArgs, true, returns);
 
-        std::vector<Value*> newVals; //propagate fixp conversion
+        SmallPtrSet<Value *, 32> newVals; //propagate fixp conversion
         oldIt = oldF->arg_begin();
         newIt = newF->arg_begin();
         for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
@@ -261,12 +261,18 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
             newIt->setName(newIt->getName() + "." + fixtype.toString());
             
             /* Create a fake value to maintain type consistency because
-             * createFixFun has RAUWed all arguments */
+             * createFixFun has RAUWed all arguments
+             * FIXME: is there a cleaner way to do this? */
             std::string name("placeholder");
             if (newIt->hasName())
               name = newIt->getName().str() + "." + name;
-            Value *placehValue = createPlaceholder(newIt->getType(), &newF->getEntryBlock(), name);
-            newIt->replaceAllUsesWith(placehValue);
+            Value *placehValue = createPlaceholder(oldIt->getType(), &newF->getEntryBlock(), name);
+            /* Reimplement RAUW to defeat the same-type check (which is ironic because
+             * we are attempting to fix a type mismatch here) */
+            while (!newIt->materialized_use_empty()) {
+              Use &U = *(newIt->uses().begin());
+              U.set(placehValue);
+            }
             valueInfo(placehValue)->fixpType = fixtype;
             valueInfo(placehValue)->fixpTypeRootDistance = 0;
             operandPool[placehValue] = newIt;
@@ -277,21 +283,40 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
           }
         }
 
-        newVals.insert(newVals.begin(), global.begin(), global.end());
+        newVals.insert(global.begin(), global.end());
         SmallPtrSet<Value*, 32> localFix;
         readLocalMetadata(*newF, localFix);
-        newVals.insert(newVals.begin(), localFix.begin(), localFix.end());
+        newVals.insert(localFix.begin(), localFix.end());
         
         /* Copy the return type on the call instruction to all the return
          * instructions */
         for (ReturnInst *v : returns) {
           if (!hasInfo(call->getInstruction()))
             continue;
-          newVals.push_back(v);
+          newVals.insert(v);
           valueInfo(v)->fixpType = valueInfo(call->getInstruction())->fixpType;
           valueInfo(v)->fixpTypeRootDistance = 0;
         }
+        
+        /* Remove instructions of the old function from the queue */
+        int removei, removej;
+        for (removei=0, removej=0; removej<vals.size(); removej++) {
+          vals[removei] = vals[removej];
+          Value *val = vals[removej];
+          bool toDelete = false;
+          if (Instruction *inst = dyn_cast<Instruction>(val)) {
+            if (inst->getFunction() == oldF)
+              toDelete = true;
+          } else if (Argument *arg = dyn_cast<Argument>(val)) {
+            if (arg->getParent() == oldF)
+              toDelete = true;
+          }
+          if (!toDelete)
+            removei++;
+        }
+        vals.resize(removei);
 
+        /* Put the instructions from the new function in */
         for (Value *val : newVals){
           if (Instruction *inst = dyn_cast<Instruction>(val)) {
             if (inst->getFunction()==newF){
