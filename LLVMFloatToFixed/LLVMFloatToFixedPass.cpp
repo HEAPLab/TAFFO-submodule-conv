@@ -78,6 +78,7 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
   size_t next = 0;
   while (next < vals.size()) {
     Value *v = vals.at(next);
+    dbgs() << "[V] " << *v << "\n";
     SmallPtrSet<Value*, 5> roots;
     for (Value *oldroot: valueInfo(v)->roots) {
       if (valueInfo(oldroot)->roots.empty())
@@ -90,6 +91,9 @@ void FloatToFixed::sortQueue(std::vector<llvm::Value *> &vals)
     }
 
     for (auto *u: v->users()) {
+      if (PHINode *phi = dyn_cast<PHINode>(u)) {
+        
+      }
       /* Insert u at the end of the queue.
        * If u exists already in the queue, *move* it to the end instead. */
       for (int i=0; i<vals.size();) {
@@ -273,19 +277,20 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
           }
         }
 
-        // If return a float, all the return inst should have a fix point (independently from the conv queue)
-        if (oldF->getReturnType()->isFloatingPointTy()) {
-          for (ReturnInst *v : returns) {
-            newVals.push_back(v);
-            valueInfo(v)->fixpType = valueInfo(call->getInstruction())->fixpType;
-            valueInfo(v)->fixpTypeRootDistance = 0;
-          }
-        }
-
         newVals.insert(newVals.begin(), global.begin(), global.end());
         SmallPtrSet<Value*, 32> localFix;
         readLocalMetadata(*newF, localFix);
         newVals.insert(newVals.begin(), localFix.begin(), localFix.end());
+        
+        /* Copy the return type on the call instruction to all the return
+         * instructions */
+        for (ReturnInst *v : returns) {
+          if (!hasInfo(call->getInstruction()))
+            continue;
+          newVals.push_back(v);
+          valueInfo(v)->fixpType = valueInfo(call->getInstruction())->fixpType;
+          valueInfo(v)->fixpTypeRootDistance = 0;
+        }
 
         for (Value *val : newVals){
           if (Instruction *inst = dyn_cast<Instruction>(val)) {
