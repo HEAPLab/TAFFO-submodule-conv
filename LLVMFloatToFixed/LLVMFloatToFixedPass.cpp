@@ -196,6 +196,10 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
       Instruction *i = dyn_cast<Instruction>(v);
       if (!i || (!toDelete(*i)))
         continue;
+      if (operandPool[v] == v) {
+        LLVM_DEBUG(dbgs() << *i << " not deleted, as it was converted by self-mutation\n");
+        continue;
+      }
       const auto &roots = valueInfo(v)->roots;
 
       bool allok = true;
