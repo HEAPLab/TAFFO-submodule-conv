@@ -112,7 +112,8 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
   Value *newptr = operandPool[ptr];
   if (newptr == ConversionError)
     return nullptr;
-  assert(newptr && "a load can't be in the conversion queue just because");
+  if (!newptr)
+    return Unsupported;
   fixpt = fixPType(newptr);
 
   LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
