@@ -230,103 +230,112 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
 
 void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global)
 {
+  SmallPtrSet<Function *, 16> oldFuncs;
+  
   for (int i=0; i < vals.size(); i++) {
     Value *valsi = vals[i];
-    if (isa<CallInst>(valsi) || isa<InvokeInst>(valsi)) {
-      CallSite *call = new CallSite(valsi);
-      if (Function *newF = createFixFun(call)) {
-        Function *oldF = call->getCalledFunction();
-
-        LLVM_DEBUG(dbgs() << "Converting function " << oldF->getName() << " : " << *oldF->getType()
-                     << " into " << newF->getName() << " : " << *newF->getType() << "\n");
-
-        ValueToValueMapTy mapArgs; // Create Val2Val mapping and clone function
-        Function::arg_iterator newIt = newF->arg_begin();
-        Function::arg_iterator oldIt = oldF->arg_begin();
-        for (; oldIt != oldF->arg_end() ; oldIt++, newIt++) {
-          newIt->setName(oldIt->getName());
-          mapArgs.insert(std::make_pair(oldIt, newIt));
-        }
-        SmallVector<ReturnInst*,100> returns;
-        CloneFunctionInto(newF, oldF, mapArgs, true, returns);
-
-        SmallPtrSet<Value *, 32> newVals; //propagate fixp conversion
-        oldIt = oldF->arg_begin();
-        newIt = newF->arg_begin();
-        for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
-          if (oldIt->getType() != newIt->getType()){
-            FixedPointType fixtype = valueInfo(call->getInstruction()->getOperand(i))->fixpType;
-            
-            //append fixp info to arg name
-            newIt->setName(newIt->getName() + "." + fixtype.toString());
-            
-            /* Create a fake value to maintain type consistency because
-             * createFixFun has RAUWed all arguments
-             * FIXME: is there a cleaner way to do this? */
-            std::string name("placeholder");
-            if (newIt->hasName())
-              name = newIt->getName().str() + "." + name;
-            Value *placehValue = createPlaceholder(oldIt->getType(), &newF->getEntryBlock(), name);
-            /* Reimplement RAUW to defeat the same-type check (which is ironic because
-             * we are attempting to fix a type mismatch here) */
-            while (!newIt->materialized_use_empty()) {
-              Use &U = *(newIt->uses().begin());
-              U.set(placehValue);
-            }
-            valueInfo(placehValue)->fixpType = fixtype;
-            valueInfo(placehValue)->fixpTypeRootDistance = 0;
-            operandPool[placehValue] = newIt;
-
-            // Mark the argument itself
-            valueInfo(newIt)->fixpType = fixtype;
-            valueInfo(newIt)->fixpTypeRootDistance = 0;
-          }
-        }
-
-        newVals.insert(global.begin(), global.end());
-        SmallPtrSet<Value*, 32> localFix;
-        readLocalMetadata(*newF, localFix);
-        newVals.insert(localFix.begin(), localFix.end());
+    CallSite call(valsi);
+    
+    if (!call.getInstruction())
+      continue;
+    
+    Function *oldF = call.getCalledFunction();
+    Function *newF = createFixFun(&call);
+    if (!newF) {
+      LLVM_DEBUG(dbgs() << "Attempted to clone function " << oldF->getName() << " but failed\n");
+      continue;
+    }
+    
+    LLVM_DEBUG(dbgs() << "Converting function " << oldF->getName() << " : " << *oldF->getType()
+               << " into " << newF->getName() << " : " << *newF->getType() << "\n");
+    
+    ValueToValueMapTy mapArgs; // Create Val2Val mapping and clone function
+    Function::arg_iterator newIt = newF->arg_begin();
+    Function::arg_iterator oldIt = oldF->arg_begin();
+    for (; oldIt != oldF->arg_end() ; oldIt++, newIt++) {
+      newIt->setName(oldIt->getName());
+      mapArgs.insert(std::make_pair(oldIt, newIt));
+    }
+    SmallVector<ReturnInst*,100> returns;
+    CloneFunctionInto(newF, oldF, mapArgs, true, returns);
+    
+    SmallPtrSet<Value *, 32> newVals; //propagate fixp conversion
+    oldIt = oldF->arg_begin();
+    newIt = newF->arg_begin();
+    for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
+      if (oldIt->getType() != newIt->getType()){
+        FixedPointType fixtype = valueInfo(call.getInstruction()->getOperand(i))->fixpType;
         
-        /* Copy the return type on the call instruction to all the return
-         * instructions */
-        for (ReturnInst *v : returns) {
-          if (!hasInfo(call->getInstruction()))
-            continue;
-          newVals.insert(v);
-          valueInfo(v)->fixpType = valueInfo(call->getInstruction())->fixpType;
-          valueInfo(v)->fixpTypeRootDistance = 0;
-        }
+        //append fixp info to arg name
+        newIt->setName(newIt->getName() + "." + fixtype.toString());
         
-        /* Remove instructions of the old function from the queue */
-        int removei, removej;
-        for (removei=0, removej=0; removej<vals.size(); removej++) {
-          vals[removei] = vals[removej];
-          Value *val = vals[removej];
-          bool toDelete = false;
-          if (Instruction *inst = dyn_cast<Instruction>(val)) {
-            if (inst->getFunction() == oldF)
-              toDelete = true;
-          } else if (Argument *arg = dyn_cast<Argument>(val)) {
-            if (arg->getParent() == oldF)
-              toDelete = true;
-          }
-          if (!toDelete)
-            removei++;
+        /* Create a fake value to maintain type consistency because
+         * createFixFun has RAUWed all arguments
+         * FIXME: is there a cleaner way to do this? */
+        std::string name("placeholder");
+        if (newIt->hasName())
+          name = newIt->getName().str() + "." + name;
+        Value *placehValue = createPlaceholder(oldIt->getType(), &newF->getEntryBlock(), name);
+        /* Reimplement RAUW to defeat the same-type check (which is ironic because
+         * we are attempting to fix a type mismatch here) */
+        while (!newIt->materialized_use_empty()) {
+          Use &U = *(newIt->uses().begin());
+          U.set(placehValue);
         }
-        vals.resize(removei);
-
-        /* Put the instructions from the new function in */
-        for (Value *val : newVals){
-          if (Instruction *inst = dyn_cast<Instruction>(val)) {
-            if (inst->getFunction()==newF){
-              vals.push_back(val);
-            }
-          }
+        valueInfo(placehValue)->fixpType = fixtype;
+        valueInfo(placehValue)->fixpTypeRootDistance = 0;
+        operandPool[placehValue] = newIt;
+        
+        // Mark the argument itself
+        valueInfo(newIt)->fixpType = fixtype;
+        valueInfo(newIt)->fixpTypeRootDistance = 0;
+      }
+    }
+    
+    newVals.insert(global.begin(), global.end());
+    SmallPtrSet<Value*, 32> localFix;
+    readLocalMetadata(*newF, localFix);
+    newVals.insert(localFix.begin(), localFix.end());
+    
+    /* Copy the return type on the call instruction to all the return
+     * instructions */
+    for (ReturnInst *v : returns) {
+      if (!hasInfo(call.getInstruction()))
+        continue;
+      newVals.insert(v);
+      valueInfo(v)->fixpType = valueInfo(call.getInstruction())->fixpType;
+      valueInfo(v)->fixpTypeRootDistance = 0;
+    }
+    
+    oldFuncs.insert(oldF);
+    
+    /* Put the instructions from the new function in */
+    for (Value *val : newVals){
+      if (Instruction *inst = dyn_cast<Instruction>(val)) {
+        if (inst->getFunction()==newF){
+          vals.push_back(val);
         }
       }
     }
   }
+  
+  /* Remove instructions of the old functions from the queue */
+  int removei, removej;
+  for (removei=0, removej=0; removej<vals.size(); removej++) {
+    vals[removei] = vals[removej];
+    Value *val = vals[removej];
+    bool toDelete = false;
+    if (Instruction *inst = dyn_cast<Instruction>(val)) {
+      if (oldFuncs.count(inst->getFunction()))
+        toDelete = true;
+    } else if (Argument *arg = dyn_cast<Argument>(val)) {
+      if (oldFuncs.count(arg->getParent()))
+        toDelete = true;
+    }
+    if (!toDelete)
+      removei++;
+  }
+  vals.resize(removei);
 }
 
 
@@ -397,22 +406,27 @@ Function* FloatToFixed::createFixFun(CallSite* call)
 
 void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
 {
-  if (vals.size() < 1000) {
-    errs() << "conversion queue:\n";
-                  for (Value *val: vals) {
-                    errs() << "bt=" << valueInfo(val)->isBacktrackingNode << " ";
-                    errs() << valueInfo(val)->fixpType << " ";
-                    errs() << "[";
-                    for (Value *rootv: valueInfo(val)->roots) {
-                      rootv->print(errs());
-                      errs() << ' ';
-                    }
-                    errs() << "] ";
-                    val->print(errs());
-                    errs() << "\n";
-                  }
-                  errs() << "\n\n";
-  } else {
-    errs() << "not printing the conversion queue because it exceeds 1000 items\n";
+  if (vals.size() > 1000) {
+    dbgs() << "not printing the conversion queue because it exceeds 1000 items\n";
+    return;
   }
+  
+  dbgs() << "conversion queue:\n";
+  for (Value *val: vals) {
+    dbgs() << "bt=" << valueInfo(val)->isBacktrackingNode << " ";
+    dbgs() << "op=" << valueInfo(val)->operation << " ";
+    dbgs() << "type=" << valueInfo(val)->fixpType << " ";
+    if (Instruction *i = dyn_cast<Instruction>(val)) {
+      dbgs() << " fun='" << i->getFunction()->getName() << "' ";
+    }
+    
+    dbgs() << "roots=[";
+    for (Value *rootv: valueInfo(val)->roots) {
+      dbgs() << *rootv << ", ";
+    }
+    dbgs() << "] ";
+    
+    dbgs() << *val << "\n";
+  }
+  dbgs() << "\n\n";
 }

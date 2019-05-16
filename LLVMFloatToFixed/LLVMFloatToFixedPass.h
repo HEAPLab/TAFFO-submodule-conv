@@ -70,6 +70,9 @@ struct FloatToFixed : public llvm::ModulePass {
    *  one of two sentinel values, ConversionError or Unsupported. */
   llvm::DenseMap<llvm::Value *, llvm::Value *> operandPool;
   
+  /** Map from original function (as cloned by Initializer)
+   *  to function cloned by this pass in order to change argument
+   *  and return values */
   llvm::DenseMap<llvm::Function*, llvm::Function*> functionPool;
   
   /* to not be accessed directly, use valueInfo() */
