@@ -91,6 +91,9 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
 
 Value *FloatToFixed::convertAlloca(AllocaInst *alloca, const FixedPointType& fixpt)
 {
+  if (valueInfo(alloca)->noTypeConversion)
+    return alloca;
+  
   Type *prevt = alloca->getAllocatedType();
   Type *newt = getLLVMFixedPointTypeForFloatType(prevt, fixpt);
   if (newt == prevt)
@@ -119,6 +122,10 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
   LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
     load->getAlignment(), load->getOrdering(), load->getSyncScopeID());
   newinst->insertAfter(load);
+  if (valueInfo(load)->noTypeConversion && isConvertedFixedPoint(newptr)) {
+    assert(newinst->getType()->isIntegerTy() && "DTA bug; improperly tagged struct/pointer!");
+    return genConvertFixToFloat(newinst, fixPType(newptr), load->getType());
+  }
   return newinst;
 }
 
