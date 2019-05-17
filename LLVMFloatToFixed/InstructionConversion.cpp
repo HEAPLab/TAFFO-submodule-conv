@@ -270,7 +270,7 @@ Value *FloatToFixed::convertPhi(PHINode *phi, FixedPointType& fixpt)
 
     for (int i=0; i<phi->getNumIncomingValues(); i++) {
       Value *thisval = phi->getIncomingValue(i);
-      Value *newval = fallbackMatchValue(operandPool[thisval], thisval->getType(), phi);
+      Value *newval = fallbackMatchValue(thisval, thisval->getType(), phi);
       if (newval && newval != ConversionError) {
         phi->setIncomingValue(i, newval);
         donesomething = true;
@@ -376,8 +376,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
       if (!hasInfo(*call_arg)) {
         thisArgument = *call_arg;
       } else {
-        thisArgument = operandPool[*call_arg];
-        thisArgument = fallbackMatchValue(thisArgument, f_arg->getType());
+        thisArgument = fallbackMatchValue(*call_arg, f_arg->getType());
       }
       
     } else if (hasInfo(*call_arg) && valueInfo(*call_arg)->noTypeConversion == false) {
@@ -687,16 +686,9 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
 
   for (int i=0,n=unsupp->getNumOperands();i<n;i++) {
     fallval = unsupp->getOperand(i);
+    fixval = fallbackMatchValue(fallval, fallval->getType(), unsupp);
 
-    Value *cvtfallval = operandPool[fallval];
-    if (cvtfallval == ConversionError) {
-      LLVM_DEBUG(dbgs() << "  bail out on missing operand " << i+1 << " of " << n << "\n");
-      return nullptr;
-    }
-
-    //se è stato precedentemente sostituito e non è un puntatore
-    if (cvtfallval) {
-      fixval = fallbackMatchValue(cvtfallval, fallval->getType(), unsupp);
+    if (fixval) {
       LLVM_DEBUG(dbgs() << "  Substituted operand number : " << i+1 << " of " << n << "\n");
       newops.push_back(fixval);
     } else {
