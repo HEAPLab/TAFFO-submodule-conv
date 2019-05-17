@@ -9,6 +9,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
+#include "TypeUtils.h"
 #include "Metadata.h"
 #include "FixedPointType.h"
 #include "InputInfo.h"
@@ -54,6 +55,7 @@ struct ValueInfo {
   // significant iff origType is a float or a pointer to a float
   // and if operation == Convert
   FixedPointType fixpType;
+  llvm::Type *origType;
 };
 
 struct FloatToFixed : public llvm::ModulePass {
@@ -317,6 +319,36 @@ struct FloatToFixed : public llvm::ModulePass {
   bool hasInfo(llvm::Value *val) {
     return info.find(val) != info.end();
   };
+  bool isConvertedFixedPoint(llvm::Value *val) {
+    if (!hasInfo(val))
+      return false;
+    if (valueInfo(val)->noTypeConversion)
+      return false;
+    if (valueInfo(val)->fixpType.isInvalid())
+      return false;
+    llvm::Type *fuwt = taffo::fullyUnwrapPointerOrArrayType(valueInfo(val)->origType);
+    if (!fuwt->isStructTy()) {
+      if (!taffo::isFloatType(valueInfo(val)->origType))
+        return false;
+    }
+    if (val->getType() == valueInfo(val)->origType)
+      return false;
+    return true;
+  }
+  bool isFloatingPointToConvert(llvm::Value *val) {
+    if (!hasInfo(val))
+      return false;
+    if (valueInfo(val)->noTypeConversion)
+      return false;
+    if (valueInfo(val)->fixpType.isInvalid())
+      return false;
+    llvm::Type *fuwt = taffo::fullyUnwrapPointerOrArrayType(val->getType());
+    if (!fuwt->isStructTy()) {
+      if (!taffo::isFloatType(val->getType()))
+        return false;
+    }
+    return true;
+  }
   llvm::Value *cpMetaData(llvm::Value* dst, llvm::Value* src, llvm::Instruction* target = nullptr) {
     using namespace llvm;
     MDNode *md = nullptr;

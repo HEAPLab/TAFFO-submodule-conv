@@ -121,6 +121,7 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
       LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because its metadata is incomplete\n");
       valueInfo(v)->noTypeConversion = true;
     }
+    valueInfo(v)->origType = v->getType();
     
     SmallPtrSetImpl<Value *> &roots = valueInfo(v)->roots;
     if (roots.empty()) {
