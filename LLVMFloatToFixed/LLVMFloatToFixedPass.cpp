@@ -105,7 +105,7 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
       
       if (!hasInfo(v)) {
         LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because it has no metadata\n");
-        valueInfo(v)->operation = ValueInfo::Operation::MatchOperands;
+        valueInfo(v)->noTypeConversion = true;
       }
 
       dbgs() << "[U] " << *u << "\n";
@@ -119,7 +119,7 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
     assert(hasInfo(v) && "all values in the queue should have a valueInfo by now");
     if (fixPType(v).isInvalid() && !(v->getType()->isVoidTy() && !isa<ReturnInst>(v))) {
       LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because its metadata is incomplete\n");
-      valueInfo(v)->operation = ValueInfo::Operation::MatchOperands;
+      valueInfo(v)->noTypeConversion = true;
     }
     
     SmallPtrSetImpl<Value *> &roots = valueInfo(v)->roots;
@@ -418,7 +418,7 @@ void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
   dbgs() << "conversion queue:\n";
   for (Value *val: vals) {
     dbgs() << "bt=" << valueInfo(val)->isBacktrackingNode << " ";
-    dbgs() << "op=" << valueInfo(val)->operation << " ";
+    dbgs() << "noconv=" << valueInfo(val)->noTypeConversion << " ";
     dbgs() << "type=" << valueInfo(val)->fixpType << " ";
     if (Instruction *i = dyn_cast<Instruction>(val)) {
       dbgs() << " fun='" << i->getFunction()->getName() << "' ";

@@ -64,7 +64,7 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
   }
   
   if (res && res != Unsupported && !(res->getType()->isVoidTy())) {
-    if (isFloatType(val->getType()) && valueInfo(val)->operation == ValueInfo::Convert) {
+    if (isFloatType(val->getType()) && !valueInfo(val)->noTypeConversion) {
       std::string tmpstore;
       raw_string_ostream tmp(tmpstore);
       if (res->hasName())
@@ -73,7 +73,7 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
         tmp << val->getName().str() << ".";
       tmp << fixPType(val);
       res->setName(tmp.str());
-    } else if (valueInfo(val)->operation == ValueInfo::MatchOperands) {
+    } else if (valueInfo(val)->noTypeConversion) {
       std::string tmpstore;
       raw_string_ostream tmp(tmpstore);
       if (res->hasName())
@@ -259,7 +259,7 @@ Value *FloatToFixed::convertInsertValue(InsertValueInst *inv, FixedPointType& fi
 
 Value *FloatToFixed::convertPhi(PHINode *phi, FixedPointType& fixpt)
 {
-  if (!phi->getType()->isFloatingPointTy() || valueInfo(phi)->operation == ValueInfo::MatchOperands) {
+  if (!phi->getType()->isFloatingPointTy() || valueInfo(phi)->noTypeConversion) {
     /* in the conversion chain the floating point number was converted to
      * an int at some point; we just upgrade the incoming values in place */
 
@@ -346,7 +346,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 
   if (isSpecialFunction(oldF))
     return Unsupported;
-  if (valueInfo(call->getInstruction())->operation == ValueInfo::MatchOperands)
+  if (valueInfo(call->getInstruction())->noTypeConversion)
     return Unsupported;
   
   Function *newF = functionPool[oldF];
@@ -380,7 +380,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
         thisArgument = fallbackMatchValue(thisArgument, f_arg->getType());
       }
       
-    } else if (hasInfo(*call_arg) && valueInfo(*call_arg)->operation == ValueInfo::Convert) {
+    } else if (hasInfo(*call_arg) && valueInfo(*call_arg)->noTypeConversion == false) {
       FixedPointType argfpt, funfpt;
       argfpt = fixPType(*call_arg);
       funfpt = fixPType(&(*f_arg));
@@ -444,7 +444,7 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
   if (!oldv) // AKA return void
     return ret;
   
-  if (oldv->getType()->isIntegerTy() || valueInfo(ret)->operation == ValueInfo::MatchOperands) {
+  if (oldv->getType()->isIntegerTy() || valueInfo(ret)->noTypeConversion) {
     //if return an int we shouldn't return a fix point, go into fallback
     return Unsupported;
   }
@@ -478,7 +478,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
   /*le istruzioni Instruction::
     [Add,Sub,Mul,SDiv,UDiv,SRem,URem,Shl,LShr,AShr,And,Or,Xor]
     vengono gestite dalla fallback e non in questa funzione */
-  if (!instr->getType()->isFloatingPointTy() || valueInfo(instr)->operation == ValueInfo::MatchOperands)
+  if (!instr->getType()->isFloatingPointTy() || valueInfo(instr)->noTypeConversion)
     return Unsupported;
   
   int opc = instr->getOpcode();
@@ -645,7 +645,7 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
     }
   }
   
-  if (valueInfo(cast)->operation == ValueInfo::MatchOperands)
+  if (valueInfo(cast)->noTypeConversion)
     return Unsupported;
   
   if (operand->getType()->isFloatingPointTy()) {
@@ -718,7 +718,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
     tmp->setOperand(i, newops[i]);
   }
   LLVM_DEBUG(dbgs() << "  mutated operands to:\n" << *tmp << "\n");
-  if (tmp->getType()->isFloatingPointTy() && valueInfo(unsupp)->operation == ValueInfo::Convert) {
+  if (tmp->getType()->isFloatingPointTy() && valueInfo(unsupp)->noTypeConversion == false) {
     Value *fallbackv = genConvertFloatToFix(tmp, fixpt, tmp);
     if (tmp->hasName())
       fallbackv->setName(tmp->getName() + ".fallback");

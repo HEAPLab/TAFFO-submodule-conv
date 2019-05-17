@@ -43,7 +43,7 @@ void FloatToFixed::performConversion(
     }
     
     LLVM_DEBUG(dbgs() << "* performConversion *\n");
-    LLVM_DEBUG(dbgs() << "  [op      ] " << valueInfo(v)->operation << "\n");
+    LLVM_DEBUG(dbgs() << "  [no conv ] " << valueInfo(v)->noTypeConversion << "\n");
     LLVM_DEBUG(dbgs() << "  [value   ] " << *v << "\n");
     if (Instruction *i = dyn_cast<Instruction>(v))
       LLVM_DEBUG(dbgs() << "  [function] " << i->getFunction()->getName() << "\n");
@@ -108,7 +108,7 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
       /* the value should have been converted but it hasn't; bail out */
       return nullptr;
     
-    if (valueInfo(val)->operation == ValueInfo::Operation::Convert) {
+    if (!valueInfo(val)->noTypeConversion) {
       /* the value has been successfully converted to fixed point in a previous step */
       iofixpt = fixPType(res);
       return res;

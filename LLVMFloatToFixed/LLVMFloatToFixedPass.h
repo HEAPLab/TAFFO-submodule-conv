@@ -42,18 +42,14 @@ namespace flttofix {
 
 
 struct ValueInfo {
-  typedef enum {
-    Convert,
-    MatchOperands
-  } Operation;
-
   bool isBacktrackingNode;
   bool isRoot;
   llvm::SmallPtrSet<llvm::Value*, 5> roots;
   unsigned int fixpTypeRootDistance = UINT_MAX;
   
-  Operation operation = Convert;
-  bool isOperationProduct = false;
+  /* Disable type conversion even if the instruction
+   * produces a floating point value */
+  bool noTypeConversion = false;
   
   // significant iff origType is a float or a pointer to a float
   // and if operation == Convert
@@ -234,7 +230,7 @@ struct FloatToFixed : public llvm::ModulePass {
     }
     if (!hasInfo(cvtfallval))
       return cvtfallval;
-    if (valueInfo(cvtfallval)->operation == ValueInfo::MatchOperands)
+    if (valueInfo(cvtfallval)->noTypeConversion)
       return cvtfallval;
     
     if (!ip) {

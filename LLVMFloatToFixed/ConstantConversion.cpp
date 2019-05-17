@@ -27,7 +27,7 @@ Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt)
 {
   /* Since constants never change, there is never anything to substitute
    * in them */
-  if (valueInfo(flt)->operation == ValueInfo::MatchOperands)
+  if (valueInfo(flt)->noTypeConversion)
     return flt;
   
   if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
