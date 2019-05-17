@@ -140,47 +140,58 @@ Value *FloatToFixed::convertStore(StoreInst *store)
     return nullptr;
   
   Value *newval;
-  if (isFloatType(val->getType())) {
-    FixedPointType valtype;
-    Type *peltype = newptr->getType()->getPointerElementType();
+  Type *peltype = newptr->getType()->getPointerElementType();
+  if (isFloatingPointToConvert(val)) {
+    /* value is converted (thus we can match it) */
     
-    if (peltype->isFloatingPointTy()) {
-      newval = translateOrMatchOperand(val, valtype, store);
-      newval = genConvertFixToFloat(newval, valtype, peltype);
-  
-    } else if (peltype->isIntegerTy()) {
-      valtype = fixPType(newptr);
-      newval = translateOrMatchOperandAndType(val, valtype, store);
+    if (isConvertedFixedPoint(newptr)) {
+      FixedPointType valtype = fixPType(newptr);
       
-    } else if (peltype->isPointerTy()) {
-      LLVM_DEBUG(dbgs()<< "[Store] Pointer store: "<< *store << "\n");
-      newval = matchOp(val);
-      if (!newval || newval->getType() != peltype) {
-        LLVM_DEBUG(dbgs()<< "[Store] HACK: bitcasting operands of wrong type to new type\n");
-        BitCastInst *bc = new BitCastInst(!newval ? val : newval,peltype);
-        cpMetaData(bc,!newval ? val : newval);
-        bc->insertBefore(store);
-        newval = bc;
+      if (peltype->isPointerTy()) {
+        /* store <value ptr> into <value ptr> pointer; both are converted
+         * so everything is fine and there is nothing special to do.
+         * Only logging type mismatches because we trust DTA has done its job */
+        newval = matchOp(val);
+        if (!(fixPType(newval) == valtype))
+          LLVM_DEBUG(dbgs() << "unsolvable fixp type mismatch between store dest and src!\n");
+      } else {
+        /* best case: store <value> into <value> pointer */
+        valtype = fixPType(newptr);
+        newval = translateOrMatchOperandAndType(val, valtype, store);
       }
       
     } else {
-      return nullptr;
+      /* store fixp <value ptr?> into original <value ptr?> pointer
+       * try to match the stored value if possible */
+      newval = fallbackMatchValue(val, peltype);
+      if (!newval)
+        return Unsupported;
     }
-    
-  } else if (isa<Argument>(val) && hasInfo(val)) {
-    /* converted function parameter in a cloned function */
-    if (val->getType()->isIntegerTy()) {
-      newval = genConvertFixedToFixed(val, fixPType(val), fixPType(newptr), store);
-    } else {
-      /* pointers */
-      newval = matchOp(val);
-      assert(fixPType(newval) == fixPType(newptr) && "mismatching types on argument");
-    }
-    
+      
   } else {
-    newval = matchOp(val);
-
+    /* value is not converted */
+    if (isConvertedFixedPoint(newptr)) {
+      FixedPointType valtype = fixPType(newptr);
+      
+      /* the value to store is not converted but the pointer is */
+      if (peltype->isIntegerTy()) {
+        /* value is not a pointer; we can convert it to fixed point */
+        newval = genConvertFloatToFix(val, valtype);
+      } else {
+        /* value unconverted ptr; dest is converted ptr
+         * would be an error; remove this as soon as it is not needed anymore */
+        LLVM_DEBUG(dbgs()<< "[Store] HACK: bitcasting operands of wrong type to new type\n");
+        BitCastInst *bc = new BitCastInst(val, peltype);
+        cpMetaData(bc, val);
+        bc->insertBefore(store);
+        newval = bc;
+      }
+    } else {
+      /* nothing is converted, just matchop */
+      newval = matchOp(val);
+    }
   }
+  
   if (!newval)
     return nullptr;
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),

@@ -322,25 +322,34 @@ struct FloatToFixed : public llvm::ModulePass {
   bool isConvertedFixedPoint(llvm::Value *val) {
     if (!hasInfo(val))
       return false;
-    if (valueInfo(val)->noTypeConversion)
+    std::shared_ptr<ValueInfo> vi = valueInfo(val);
+    if (vi->noTypeConversion)
       return false;
-    if (valueInfo(val)->fixpType.isInvalid())
+    if (vi->fixpType.isInvalid())
       return false;
-    llvm::Type *fuwt = taffo::fullyUnwrapPointerOrArrayType(valueInfo(val)->origType);
+    llvm::Type *fuwt = taffo::fullyUnwrapPointerOrArrayType(vi->origType);
     if (!fuwt->isStructTy()) {
-      if (!taffo::isFloatType(valueInfo(val)->origType))
+      if (!taffo::isFloatType(vi->origType))
         return false;
     }
-    if (val->getType() == valueInfo(val)->origType)
+    if (val->getType() == vi->origType)
       return false;
     return true;
   }
   bool isFloatingPointToConvert(llvm::Value *val) {
+    if (llvm::isa<llvm::Argument>(val))
+      // function arguments to be converted are substituted by placeholder
+      // values in the function cloning stage.
+      // Besides, they cannot be replaced without recreating the
+      // function, thus they never fit the requirements for being
+      // converted.
+      return false;
     if (!hasInfo(val))
       return false;
-    if (valueInfo(val)->noTypeConversion)
+    std::shared_ptr<ValueInfo> vi = valueInfo(val);
+    if (vi->noTypeConversion)
       return false;
-    if (valueInfo(val)->fixpType.isInvalid())
+    if (vi->fixpType.isInvalid())
       return false;
     llvm::Type *fuwt = taffo::fullyUnwrapPointerOrArrayType(val->getType());
     if (!fuwt->isStructTy()) {
