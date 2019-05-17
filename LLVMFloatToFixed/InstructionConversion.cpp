@@ -203,6 +203,9 @@ Value *FloatToFixed::convertStore(StoreInst *store)
 
 Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
 {
+  if (valueInfo(gep)->noTypeConversion)
+    return Unsupported;
+  
   if (valueInfo(gep)->isRoot && valueInfo(gep)->isBacktrackingNode) {
     dbgs() << "*** UGLY HACK *** ";
     /* till we can flag a structure for conversion we bitcast away the
@@ -231,6 +234,9 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
 
 Value *FloatToFixed::convertExtractValue(ExtractValueInst *exv, FixedPointType& fixpt)
 {
+  if (valueInfo(exv)->noTypeConversion)
+    return Unsupported;
+  
   IRBuilder<> builder(exv);
   
   Value *oldval = exv->getAggregateOperand();
@@ -251,6 +257,9 @@ Value *FloatToFixed::convertExtractValue(ExtractValueInst *exv, FixedPointType& 
 
 Value *FloatToFixed::convertInsertValue(InsertValueInst *inv, FixedPointType& fixpt)
 {
+  if (valueInfo(inv)->noTypeConversion)
+    return Unsupported;
+  
   IRBuilder<> builder(inv);
   
   Value *oldAggVal = inv->getAggregateOperand();
@@ -324,29 +333,15 @@ Value *FloatToFixed::convertPhi(PHINode *phi, FixedPointType& fixpt)
 
 Value *FloatToFixed::convertSelect(SelectInst *sel, FixedPointType& fixpt)
 {
+  if (!isFloatingPointToConvert(sel))
+    return Unsupported;
+  
   /* the condition is always a bool (i1) or a vector of bools */
   Value *newcond = matchOp(sel->getCondition());
-  
-  if (!sel->getType()->isFloatingPointTy()) {
-    if (isFloatType(sel->getType())) {
-      dbgs() << "warning: select + multiple fixed point types are tricky";
-    }
-    Value *newtruev = matchOp(sel->getTrueValue());
-    Value *newfalsev = matchOp(sel->getFalseValue());
-
-    /* like phi, upgrade in place */
-    if (newcond)
-      sel->setCondition(newcond);
-    if (newtruev)
-      sel->setTrueValue(newtruev);
-    if (newfalsev)
-      sel->setFalseValue(newfalsev);
-    return sel;
-  }
 
   /* otherwise create a new one */
-  Value *newtruev = translateOrMatchOperandAndType(sel->getTrueValue(), fixpt, sel);
-  Value *newfalsev = translateOrMatchOperandAndType(sel->getFalseValue(), fixpt, sel);
+  Value *newtruev = translateOrMatchAnyOperandAndType(sel->getTrueValue(), fixpt, sel);
+  Value *newfalsev = translateOrMatchAnyOperandAndType(sel->getFalseValue(), fixpt, sel);
   if (!newtruev || !newfalsev || !newcond)
     return nullptr;
 
