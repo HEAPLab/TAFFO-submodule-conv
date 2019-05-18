@@ -267,7 +267,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     newIt = newF->arg_begin();
     for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
       if (oldIt->getType() != newIt->getType()){
-        FixedPointType fixtype = valueInfo(call.getInstruction()->getOperand(i))->fixpType;
+        FixedPointType fixtype = valueInfo(oldIt)->fixpType;
         
         //append fixp info to arg name
         newIt->setName(newIt->getName() + "." + fixtype.toString());
@@ -289,9 +289,8 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         valueInfo(placehValue)->fixpTypeRootDistance = 0;
         operandPool[placehValue] = newIt;
         
-        // Mark the argument itself
-        valueInfo(newIt)->fixpType = fixtype;
-        valueInfo(newIt)->fixpTypeRootDistance = 0;
+        /* No need to mark the argument itself, readLocalMetadata will
+         * do it in a bit as its metadata has been cloned as well */
       }
     }
     
