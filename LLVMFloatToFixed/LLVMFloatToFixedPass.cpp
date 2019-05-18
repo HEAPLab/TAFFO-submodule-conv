@@ -104,6 +104,7 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
       if (!hasInfo(v)) {
         LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because it has no metadata\n");
         valueInfo(v)->noTypeConversion = true;
+        valueInfo(u)->origType = u->getType();
       }
 
       dbgs() << "[U] " << *u << "\n";
@@ -119,7 +120,6 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
       LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because its metadata is incomplete\n");
       valueInfo(v)->noTypeConversion = true;
     }
-    valueInfo(v)->origType = v->getType();
     
     SmallPtrSetImpl<Value *> &roots = valueInfo(v)->roots;
     if (roots.empty()) {
@@ -307,6 +307,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         continue;
       newVals.insert(v);
       valueInfo(v)->fixpType = valueInfo(call.getInstruction())->fixpType;
+      valueInfo(v)->origType = nullptr;
       valueInfo(v)->fixpTypeRootDistance = 0;
     }
     

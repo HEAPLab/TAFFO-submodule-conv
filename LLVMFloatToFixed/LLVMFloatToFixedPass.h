@@ -55,7 +55,7 @@ struct ValueInfo {
   // significant iff origType is a float or a pointer to a float
   // and if operation == Convert
   FixedPointType fixpType;
-  llvm::Type *origType;
+  llvm::Type *origType = nullptr;
 };
 
 struct FloatToFixed : public llvm::ModulePass {

@@ -79,6 +79,7 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *ra
 
   vi.isBacktrackingNode = false;
   vi.fixpTypeRootDistance = 0;
+  vi.origType = instr->getType();
   
   if (InputInfo *fpInfo = dyn_cast<InputInfo>(raw)) {
     if (!fpInfo->IEnableConversion)
