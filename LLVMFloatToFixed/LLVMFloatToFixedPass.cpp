@@ -52,6 +52,7 @@ bool FloatToFixed::runOnModule(Module &m)
   ConversionCount = vals.size();
 
   performConversion(m, vals);
+  closePhiLoops();
   cleanup(vals);
 
   return true;
@@ -68,6 +69,53 @@ int FloatToFixed::getLoopNestingLevelOfValue(llvm::Value *v)
   LoopInfo &li = this->getAnalysis<LoopInfoWrapperPass>(*fun).getLoopInfo();
   BasicBlock *bb = inst->getParent();
   return li.getLoopDepth(bb);
+}
+
+
+void FloatToFixed::openPhiLoop(PHINode *phi)
+{
+  PHIInfo info;
+  info.phi = phi;
+  info.placeh_noconv = createPlaceholder(phi->getType(), phi->getParent(), "phi_noconv");
+  newValueInfo(info.placeh_noconv) = valueInfo(phi);
+  phi->replaceAllUsesWith(info.placeh_noconv);
+  if (isFloatingPointToConvert(phi)) {
+    Type *convt = getLLVMFixedPointTypeForFloatType(phi->getType(), fixPType(phi));
+    info.placeh_conv = createPlaceholder(convt, phi->getParent(), "phi_conv");
+    newValueInfo(info.placeh_conv) = valueInfo(phi);
+  } else {
+    info.placeh_conv = info.placeh_noconv;
+  }
+  operandPool[info.placeh_noconv] = operandPool[info.placeh_conv];
+  
+  LLVM_DEBUG(dbgs() << "created placeholder (non-converted=[" << *info.placeh_noconv << "], converted=[" << *info.placeh_conv << "]) for phi " << *phi << "\n");
+  
+  phiReplacementData.push_back(info);
+}
+
+
+void FloatToFixed::closePhiLoops()
+{
+  LLVM_DEBUG(dbgs() << __PRETTY_FUNCTION__ << " begin\n");
+  
+  for (PHIInfo& info: phiReplacementData) {
+    PHINode *origphi = info.phi;
+    Value *substphi = operandPool[origphi];
+    
+    info.placeh_noconv->replaceAllUsesWith(origphi);
+    if (substphi) {
+      info.placeh_noconv->replaceAllUsesWith(substphi);
+    } else {
+      LLVM_DEBUG(dbgs() << "phi " << *origphi << "could not be converted! Trying last resort conversion\n");
+      substphi = translateOrMatchAnyOperandAndType(origphi, fixPType(origphi));
+      assert(substphi && "phi conversion has failed");
+    }
+    
+    info.placeh_conv->replaceAllUsesWith(substphi);
+    LLVM_DEBUG(dbgs() << "restored data flow of converted phi " << *substphi << " (orig=[" << *origphi << "])\n");
+  }
+  
+  LLVM_DEBUG(dbgs() << __PRETTY_FUNCTION__ << " end\n");
 }
 
 
@@ -109,6 +157,8 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
 
       dbgs() << "[U] " << *u << "\n";
       vals.push_back(u);
+      if (PHINode *phi = dyn_cast<PHINode>(u))
+        openPhiLoop(phi);
       valueInfo(u)->roots.insert(roots.begin(), roots.end());
     }
     next++;

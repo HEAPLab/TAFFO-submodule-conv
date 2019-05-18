@@ -58,6 +58,14 @@ struct ValueInfo {
   llvm::Type *origType = nullptr;
 };
 
+
+struct PHIInfo {
+  llvm::PHINode *phi;
+  llvm::Value *placeh_noconv;
+  llvm::Value *placeh_conv;
+};
+
+
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
   FixedPointType defaultFixpType;
@@ -76,6 +84,8 @@ struct FloatToFixed : public llvm::ModulePass {
   /* to not be accessed directly, use valueInfo() */
   llvm::DenseMap<llvm::Value *, std::shared_ptr<ValueInfo>> info;
   
+  llvm::SmallVector<PHIInfo, 8> phiReplacementData;
+  
   FloatToFixed(): ModulePass(ID) { };
   void getAnalysisUsage(llvm::AnalysisUsage &) const override;
   bool runOnModule(llvm::Module &M) override;
@@ -86,7 +96,9 @@ struct FloatToFixed : public llvm::ModulePass {
   bool parseMetaData(llvm::SmallPtrSetImpl<llvm::Value *> *variables, mdutils::MDInfo *fpInfo, llvm::Value *instr);
   void removeNoFloatTy(llvm::SmallPtrSetImpl<llvm::Value *>& res);
   void printAnnotatedObj(llvm::Module &m);
-
+  
+  void openPhiLoop(llvm::PHINode *phi);
+  void closePhiLoops();
   void sortQueue(std::vector<llvm::Value*> &vals);
   void cleanup(const std::vector<llvm::Value*>& queue);
   void propagateCall(std::vector<llvm::Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global);
@@ -348,6 +360,7 @@ struct FloatToFixed : public llvm::ModulePass {
   bool hasInfo(llvm::Value *val) {
     return info.find(val) != info.end();
   };
+  
   bool isConvertedFixedPoint(llvm::Value *val) {
     if (!hasInfo(val))
       return false;
