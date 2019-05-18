@@ -72,7 +72,7 @@ void FloatToFixed::performConversion(
 
 Value *FloatToFixed::createPlaceholder(Type *type, BasicBlock *where, StringRef name)
 {
-  IRBuilder<> builder(where, where->begin());
+  IRBuilder<> builder(where, where->getFirstInsertionPt());
   AllocaInst *alloca = builder.CreateAlloca(type);
   return builder.CreateLoad(type, alloca, name);
 }
@@ -139,11 +139,8 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
   }
 
   if (Instruction *i = dyn_cast<Instruction>(flt)) {
-    Instruction *tentativeIp = i->getNextNode();
-    if (tentativeIp)
-      ip = tentativeIp;
-    else
-      LLVM_DEBUG(dbgs() << "warning: genConvertFloatToFix on a BB-terminating inst\n");
+    if (!ip)
+      ip = getFirstInsertionPointAfter(i);
   } else if (Argument *arg = dyn_cast<Argument>(flt)) {
     Function *fun = arg->getParent();
     BasicBlock& firstbb = fun->getEntryBlock();
@@ -194,8 +191,8 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   Type *llvmdestt = destt.scalarToLLVMType(fix->getContext());
   
   Instruction *fixinst = dyn_cast<Instruction>(fix);
-  if (fixinst)
-    ip = fixinst->getNextNode();
+  if (!ip)
+    ip = getFirstInsertionPointAfter(fixinst);
   assert(ip && "ip required when converted value not an instruction");
 
   IRBuilder<> builder(ip);
@@ -247,7 +244,7 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
   FixToFloatWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(fix)));
   
   if (Instruction *i = dyn_cast<Instruction>(fix)) {
-    IRBuilder<> builder(i->getNextNode());
+    IRBuilder<> builder(getFirstInsertionPointAfter(i));
     
     Value *floattmp = fixpt.scalarIsSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
     cpMetaData(floattmp,fix);

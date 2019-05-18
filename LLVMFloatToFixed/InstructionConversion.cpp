@@ -727,7 +727,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
   }
   LLVM_DEBUG(dbgs() << "  mutated operands to:\n" << *tmp << "\n");
   if (tmp->getType()->isFloatingPointTy() && valueInfo(unsupp)->noTypeConversion == false) {
-    Value *fallbackv = genConvertFloatToFix(tmp, fixpt, tmp);
+    Value *fallbackv = genConvertFloatToFix(tmp, fixpt, getFirstInsertionPointAfter(tmp));
     if (tmp->hasName())
       fallbackv->setName(tmp->getName() + ".fallback");
     return fallbackv;
