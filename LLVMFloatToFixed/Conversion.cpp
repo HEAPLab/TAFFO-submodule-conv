@@ -84,7 +84,12 @@ Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& f
   Value *res = Unsupported;
   
   if (Constant *con = dyn_cast<Constant>(val)) {
-    res = convertConstant(con, fixpt);
+    /* Since constants never change, there is never anything to substitute
+     * in them */
+    if (!valueInfo(con)->noTypeConversion)
+      res = convertConstant(con, fixpt);
+    else
+      res = con;
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) {
     res = convertInstruction(m, instr, fixpt);
   } else if (Argument *argument = dyn_cast<Argument>(val)) {

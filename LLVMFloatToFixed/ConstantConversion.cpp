@@ -25,11 +25,6 @@ using namespace taffo;
 
 Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt)
 {
-  /* Since constants never change, there is never anything to substitute
-   * in them */
-  if (valueInfo(flt)->noTypeConversion)
-    return flt;
-  
   if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
     return convertGlobalVariable(gvar, fixpt);
   } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
