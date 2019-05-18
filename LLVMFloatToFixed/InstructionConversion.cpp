@@ -63,7 +63,7 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
     res = fallback(dyn_cast<Instruction>(val), fixpt);
   }
   
-  if (res && res != Unsupported && !(res->getType()->isVoidTy())) {
+  if (res && res != Unsupported && !(res->getType()->isVoidTy()) && !hasInfo(res)) {
     if (isFloatType(val->getType()) && !valueInfo(val)->noTypeConversion) {
       std::string tmpstore;
       raw_string_ostream tmp(tmpstore);
