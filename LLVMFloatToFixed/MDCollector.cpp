@@ -148,49 +148,4 @@ void FloatToFixed::removeNoFloatTy(SmallPtrSetImpl<Value *> &res)
   }
 }
 
-void FloatToFixed::printAnnotatedObj(Module &m)
-{
-  SmallPtrSet<Value*, 32> res;
-
-  /*readGlobalMetadata(m, res, true);
-  errs() << "Annotated Function: \n";
-  if(!res.empty())
-  {
-    for (auto it : res)
-    {
-      errs() << " -> " << *it << "\n";
-    }
-    errs() << "\n";
-  }*/
-
-  res.clear();
-  readGlobalMetadata(m, res);
-  errs() << "Global Set: \n";
-  if(!res.empty())
-  {
-    for (auto it : res)
-    {
-      errs() << " -> " << *it << "\n";
-    }
-    errs() << "\n";
-  }
-
-  for (auto fIt=m.begin() , fItEnd=m.end() ; fIt!=fItEnd ; fIt++)
-  {
-    Function &f = *fIt;
-    errs().write_escaped(f.getName()) << " : ";
-    res.clear();
-    readLocalMetadata(f, res);
-    if(!res.empty())
-    {
-      errs() << "\nLocal Set: \n";
-      for (auto it : res)
-      {
-        errs() << " -> " << *it << "\n";
-      }
-    }
-    errs() << "\n";
-  }
-
-}
 

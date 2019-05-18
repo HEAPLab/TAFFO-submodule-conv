@@ -37,8 +37,6 @@ void FloatToFixed::getAnalysisUsage(llvm::AnalysisUsage &au) const
 
 bool FloatToFixed::runOnModule(Module &m)
 {
-  DEBUG_WITH_TYPE(DEBUG_ANNOTATION, printAnnotatedObj(m));
-
   llvm::SmallPtrSet<llvm::Value *, 32> local;
   llvm::SmallPtrSet<llvm::Value *, 32> global;
   readAllLocalMetadata(m, local);
