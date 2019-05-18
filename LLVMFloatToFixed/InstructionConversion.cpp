@@ -560,6 +560,9 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
 
 Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
 {
+  if (!isFloatingPointToConvert(fcmp))
+    return Unsupported;
+  
   Value *op1 = fcmp->getOperand(0);
   Value *op2 = fcmp->getOperand(1);
   
