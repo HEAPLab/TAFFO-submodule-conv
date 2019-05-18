@@ -61,7 +61,13 @@ void FloatToFixed::performConversion(
         newinst->setDebugLoc(oldinst->getDebugLoc());
       }
       cpMetaData(newv,v);
-      *valueInfo(newv) = *valueInfo(v);
+      if (newv != v) {
+        if (hasInfo(newv)) {
+          LLVM_DEBUG(dbgs() << "warning: output has valueInfo already from a previous conversion\n");
+        } else {
+          *newValueInfo(newv) = *valueInfo(v);
+        }
+      }
     } else {
       LLVM_DEBUG(dbgs() << "  [output  ] CONVERSION ERROR\n");
     }

@@ -101,9 +101,9 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
         }
       }
       
-      if (!hasInfo(v)) {
+      if (!hasInfo(u)) {
         LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because it has no metadata\n");
-        valueInfo(v)->noTypeConversion = true;
+        newValueInfo(u)->noTypeConversion = true;
         valueInfo(u)->origType = u->getType();
       }
 
@@ -285,8 +285,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
           Use &U = *(newIt->uses().begin());
           U.set(placehValue);
         }
-        valueInfo(placehValue)->fixpType = fixtype;
-        valueInfo(placehValue)->fixpTypeRootDistance = 0;
+        newValueInfo(placehValue) = valueInfo(oldIt);
         operandPool[placehValue] = newIt;
         
         /* No need to mark the argument itself, readLocalMetadata will
@@ -305,7 +304,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
       if (!hasInfo(call.getInstruction()))
         continue;
       newVals.insert(v);
-      valueInfo(v)->fixpType = valueInfo(call.getInstruction())->fixpType;
+      demandValueInfo(v)->fixpType = valueInfo(call.getInstruction())->fixpType;
       valueInfo(v)->origType = nullptr;
       valueInfo(v)->fixpTypeRootDistance = 0;
     }

@@ -111,7 +111,7 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *ra
 
   if (variables)
     variables->insert(instr);
-  *valueInfo(instr) = vi;
+  *newValueInfo(instr) = vi;
 
   return true;
 }

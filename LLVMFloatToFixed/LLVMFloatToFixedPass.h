@@ -312,15 +312,33 @@ struct FloatToFixed : public llvm::ModulePass {
   }
   
   llvm::Type *getLLVMFixedPointTypeForFloatValue(llvm::Value *val);
-  std::shared_ptr<ValueInfo> valueInfo(llvm::Value *val) {
+  
+  std::shared_ptr<ValueInfo> newValueInfo(llvm::Value *val) {
+    LLVM_DEBUG(llvm::dbgs() << "new valueinfo for " << *val << "\n");
     auto vi = info.find(val);
     if (vi == info.end()) {
-      LLVM_DEBUG(llvm::dbgs() << "new valueinfo for " << *val << "\n");
       info[val] = std::make_shared<ValueInfo>(ValueInfo());
       return info[val];
     } else {
+      assert(false && "value already has info!");
+    }
+  }
+  std::shared_ptr<ValueInfo> demandValueInfo(llvm::Value *val, bool *isNew = nullptr) {
+    LLVM_DEBUG(llvm::dbgs() << "new valueinfo for " << *val << "\n");
+    auto vi = info.find(val);
+    if (vi == info.end()) {
+      if (isNew) *isNew = true;
+      info[val] = std::make_shared<ValueInfo>(ValueInfo());
+      return info[val];
+    } else {
+      if (isNew) *isNew = false;
       return vi->getSecond();
     }
+  }
+  std::shared_ptr<ValueInfo> valueInfo(llvm::Value *val) {
+    auto vi = info.find(val);
+    assert((vi != info.end()) && "value with no info");
+    return vi->getSecond();
   };
   FixedPointType& fixPType(llvm::Value *val) {
     auto vi = info.find(val);
