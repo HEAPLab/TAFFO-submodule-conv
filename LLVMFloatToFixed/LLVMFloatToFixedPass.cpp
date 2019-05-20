@@ -102,17 +102,17 @@ void FloatToFixed::closePhiLoops()
     PHINode *origphi = info.phi;
     Value *substphi = operandPool[origphi];
     
-    info.placeh_noconv->replaceAllUsesWith(origphi);
-    if (substphi) {
-      info.placeh_noconv->replaceAllUsesWith(substphi);
-    } else {
+    LLVM_DEBUG(dbgs() << "restoring data flow of phi " << *origphi << "\n");
+    if (info.placeh_noconv != info.placeh_conv)
+      info.placeh_noconv->replaceAllUsesWith(origphi);
+    if (!substphi)  {
       LLVM_DEBUG(dbgs() << "phi " << *origphi << "could not be converted! Trying last resort conversion\n");
       substphi = translateOrMatchAnyOperandAndType(origphi, fixPType(origphi));
       assert(substphi && "phi conversion has failed");
     }
     
     info.placeh_conv->replaceAllUsesWith(substphi);
-    LLVM_DEBUG(dbgs() << "restored data flow of converted phi " << *substphi << " (orig=[" << *origphi << "])\n");
+    LLVM_DEBUG(dbgs() << "restored data flow of original phi " << *origphi << " to new value " << *substphi << "\n");
   }
   
   LLVM_DEBUG(dbgs() << __PRETTY_FUNCTION__ << " end\n");
