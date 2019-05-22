@@ -86,7 +86,7 @@ void FloatToFixed::openPhiLoop(PHINode *phi)
   } else {
     info.placeh_conv = info.placeh_noconv;
   }
-  operandPool[info.placeh_noconv] = operandPool[info.placeh_conv];
+  operandPool[info.placeh_noconv] = info.placeh_conv;
   
   LLVM_DEBUG(dbgs() << "created placeholder (non-converted=[" << *info.placeh_noconv << "], converted=[" << *info.placeh_conv << "]) for phi " << *phi << "\n");
   
