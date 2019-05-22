@@ -77,12 +77,12 @@ void FloatToFixed::openPhiLoop(PHINode *phi)
   PHIInfo info;
   info.phi = phi;
   info.placeh_noconv = createPlaceholder(phi->getType(), phi->getParent(), "phi_noconv");
-  newValueInfo(info.placeh_noconv) = valueInfo(phi);
+  *(newValueInfo(info.placeh_noconv)) = *(valueInfo(phi));
   phi->replaceAllUsesWith(info.placeh_noconv);
   if (isFloatingPointToConvert(phi)) {
     Type *convt = getLLVMFixedPointTypeForFloatType(phi->getType(), fixPType(phi));
     info.placeh_conv = createPlaceholder(convt, phi->getParent(), "phi_conv");
-    newValueInfo(info.placeh_conv) = valueInfo(phi);
+    *(newValueInfo(info.placeh_conv)) = *(valueInfo(phi));
   } else {
     info.placeh_conv = info.placeh_noconv;
   }
