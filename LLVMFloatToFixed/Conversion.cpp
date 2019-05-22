@@ -209,7 +209,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   IRBuilder<> builder(ip);
 
   auto genSizeChange = [&](Value *fix) -> Value* {
-    if (destt.scalarIsSigned()) {
+    if (srct.scalarIsSigned()) {
       return cpMetaData(builder.CreateSExtOrTrunc(fix, llvmdestt),fix);
     } else {
       return cpMetaData(builder.CreateZExtOrTrunc(fix, llvmdestt),fix);
