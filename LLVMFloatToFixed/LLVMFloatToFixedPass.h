@@ -434,26 +434,17 @@ struct FloatToFixed : public llvm::ModulePass {
   }
   void updateFPTypeMetadata(llvm::Value *v, bool isSigned, int fracBitsAmt, int bitsAmt) {
     using namespace llvm;
-    Metadata *TypeFlag = MDString::get(v->getContext(), "fixp");
+    using namespace mdutils;
 
-    IntegerType *Int32Ty = Type::getInt32Ty(v->getContext());
-    int swidth = (isSigned) ? -bitsAmt : bitsAmt;
-    ConstantInt *WCI = ConstantInt::getSigned(Int32Ty, swidth);
-    Metadata *WidthMD = ConstantAsMetadata::get(WCI);
+    MetadataManager& mdmgr = MetadataManager::getMetadataManager();
+    InputInfo* ii = dyn_cast<InputInfo>(mdmgr.retrieveMDInfo(v));
+    if (!ii)
+      return;
 
-    ConstantInt *PCI = ConstantInt::get(Int32Ty, fracBitsAmt);
-    ConstantAsMetadata *PointPosMD = ConstantAsMetadata::get(PCI);
+    InputInfo* newII = cast<InputInfo>(ii->clone());
+    newII->IType.reset(new FPType(bitsAmt, fracBitsAmt, isSigned));
 
-    Metadata *MDs[] = {TypeFlag, WidthMD, PointPosMD};
-    MDNode *FPTNode = MDNode::get(v->getContext(), MDs);
-
-    if (Instruction *i = dyn_cast<Instruction>(v)) {
-      MDNode *md = i->getMetadata(INPUT_INFO_METADATA);
-      if (md) {
-        Metadata *iimds[] = {FPTNode, md->getOperand(1U), md->getOperand(2U)};
-        i->setMetadata(INPUT_INFO_METADATA, MDNode::get(v->getContext(), iimds));
-      }
-    }
+    mdmgr.setMDInfoMetadata(v, newII);
   }
 
   int getLoopNestingLevelOfValue(llvm::Value *v);
