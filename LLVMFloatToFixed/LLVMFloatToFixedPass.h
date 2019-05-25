@@ -437,7 +437,7 @@ struct FloatToFixed : public llvm::ModulePass {
     using namespace mdutils;
 
     MetadataManager& mdmgr = MetadataManager::getMetadataManager();
-    InputInfo* ii = dyn_cast<InputInfo>(mdmgr.retrieveMDInfo(v));
+    InputInfo* ii = dyn_cast_or_null<InputInfo>(mdmgr.retrieveMDInfo(v));
     if (!ii)
       return;
 
