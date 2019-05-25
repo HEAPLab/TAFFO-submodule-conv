@@ -254,8 +254,14 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
   FixToFloatCount++;
   FixToFloatWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(fix)));
   
-  if (Instruction *i = dyn_cast<Instruction>(fix)) {
-    IRBuilder<> builder(getFirstInsertionPointAfter(i));
+  if (isa<Instruction>(fix) || isa<Argument>(fix)) {
+    Instruction *ip = nullptr;
+    if (Instruction *i = dyn_cast<Instruction>(fix)) {
+      ip = getFirstInsertionPointAfter(i);
+    } else if (Argument *arg = dyn_cast<Argument>(fix)){
+      ip = &(*(arg->getParent()->getEntryBlock().getFirstInsertionPt()));
+    }
+    IRBuilder<> builder(ip);
     
     Value *floattmp = fixpt.scalarIsSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
     cpMetaData(floattmp,fix);
