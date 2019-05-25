@@ -315,7 +315,7 @@ Value *FloatToFixed::convertPhi(PHINode *phi, FixedPointType& fixpt)
   for (int i=0; i<phi->getNumIncomingValues(); i++) {
     Value *thisval = phi->getIncomingValue(i);
     BasicBlock *thisbb = phi->getIncomingBlock(i);
-    Value *newval = translateOrMatchOperandAndType(thisval, fixpt, thisbb->getFirstNonPHI());
+    Value *newval = translateOrMatchOperandAndType(thisval, fixpt, thisbb->getTerminator());
     if (!newval) {
       delete newphi;
       return nullptr;
