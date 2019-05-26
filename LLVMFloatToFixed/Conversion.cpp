@@ -202,7 +202,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   Type *llvmdestt = destt.scalarToLLVMType(fix->getContext());
   
   Instruction *fixinst = dyn_cast<Instruction>(fix);
-  if (!ip)
+  if (!ip && fixinst)
     ip = getFirstInsertionPointAfter(fixinst);
   assert(ip && "ip required when converted value not an instruction");
 

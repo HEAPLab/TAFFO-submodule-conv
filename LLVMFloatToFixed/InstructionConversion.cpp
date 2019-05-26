@@ -401,7 +401,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
         LLVM_DEBUG(dbgs() << "      (actual " << argfpt.toString() << ", vs. formal " << funfpt.toString() << ")\n");
         LLVM_DEBUG(dbgs() << "      making an attempt to ignore the issue because mem2reg can interfere\n");
       }
-      thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt);
+      thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt, call->getInstruction());
       fixArgs.push_back(std::pair<int, FixedPointType>(i, funfpt));
       
     } else {
@@ -409,7 +409,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
       funfpt = fixPType(&(*f_arg));
       LLVM_DEBUG(dbgs() << "CALL: formal argument " << i << " converted but not actual argument\n");
       LLVM_DEBUG(dbgs() << "      making an attempt to ignore the issue because mem2reg can interfere\n");
-      thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt);
+      thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt, call->getInstruction());
     }
     
     if (!thisArgument) {
