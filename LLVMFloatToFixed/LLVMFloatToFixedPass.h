@@ -243,7 +243,7 @@ struct FloatToFixed : public llvm::ModulePass {
     llvm::Value *cvtfallval = operandPool[fallval];
     
     if (cvtfallval == ConversionError) {
-      LLVM_DEBUG(llvm::dbgs() << "error: bail out reverse match of " << *cvtfallval << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "error: bail out reverse match of " << *fallval << "\n");
       return nullptr;
     }
     if (!hasInfo(cvtfallval))
