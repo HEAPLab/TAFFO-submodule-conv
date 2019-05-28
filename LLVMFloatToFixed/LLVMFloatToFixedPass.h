@@ -191,9 +191,13 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *translateOrMatchAnyOperand(llvm::Value *val, FixedPointType& iofixpt, llvm::Instruction *ip = nullptr) {
     llvm::Value *res;
     if (val->getType()->getNumContainedTypes() > 0) {
-      res = matchOp(val);
-      if (res)
-        iofixpt = valueInfo(res)->fixpType;
+      if (llvm::Constant *cst = llvm::dyn_cast<llvm::Constant>(val)) {
+        res = convertConstant(cst, iofixpt);
+      } else {
+        res = matchOp(val);
+        if (res)
+          iofixpt = valueInfo(res)->fixpType;
+      }
     } else {
       res = translateOrMatchOperand(val, iofixpt, ip);
     }
@@ -231,8 +235,14 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *translateOrMatchAnyOperandAndType(llvm::Value *val, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr) {
     llvm::Value *res;
     if (val->getType()->getNumContainedTypes() > 0) {
-      res = matchOp(val);
-      assert(fixpt == valueInfo(res)->fixpType && "type mismatch on reference Value");
+      if (llvm::Constant *cst = llvm::dyn_cast<llvm::Constant>(val)) {
+        FixedPointType tmpfixpt = fixpt;
+        res = convertConstant(cst, tmpfixpt);
+        assert(fixpt == tmpfixpt && "type mismatch on reference Value");
+      } else {
+        res = matchOp(val);
+        assert(fixpt == valueInfo(res)->fixpType && "type mismatch on reference Value");
+      }
     } else {
       res = translateOrMatchOperandAndType(val, fixpt, ip);
     }
