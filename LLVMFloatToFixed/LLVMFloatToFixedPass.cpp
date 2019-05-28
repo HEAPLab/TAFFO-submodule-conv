@@ -150,7 +150,7 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
       }
       
       if (!hasInfo(u)) {
-        LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because it has no metadata\n");
+        LLVM_DEBUG(dbgs() << "[WARNING] Value " << *u << " will not be converted because it has no metadata\n");
         newValueInfo(u)->noTypeConversion = true;
         valueInfo(u)->origType = u->getType();
       }
@@ -351,6 +351,15 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     SmallPtrSet<Value*, 32> localFix;
     readLocalMetadata(*newF, localFix);
     newVals.insert(localFix.begin(), localFix.end());
+    
+    /* Make sure that the new arguments have correct ValueInfo */
+    oldIt = oldF->arg_begin();
+    newIt = newF->arg_begin();
+    for (; oldIt != oldF->arg_end(); oldIt++, newIt++) {
+      if (oldIt->getType() != newIt->getType()) {
+        *(valueInfo(newIt)) = *(valueInfo(oldIt));
+      }
+    }
     
     /* Copy the return type on the call instruction to all the return
      * instructions */
