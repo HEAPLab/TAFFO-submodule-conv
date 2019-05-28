@@ -206,22 +206,22 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
   if (valueInfo(gep)->noTypeConversion)
     return Unsupported;
   
-  if (EnableStructHack && valueInfo(gep)->isRoot && valueInfo(gep)->isBacktrackingNode) {
-    dbgs() << "*** UGLY HACK *** ";
+  IRBuilder <> builder (gep);
+  Value *newval = matchOp(gep->getPointerOperand());
+  if (!newval)
+    return nullptr;
+  
+  if (!isConvertedFixedPoint(newval)) {
     /* till we can flag a structure for conversion we bitcast away the
      * item pointer to a fixed point type and hope everything still works */
     BitCastInst *bci = new BitCastInst(gep, getLLVMFixedPointTypeForFloatType(gep->getType(), fixpt));
     cpMetaData(bci,gep);
     bci->setName(gep->getName() + ".haxfixp");
     bci->insertAfter(gep);
-    bci->print(dbgs());
-    dbgs() << "\n";
+    dbgs() << "*** UGLY HACK ***: inserted bitcast " << *bci << "\n";
     return bci;
   }
-  IRBuilder <> builder (gep);
-  Value *newval = matchOp(gep->getPointerOperand());
-  if (!newval)
-    return nullptr;
+  
   FixedPointType tempFixpt = fixPType(newval);
 
   Type *type = gep->getPointerOperand()->getType();

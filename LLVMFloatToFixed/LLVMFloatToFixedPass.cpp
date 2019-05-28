@@ -28,11 +28,6 @@ static RegisterPass<FloatToFixed> X(
   true /* Optimization Pass */);
 
 
-llvm::cl::opt<bool> EnableStructHack("structhack",
-    llvm::cl::desc("Enables a very ugly hack involving GEP instructions. "
-    "Do NOT use this except in extreme need."), llvm::cl::init(false));
-
-
 void FloatToFixed::getAnalysisUsage(llvm::AnalysisUsage &au) const
 {
   au.addRequiredTransitive<LoopInfoWrapperPass>();

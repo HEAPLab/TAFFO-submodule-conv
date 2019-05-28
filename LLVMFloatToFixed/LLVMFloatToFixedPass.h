@@ -33,8 +33,6 @@ STATISTIC(ConversionCount, "Number of instructions affected by flttofix");
 STATISTIC(MetadataCount, "Number of valid Metadata found");
 STATISTIC(FunctionCreated, "Number of fixed point function inserted");
 
-extern llvm::cl::opt<bool> EnableStructHack;
-
 
 /* flags in conversionPool */
 extern llvm::Value *ConversionError;
