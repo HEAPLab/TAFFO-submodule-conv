@@ -206,7 +206,7 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
   if (valueInfo(gep)->noTypeConversion)
     return Unsupported;
   
-  if (valueInfo(gep)->isRoot && valueInfo(gep)->isBacktrackingNode) {
+  if (EnableStructHack && valueInfo(gep)->isRoot && valueInfo(gep)->isBacktrackingNode) {
     dbgs() << "*** UGLY HACK *** ";
     /* till we can flag a structure for conversion we bitcast away the
      * item pointer to a fixed point type and hope everything still works */

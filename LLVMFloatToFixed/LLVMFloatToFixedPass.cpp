@@ -28,6 +28,11 @@ static RegisterPass<FloatToFixed> X(
   true /* Optimization Pass */);
 
 
+llvm::cl::opt<bool> EnableStructHack("structhack",
+    llvm::cl::desc("Enables a very ugly hack involving GEP instructions. "
+    "Do NOT use this except in extreme need."), llvm::cl::init(false));
+
+
 void FloatToFixed::getAnalysisUsage(llvm::AnalysisUsage &au) const
 {
   au.addRequiredTransitive<LoopInfoWrapperPass>();
@@ -271,8 +276,12 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
   };
 
   clear(isa<StoreInst>);
+  
+  /* remove calls manually because DCE does not do it as they may have
+   * side effects */
   clear(isa<CallInst>);
   clear(isa<InvokeInst>);
+  
   clear(isa<BranchInst>);
 
   for (Instruction *v: toErase) {
