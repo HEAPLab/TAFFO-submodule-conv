@@ -47,6 +47,7 @@ bool FloatToFixed::runOnModule(Module &m)
   MetadataCount = vals.size();
 
   propagateCall(vals, global);
+  openPhiLoops(vals);
   sortQueue(vals);
   LLVM_DEBUG(printConversionQueue(vals));
   ConversionCount = vals.size();
@@ -72,25 +73,35 @@ int FloatToFixed::getLoopNestingLevelOfValue(llvm::Value *v)
 }
 
 
-void FloatToFixed::openPhiLoop(PHINode *phi)
+void FloatToFixed::openPhiLoops(std::vector<Value *>& vals)
 {
-  PHIInfo info;
-  info.phi = phi;
-  info.placeh_noconv = createPlaceholder(phi->getType(), phi->getParent(), "phi_noconv");
-  *(newValueInfo(info.placeh_noconv)) = *(valueInfo(phi));
-  phi->replaceAllUsesWith(info.placeh_noconv);
-  if (isFloatingPointToConvert(phi)) {
-    Type *convt = getLLVMFixedPointTypeForFloatType(phi->getType(), fixPType(phi));
-    info.placeh_conv = createPlaceholder(convt, phi->getParent(), "phi_conv");
-    *(newValueInfo(info.placeh_conv)) = *(valueInfo(phi));
-  } else {
-    info.placeh_conv = info.placeh_noconv;
+  LLVM_DEBUG(dbgs() << __PRETTY_FUNCTION__ << " begin\n");
+  
+  for (Value *v: vals) {
+    PHINode *phi = dyn_cast<PHINode>(v);
+    if (!phi)
+      continue;
+    
+    PHIInfo info;
+    info.phi = phi;
+    info.placeh_noconv = createPlaceholder(phi->getType(), phi->getParent(), "phi_noconv");
+    *(newValueInfo(info.placeh_noconv)) = *(valueInfo(phi));
+    phi->replaceAllUsesWith(info.placeh_noconv);
+    if (isFloatingPointToConvert(phi)) {
+      Type *convt = getLLVMFixedPointTypeForFloatType(phi->getType(), fixPType(phi));
+      info.placeh_conv = createPlaceholder(convt, phi->getParent(), "phi_conv");
+      *(newValueInfo(info.placeh_conv)) = *(valueInfo(phi));
+    } else {
+      info.placeh_conv = info.placeh_noconv;
+    }
+    operandPool[info.placeh_noconv] = info.placeh_conv;
+    
+    LLVM_DEBUG(dbgs() << "created placeholder (non-converted=[" << *info.placeh_noconv << "], converted=[" << *info.placeh_conv << "]) for phi " << *phi << "\n");
+    
+    phiReplacementData.push_back(info);
   }
-  operandPool[info.placeh_noconv] = info.placeh_conv;
   
-  LLVM_DEBUG(dbgs() << "created placeholder (non-converted=[" << *info.placeh_noconv << "], converted=[" << *info.placeh_conv << "]) for phi " << *phi << "\n");
-  
-  phiReplacementData.push_back(info);
+  LLVM_DEBUG(dbgs() << __PRETTY_FUNCTION__ << " end\n");
 }
 
 
@@ -157,8 +168,6 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
 
       dbgs() << "[U] " << *u << "\n";
       vals.push_back(u);
-      if (PHINode *phi = dyn_cast<PHINode>(u))
-        openPhiLoop(phi);
       valueInfo(u)->roots.insert(roots.begin(), roots.end());
     }
     next++;

@@ -97,7 +97,7 @@ struct FloatToFixed : public llvm::ModulePass {
   void removeNoFloatTy(llvm::SmallPtrSetImpl<llvm::Value *>& res);
   void printAnnotatedObj(llvm::Module &m);
   
-  void openPhiLoop(llvm::PHINode *phi);
+  void openPhiLoops(std::vector<llvm::Value*>& q);
   void closePhiLoops();
   void sortQueue(std::vector<llvm::Value*> &vals);
   void cleanup(const std::vector<llvm::Value*>& queue);
