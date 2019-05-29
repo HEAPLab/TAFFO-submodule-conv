@@ -709,7 +709,7 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
   }
   
   Instruction *tmp;
-  if (!unsupp->isTerminator()) {
+  if (valueInfo(unsupp)->noTypeConversion == false && !unsupp->isTerminator()) {
     tmp = unsupp->clone();
     if (!tmp->getType()->isVoidTy())
       tmp->setName(unsupp->getName() + ".flt");
