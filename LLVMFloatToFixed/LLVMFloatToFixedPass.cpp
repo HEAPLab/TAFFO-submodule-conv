@@ -75,6 +75,12 @@ int FloatToFixed::getLoopNestingLevelOfValue(llvm::Value *v)
 void FloatToFixed::openPhiLoop(PHINode *phi)
 {
   PHIInfo info;
+  
+  if (phi->materialized_use_empty()) {
+    LLVM_DEBUG(dbgs() << "phi" << *phi << " not currently used by anything; skipping placeholder creation\n");
+    return;
+  }
+  
   info.phi = phi;
   info.placeh_noconv = createPlaceholder(phi->getType(), phi->getParent(), "phi_noconv");
   *(newValueInfo(info.placeh_noconv)) = *(valueInfo(phi));
@@ -135,6 +141,9 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
     if (roots.empty()) {
       roots.insert(v);
     }
+    
+    if (PHINode *phi = dyn_cast<PHINode>(v))
+      openPhiLoop(phi);
 
     for (auto *u: v->users()) {
       /* Insert u at the end of the queue.
