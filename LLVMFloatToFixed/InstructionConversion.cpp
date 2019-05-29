@@ -397,7 +397,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
       argfpt = fixPType(*call_arg);
       funfpt = fixPType(&(*f_arg));
       if (!(argfpt == funfpt)) {
-        LLVM_DEBUG(dbgs() << "CALL: fixed point type mismatch in actual argument " << i << " vs. formal argument\n");
+        LLVM_DEBUG(dbgs() << "CALL: fixed point type mismatch in actual argument " << i << " (" << *f_arg << ") vs. formal argument\n");
         LLVM_DEBUG(dbgs() << "      (actual " << argfpt.toString() << ", vs. formal " << funfpt.toString() << ")\n");
         LLVM_DEBUG(dbgs() << "      making an attempt to ignore the issue because mem2reg can interfere\n");
       }
@@ -407,13 +407,13 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
     } else {
       FixedPointType funfpt;
       funfpt = fixPType(&(*f_arg));
-      LLVM_DEBUG(dbgs() << "CALL: formal argument " << i << " converted but not actual argument\n");
+      LLVM_DEBUG(dbgs() << "CALL: formal argument " << i << " (" << *f_arg << ") converted but not actual argument\n");
       LLVM_DEBUG(dbgs() << "      making an attempt to ignore the issue because mem2reg can interfere\n");
       thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt, call->getInstruction());
     }
     
     if (!thisArgument) {
-      LLVM_DEBUG(dbgs() << "CALL: match of argument " << i << " failed\n");
+      LLVM_DEBUG(dbgs() << "CALL: match of argument " << i << " (" << *f_arg << ") failed\n");
       return Unsupported;
     }
     
@@ -421,7 +421,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
     typeArgs.push_back(thisArgument->getType());
     
     if (convArgs[i]->getType() != f_arg->getType()) {
-      LLVM_DEBUG(dbgs() << "CALL: type mismatch in actual argument " << i << " vs. formal argument\n");
+      LLVM_DEBUG(dbgs() << "CALL: type mismatch in actual argument " << i << " (" << *f_arg << ") vs. formal argument\n");
       return nullptr;
     }
     
