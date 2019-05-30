@@ -102,7 +102,7 @@ struct FloatToFixed : public llvm::ModulePass {
   void sortQueue(std::vector<llvm::Value*> &vals);
   void cleanup(const std::vector<llvm::Value*>& queue);
   void propagateCall(std::vector<llvm::Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global);
-  llvm::Function *createFixFun(llvm::CallSite* call);
+  llvm::Function *createFixFun(llvm::CallSite* call, bool *old);
   void printConversionQueue(std::vector<llvm::Value*> vals);
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, FixedPointType& fixpt);

@@ -146,6 +146,13 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
       openPhiLoop(phi);
 
     for (auto *u: v->users()) {
+      if (Instruction *i = dyn_cast<Instruction>(u)) {
+        if (functionPool.find(i->getFunction()) != functionPool.end()) {
+          dbgs() << "old function: skipped " << *u << "\n";
+          continue;
+        }
+      }
+    
       /* Insert u at the end of the queue.
        * If u exists already in the queue, *move* it to the end instead. */
       for (int i=0; i<vals.size();) {
@@ -305,10 +312,15 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     if (!call.getInstruction())
       continue;
     
+    bool alreadyHandledNewF;
     Function *oldF = call.getCalledFunction();
-    Function *newF = createFixFun(&call);
+    Function *newF = createFixFun(&call, &alreadyHandledNewF);
     if (!newF) {
       LLVM_DEBUG(dbgs() << "Attempted to clone function " << oldF->getName() << " but failed\n");
+      continue;
+    }
+    if (alreadyHandledNewF) {
+      oldFuncs.insert(oldF);
       continue;
     }
     
@@ -413,7 +425,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
 }
 
 
-Function* FloatToFixed::createFixFun(CallSite* call)
+Function* FloatToFixed::createFixFun(CallSite* call, bool *old)
 {
   Function *oldF = call->getCalledFunction();
   assert(oldF && "bitcasted function pointers and such not handled atm");
@@ -454,8 +466,10 @@ Function* FloatToFixed::createFixFun(CallSite* call)
   if (newF) {
     LLVM_DEBUG(dbgs() << *(call->getInstruction()) <<  " use already converted function : " <<
                  newF->getName() << " " << *newF->getType() << "\n";);
-    return nullptr;
+    if (old) *old = true;
+    return newF;
   }
+  if (old) *old = false;
 
   FunctionType *newFunTy = FunctionType::get(
       isFloatType(oldF->getReturnType()) ?
