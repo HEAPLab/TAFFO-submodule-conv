@@ -117,16 +117,21 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
     return nullptr;
   if (!newptr)
     return Unsupported;
-  fixpt = fixPType(newptr);
+  
+  if (isConvertedFixedPoint(newptr)) {
+    fixpt = fixPType(newptr);
 
-  LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
-    load->getAlignment(), load->getOrdering(), load->getSyncScopeID());
-  newinst->insertAfter(load);
-  if (valueInfo(load)->noTypeConversion && isConvertedFixedPoint(newptr)) {
-    assert(newinst->getType()->isIntegerTy() && "DTA bug; improperly tagged struct/pointer!");
-    return genConvertFixToFloat(newinst, fixPType(newptr), load->getType());
+    LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
+      load->getAlignment(), load->getOrdering(), load->getSyncScopeID());
+    newinst->insertAfter(load);
+    if (valueInfo(load)->noTypeConversion) {
+      assert(newinst->getType()->isIntegerTy() && "DTA bug; improperly tagged struct/pointer!");
+      return genConvertFixToFloat(newinst, fixPType(newptr), load->getType());
+    }
+    return newinst;
   }
-  return newinst;
+  
+  return Unsupported;
 }
 
 
