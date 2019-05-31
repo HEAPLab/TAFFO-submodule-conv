@@ -23,27 +23,27 @@ using namespace taffo;
 #define defaultFixpType @SYNTAX_ERROR@
 
 
-Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt)
+Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt, bool allowTypeAdj)
 {
   if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
-    return convertGlobalVariable(gvar, fixpt);
+    return convertGlobalVariable(gvar, fixpt, allowTypeAdj);
   } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
-    return convertLiteral(fpc, nullptr, fixpt);
+    return convertLiteral(fpc, nullptr, fixpt, allowTypeAdj);
   } else if (ConstantAggregate *cag = dyn_cast<ConstantAggregate>(flt)) {
-    return convertConstantAggregate(cag, fixpt);
+    return convertConstantAggregate(cag, fixpt, allowTypeAdj);
   } else if (ConstantDataSequential *cds = dyn_cast<ConstantDataSequential>(flt)) {
     return convertConstantDataSequential(cds, fixpt);
   } else if (auto cag = dyn_cast<ConstantAggregateZero>(flt)) {
     Type *newt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
     return ConstantAggregateZero::get(newt);
   } else if (ConstantExpr *cexp = dyn_cast<ConstantExpr>(flt)) {
-    return convertConstantExpr(cexp, fixpt);
+    return convertConstantExpr(cexp, fixpt, allowTypeAdj);
   }
   return nullptr;
 }
 
 
-Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType& fixpt)
+Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType& fixpt, bool allowTypeAdj)
 {
   if (cexp->isGEPWithNoNotionalOverIndexing()) {
     Value *newval = operandPool[cexp->getOperand(0)];
@@ -53,7 +53,10 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType& 
     if (!newconst)
       return nullptr;
     
-    fixpt = fixPType(newval);
+    if (!allowTypeAdj)
+      assert(fixpt == fixPType(newval) && "type adjustment forbidden...");
+    else
+      fixpt = fixPType(newval);
   
     std::vector<Constant *> vals;
     for (int i=1; i<cexp->getNumOperands(); i++) {
@@ -67,7 +70,7 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType& 
 }
 
 
-Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointType& fixpt)
+Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointType& fixpt, bool allowTypeAdj)
 {
   bool hasfloats;
   Type *prevt = glob->getType()->getPointerElementType();
@@ -80,7 +83,7 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointTy
   Constant *oldinit = glob->getInitializer();
   Constant *newinit = nullptr;
   if (oldinit && !oldinit->isNullValue())
-    newinit = convertConstant(oldinit, fixpt);
+    newinit = convertConstant(oldinit, fixpt, allowTypeAdj);
   else
     newinit = Constant::getNullValue(newt);
   
@@ -91,14 +94,14 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointTy
 }
 
 
-Constant *FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, FixedPointType& fixpt)
+Constant *FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, FixedPointType& fixpt, bool allowTypeAdj)
 {
   std::vector<Constant*> consts;
   for (int i=0; i<cag->getNumOperands(); i++) {
     Constant *oldconst = cag->getOperand(i);
     Constant *newconst;
     if (isFloatType(oldconst->getType())) {
-      newconst = convertConstant(cag->getOperand(i), fixpt);
+      newconst = convertConstant(cag->getOperand(i), fixpt, false);
       if (!newconst)
         return nullptr;
     } else {
@@ -167,10 +170,28 @@ Constant *FloatToFixed::convertConstantDataSequential(ConstantDataSequential *cd
 }
 
 
-Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, const FixedPointType& fixpt)
+Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, FixedPointType& fixpt, bool allowTypeAdj)
 {
   APFloat val = fpc->getValueAPF();
   APSInt fixval;
+  
+  if (allowTypeAdj) {
+    APFloat tmp(val);
+    bool precise = false;
+    tmp.convert(APFloatBase::IEEEdouble(), APFloat::rmTowardNegative, &precise);
+    double dblval = tmp.convertToDouble();
+    bool idealSignedness = dblval < 0;
+    int nbits = fixpt.scalarBitsAmt();
+    if (std::trunc(dblval) == dblval) {
+      /* we've got an integer disguised as a float
+       * sneaky bastard, we'll give him the full-fledged integer treatment,
+       * maybe he'll learn next time */
+      fixpt = FixedPointType(idealSignedness, 0, nbits);
+    } else {
+      int intbits = std::ceil(std::log2(std::abs(dblval+1.0))) + (idealSignedness ? 1 : 0);
+      fixpt = FixedPointType(idealSignedness, nbits - intbits, nbits);
+    }
+  }
   
   if (convertAPFloat(val, fixval, context, fixpt)) {
     Type *intty = fixpt.scalarToLLVMType(fpc->getContext());

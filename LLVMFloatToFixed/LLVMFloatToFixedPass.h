@@ -112,13 +112,13 @@ struct FloatToFixed : public llvm::ModulePass {
   /* convert* functions return nullptr if the conversion cannot be
    * recovered, and Unsupported to trigger the fallback behavior */
   
-  llvm::Constant *convertConstant(llvm::Constant *flt, FixedPointType& fixpt);
-  llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob, FixedPointType& fixpt);
-  llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, FixedPointType& fixpt);
-  llvm::Constant *convertConstantAggregate(llvm::ConstantAggregate *cag, FixedPointType& fixpt);
+  llvm::Constant *convertConstant(llvm::Constant *flt, FixedPointType& fixpt, bool allowTypeAdj);
+  llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob, FixedPointType& fixpt, bool allowTypeAdj);
+  llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, FixedPointType& fixpt, bool allowTypeAdj);
+  llvm::Constant *convertConstantAggregate(llvm::ConstantAggregate *cag, FixedPointType& fixpt, bool allowTypeAdj);
   llvm::Constant *convertConstantDataSequential(llvm::ConstantDataSequential *, const FixedPointType&);
   template <class T> llvm::Constant *createConstantDataSequential(llvm::ConstantDataSequential *, const FixedPointType&);
-  llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *, const FixedPointType&);
+  llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *, FixedPointType&, bool allowTypeAdj);
   bool convertAPFloat(llvm::APFloat, llvm::APSInt&, llvm::Instruction *, const FixedPointType&);
   
   llvm::Value *convertInstruction(llvm::Module& m, llvm::Instruction *val, FixedPointType& fixpt);
@@ -190,7 +190,7 @@ struct FloatToFixed : public llvm::ModulePass {
     llvm::Value *res;
     if (val->getType()->getNumContainedTypes() > 0) {
       if (llvm::Constant *cst = llvm::dyn_cast<llvm::Constant>(val)) {
-        res = convertConstant(cst, iofixpt);
+        res = convertConstant(cst, iofixpt, true);
       } else {
         res = matchOp(val);
         if (res)
@@ -235,7 +235,7 @@ struct FloatToFixed : public llvm::ModulePass {
     if (val->getType()->getNumContainedTypes() > 0) {
       if (llvm::Constant *cst = llvm::dyn_cast<llvm::Constant>(val)) {
         FixedPointType tmpfixpt = fixpt;
-        res = convertConstant(cst, tmpfixpt);
+        res = convertConstant(cst, tmpfixpt, false);
         assert(fixpt == tmpfixpt && "type mismatch on reference Value");
       } else {
         res = matchOp(val);

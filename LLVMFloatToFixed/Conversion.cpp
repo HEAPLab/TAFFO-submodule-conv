@@ -93,7 +93,7 @@ Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& f
     /* Since constants never change, there is never anything to substitute
      * in them */
     if (!valueInfo(con)->noTypeConversion)
-      res = convertConstant(con, fixpt);
+      res = convertConstant(con, fixpt, true);
     else
       res = con;
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) {
@@ -134,6 +134,26 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
   }
 
   assert(val->getType()->isFloatingPointTy());
+  
+  /* try the easy cases first
+   *   this is essentially duplicated from genConvertFloatToFix because once we
+   * enter that function iofixpt cannot change anymore
+   *   in other words, by duplicating this logic here we potentially avoid a loss
+   * of range if the suggested iofixpt is not enough for the value */
+  
+  if (Constant *c = dyn_cast<Constant>(val)) {
+    Value *res = convertConstant(c, iofixpt, true);
+    return res;
+  } else if (SIToFPInst *instr = dyn_cast<SIToFPInst>(val)) {
+    Value *intparam = instr->getOperand(0);
+    iofixpt = FixedPointType(intparam->getType(), true);
+    return intparam;
+  } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(val)) {
+    Value *intparam = instr->getOperand(0);
+    iofixpt = FixedPointType(intparam->getType(), false);
+    return intparam;
+  }
+  
   return genConvertFloatToFix(val, iofixpt, ip);
 }
 
@@ -144,7 +164,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
   
   if (Constant *c = dyn_cast<Constant>(flt)) {
     FixedPointType fixptcopy = fixpt;
-    Value *res = convertConstant(c, fixptcopy);
+    Value *res = convertConstant(c, fixptcopy, false);
     assert(fixptcopy == fixpt && "why is there a pointer here?");
     return res;
   }
