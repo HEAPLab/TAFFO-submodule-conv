@@ -140,7 +140,6 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
    * enter that function iofixpt cannot change anymore
    *   in other words, by duplicating this logic here we potentially avoid a loss
    * of range if the suggested iofixpt is not enough for the value */
-  
   if (Constant *c = dyn_cast<Constant>(val)) {
     Value *res = convertConstant(c, iofixpt, true);
     return res;
@@ -152,6 +151,18 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
     Value *intparam = instr->getOperand(0);
     iofixpt = FixedPointType(intparam->getType(), false);
     return intparam;
+  }
+  
+  /* not an easy case; check if the value has a range metadata
+   * from VRA before giving up and using the suggested type */
+  mdutils::MDInfo *mdi = mdutils::MetadataManager::getMetadataManager().retrieveMDInfo(val);
+  if (mdutils::InputInfo *ii = dyn_cast_or_null<mdutils::InputInfo>(mdi)) {
+    if (ii->IRange) {
+      FixedPointTypeGenError err;
+      mdutils::FPType fpt = taffo::fixedPointTypeFromRange(*(ii->IRange), &err, iofixpt.scalarBitsAmt());
+      if (err != FixedPointTypeGenError::InvalidRange)
+        iofixpt = FixedPointType(&fpt);
+    }
   }
   
   return genConvertFloatToFix(val, iofixpt, ip);
