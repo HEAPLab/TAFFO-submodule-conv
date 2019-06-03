@@ -108,17 +108,25 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, FixedPointType& fixpt);
   
   llvm::Value *createPlaceholder(llvm::Type *type, llvm::BasicBlock *where, llvm::StringRef name);
+  
+  enum class TypeMatchPolicy {
+    RangeOverHintMaxFrac = 0, /// Minimize extra conversions
+    RangeOverHintMaxInt,
+    HintOverRangeMaxFrac,     /// Create new type different than the hint if hint does not fit value
+    HintOverRangeMaxInt,
+    ForceHint                 /// Always use the hint for the type
+  };
 
   /* convert* functions return nullptr if the conversion cannot be
    * recovered, and Unsupported to trigger the fallback behavior */
   
-  llvm::Constant *convertConstant(llvm::Constant *flt, FixedPointType& fixpt, bool allowTypeAdj);
-  llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob, FixedPointType& fixpt, bool allowTypeAdj);
-  llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, FixedPointType& fixpt, bool allowTypeAdj);
-  llvm::Constant *convertConstantAggregate(llvm::ConstantAggregate *cag, FixedPointType& fixpt, bool allowTypeAdj);
+  llvm::Constant *convertConstant(llvm::Constant *flt, FixedPointType& fixpt, TypeMatchPolicy typepol);
+  llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob, FixedPointType& fixpt, TypeMatchPolicy typepol);
+  llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, FixedPointType& fixpt, TypeMatchPolicy typepol);
+  llvm::Constant *convertConstantAggregate(llvm::ConstantAggregate *cag, FixedPointType& fixpt, TypeMatchPolicy typepol);
   llvm::Constant *convertConstantDataSequential(llvm::ConstantDataSequential *, const FixedPointType&);
   template <class T> llvm::Constant *createConstantDataSequential(llvm::ConstantDataSequential *, const FixedPointType&);
-  llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *, FixedPointType&, bool allowTypeAdj);
+  llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *, FixedPointType&, TypeMatchPolicy typepol);
   bool convertAPFloat(llvm::APFloat, llvm::APSInt&, llvm::Instruction *, const FixedPointType&);
   
   llvm::Value *convertInstruction(llvm::Module& m, llvm::Instruction *val, FixedPointType& fixpt);
@@ -154,7 +162,7 @@ struct FloatToFixed : public llvm::ModulePass {
     llvm::Value *res = operandPool[val];
     return res == ConversionError ? nullptr : (res ? res : val);
   };
-  
+
   /** Returns a fixed point Value from any Value, whether it should be
    *  converted or not.
    *  @param val The non-converted value. Must be of a primitive floating-point
@@ -171,7 +179,11 @@ struct FloatToFixed : public llvm::ModulePass {
    *    is an instruction or a constant.
    *  @returns A fixed point value corresponding to val or nullptr if
    *    val was to be converted but its conversion failed. */
-  llvm::Value *translateOrMatchOperand(llvm::Value *val, FixedPointType& iofixpt, llvm::Instruction *ip = nullptr);
+  llvm::Value *translateOrMatchOperand(
+    llvm::Value *val,
+    FixedPointType& iofixpt,
+    llvm::Instruction *ip = nullptr,
+    TypeMatchPolicy typepol = TypeMatchPolicy::RangeOverHintMaxFrac);
   /** Returns a fixed point Value from any Value, whether it should be
    *  converted or not, if possible.
    *  @param val The non-converted value.
@@ -186,18 +198,22 @@ struct FloatToFixed : public llvm::ModulePass {
    *    is an instruction or a constant.
    *  @returns A fixed point value corresponding to val or nullptr if
    *    val was to be converted but its conversion failed. */
-  llvm::Value *translateOrMatchAnyOperand(llvm::Value *val, FixedPointType& iofixpt, llvm::Instruction *ip = nullptr) {
+  llvm::Value *translateOrMatchAnyOperand(llvm::Value *val, FixedPointType& iofixpt, llvm::Instruction *ip = nullptr, TypeMatchPolicy typepol = TypeMatchPolicy::RangeOverHintMaxFrac) {
     llvm::Value *res;
     if (val->getType()->getNumContainedTypes() > 0) {
       if (llvm::Constant *cst = llvm::dyn_cast<llvm::Constant>(val)) {
-        res = convertConstant(cst, iofixpt, true);
+        res = convertConstant(cst, iofixpt, typepol);
       } else {
         res = matchOp(val);
-        if (res)
-          iofixpt = valueInfo(res)->fixpType;
+        if (res) {
+          if (typepol == TypeMatchPolicy::ForceHint)
+            assert(iofixpt == valueInfo(res)->fixpType && "type mismatch on reference Value");
+          else
+            iofixpt = valueInfo(res)->fixpType;
+        }
       }
     } else {
-      res = translateOrMatchOperand(val, iofixpt, ip);
+      res = translateOrMatchOperand(val, iofixpt, ip, typepol);
     }
     return res;
   }
@@ -215,8 +231,7 @@ struct FloatToFixed : public llvm::ModulePass {
    *    or nullptr if val was to be converted but its conversion failed.  */
   llvm::Value *translateOrMatchOperandAndType(llvm::Value *val, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr) {
     FixedPointType iofixpt = fixpt;
-    llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip);
-    return genConvertFixedToFixed(tmp, iofixpt, fixpt, ip);
+    return translateOrMatchOperand(val, iofixpt, ip, TypeMatchPolicy::ForceHint);
   };
   /** Returns a fixed point Value of a specified fixed point type from any
    *  Value, whether it should be converted or not, if possible.
@@ -231,20 +246,8 @@ struct FloatToFixed : public llvm::ModulePass {
    *    An assertion is raised if the value cannot be converted to
    *    the specified type (for example if it is a pointer)  */
   llvm::Value *translateOrMatchAnyOperandAndType(llvm::Value *val, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr) {
-    llvm::Value *res;
-    if (val->getType()->getNumContainedTypes() > 0) {
-      if (llvm::Constant *cst = llvm::dyn_cast<llvm::Constant>(val)) {
-        FixedPointType tmpfixpt = fixpt;
-        res = convertConstant(cst, tmpfixpt, false);
-        assert(fixpt == tmpfixpt && "type mismatch on reference Value");
-      } else {
-        res = matchOp(val);
-        assert(fixpt == valueInfo(res)->fixpType && "type mismatch on reference Value");
-      }
-    } else {
-      res = translateOrMatchOperandAndType(val, fixpt, ip);
-    }
-    return res;
+    FixedPointType iofixpt = fixpt;
+    return translateOrMatchAnyOperand(val, iofixpt, ip, TypeMatchPolicy::ForceHint);
   };
   
   llvm::Value *fallbackMatchValue(llvm::Value *fallval, llvm::Type *origType, llvm::Instruction *ip = nullptr) {

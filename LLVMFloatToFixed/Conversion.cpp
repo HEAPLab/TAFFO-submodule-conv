@@ -93,7 +93,7 @@ Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& f
     /* Since constants never change, there is never anything to substitute
      * in them */
     if (!valueInfo(con)->noTypeConversion)
-      res = convertConstant(con, fixpt, true);
+      res = convertConstant(con, fixpt, TypeMatchPolicy::RangeOverHintMaxFrac);
     else
       res = con;
   } else if (Instruction *instr = dyn_cast<Instruction>(val)) {
@@ -110,8 +110,14 @@ Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& f
 
 
 /* do not use on pointer operands */
-Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt, Instruction *ip)
+Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt, Instruction *ip, TypeMatchPolicy typepol)
 {
+  if (typepol == TypeMatchPolicy::ForceHint) {
+    FixedPointType origfixpt = iofixpt;
+    llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip, TypeMatchPolicy::RangeOverHintMaxFrac);
+    return genConvertFixedToFixed(tmp, iofixpt, origfixpt, ip);
+  }
+  
   assert(val->getType()->getNumContainedTypes() == 0 && "translateOrMatchOperand val is not a scalar value");
   Value *res = operandPool[val];
   if (res) {
@@ -141,7 +147,7 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
    *   in other words, by duplicating this logic here we potentially avoid a loss
    * of range if the suggested iofixpt is not enough for the value */
   if (Constant *c = dyn_cast<Constant>(val)) {
-    Value *res = convertConstant(c, iofixpt, true);
+    Value *res = convertConstant(c, iofixpt, typepol);
     return res;
   } else if (SIToFPInst *instr = dyn_cast<SIToFPInst>(val)) {
     Value *intparam = instr->getOperand(0);
@@ -149,7 +155,7 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
     return intparam;
   } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(val)) {
     Value *intparam = instr->getOperand(0);
-    iofixpt = FixedPointType(intparam->getType(), false);
+    iofixpt = FixedPointType(intparam->getType(), true);
     return intparam;
   }
   
@@ -175,7 +181,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
   
   if (Constant *c = dyn_cast<Constant>(flt)) {
     FixedPointType fixptcopy = fixpt;
-    Value *res = convertConstant(c, fixptcopy, false);
+    Value *res = convertConstant(c, fixptcopy, TypeMatchPolicy::ForceHint);
     assert(fixptcopy == fixpt && "why is there a pointer here?");
     return res;
   }
