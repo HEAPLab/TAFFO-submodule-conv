@@ -500,63 +500,75 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
   
   int opc = instr->getOpcode();
 
-  FixedPointType intype1 = fixpt, intype2 = fixpt;
-  Value *val1 = translateOrMatchOperand(instr->getOperand(0), intype1, instr);
-  Value *val2 = translateOrMatchOperand(instr->getOperand(1), intype2, instr);
-  if (!val1 || !val2)
-    return nullptr;
-
   if (opc == Instruction::FAdd || opc == Instruction::FSub || opc == Instruction::FRem) {
-    val1 = genConvertFixedToFixed(val1, intype1, fixpt, instr);
-    val2 = genConvertFixedToFixed(val2, intype2, fixpt, instr);
+    Value *val1 = translateOrMatchOperandAndType(instr->getOperand(0), fixpt, instr);
+    Value *val2 = translateOrMatchOperandAndType(instr->getOperand(1), fixpt, instr);
+    if (!val1 || !val2)
+      return nullptr;
     IRBuilder<> builder(instr);
     
-    if (opc == Instruction::FAdd)
+    if (opc == Instruction::FAdd) {
       return builder.CreateBinOp(Instruction::Add, val1, val2);
     
-    else if (opc == Instruction::FSub)
+    } else if (opc == Instruction::FSub) {
+      // TODO: improve overflow resistance by shifting late
       return builder.CreateBinOp(Instruction::Sub, val1, val2);
     
-    else if (opc == Instruction::FRem) {
+    } else if (opc == Instruction::FRem) {
       if (fixpt.scalarIsSigned())
         return builder.CreateBinOp(Instruction::SRem, val1, val2);
       else
         return builder.CreateBinOp(Instruction::URem, val1, val2);
     }
 
-  } else if (opc == Instruction::FMul || opc == Instruction::FDiv) {
+  } else if (opc == Instruction::FMul) {
+    FixedPointType intype1 = fixpt, intype2 = fixpt;
+    Value *val1 = translateOrMatchOperand(instr->getOperand(0), intype1, instr, TypeMatchPolicy::RangeOverHintMaxInt);
+    Value *val2 = translateOrMatchOperand(instr->getOperand(1), intype2, instr, TypeMatchPolicy::RangeOverHintMaxInt);
+    if (!val1 || !val2)
+      return nullptr;
     FixedPointType intermtype(
       fixpt.scalarIsSigned(),
       intype1.scalarFracBitsAmt() + intype2.scalarFracBitsAmt(),
       intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
     Type *dbfxt = intermtype.scalarToLLVMType(instr->getContext());
-  
-    if (opc == Instruction::FMul) {
-      IRBuilder<> builder(instr);
-      Value *ext1 = intype1.scalarIsSigned() ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
-      Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
-      Value *fixop = builder.CreateMul(ext1, ext2);
-      cpMetaData(ext1,val1);
-      cpMetaData(ext2,val2);
-      cpMetaData(fixop,ext1);
-      cpMetaData(fixop,ext2);
-      updateFPTypeMetadata(fixop, intermtype.scalarIsSigned(), intype1.scalarFracBitsAmt(), intermtype.scalarBitsAmt());
-      return genConvertFixedToFixed(fixop, intermtype, fixpt, instr);
-      
-    } else {
-      FixedPointType fixoptype(
-        fixpt.scalarIsSigned(),
-        intype1.scalarFracBitsAmt(),
-        intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
-      Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype, instr);
-      IRBuilder<> builder(instr);
-      Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
-      Value *fixop = fixpt.scalarIsSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
-      cpMetaData(ext2,val2);
-      cpMetaData(fixop,ext2);
-      updateFPTypeMetadata(fixop, fixoptype.scalarIsSigned(), fixoptype.scalarFracBitsAmt(), fixoptype.scalarBitsAmt());
-      return genConvertFixedToFixed(fixop, fixoptype, fixpt, instr);
-    }
+    
+    IRBuilder<> builder(instr);
+    Value *ext1 = intype1.scalarIsSigned() ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
+    Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+    Value *fixop = builder.CreateMul(ext1, ext2);
+    cpMetaData(ext1,val1);
+    cpMetaData(ext2,val2);
+    cpMetaData(fixop,ext1);
+    cpMetaData(fixop,ext2);
+    updateFPTypeMetadata(fixop, intermtype.scalarIsSigned(), intype1.scalarFracBitsAmt(), intermtype.scalarBitsAmt());
+    return genConvertFixedToFixed(fixop, intermtype, fixpt, instr);
+    
+  } else if (opc == Instruction::FDiv) {
+    // TODO: fix by using HintOverRange when it is actually implemented
+    FixedPointType intype1 = fixpt, intype2 = fixpt;
+    Value *val1 = translateOrMatchOperand(instr->getOperand(0), intype1, instr, TypeMatchPolicy::RangeOverHintMaxFrac);
+    Value *val2 = translateOrMatchOperand(instr->getOperand(1), intype2, instr, TypeMatchPolicy::RangeOverHintMaxInt);
+    if (!val1 || !val2)
+      return nullptr;
+    FixedPointType intermtype(
+      fixpt.scalarIsSigned(),
+      intype1.scalarFracBitsAmt() + intype2.scalarFracBitsAmt(),
+      intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
+    Type *dbfxt = intermtype.scalarToLLVMType(instr->getContext());
+    
+    FixedPointType fixoptype(
+      fixpt.scalarIsSigned(),
+      intype1.scalarFracBitsAmt(),
+      intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
+    Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype, instr);
+    IRBuilder<> builder(instr);
+    Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+    Value *fixop = fixpt.scalarIsSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
+    cpMetaData(ext2,val2);
+    cpMetaData(fixop,ext2);
+    updateFPTypeMetadata(fixop, fixoptype.scalarIsSigned(), fixoptype.scalarFracBitsAmt(), fixoptype.scalarBitsAmt());
+    return genConvertFixedToFixed(fixop, fixoptype, fixpt, instr);
   }
   
   return Unsupported;
