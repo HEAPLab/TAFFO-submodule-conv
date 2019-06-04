@@ -188,7 +188,7 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, Fi
        * maybe he'll learn next time */
       fixpt = FixedPointType(idealSignedness, 0, nbits);
     } else {
-      int intbits = std::ceil(std::log2(std::abs(dblval+1.0))) + (idealSignedness ? 1 : 0);
+      int intbits = std::ceil(std::log2(std::abs(dblval) + 1.0)) + (idealSignedness ? 1 : 0);
       fixpt = FixedPointType(idealSignedness, nbits - intbits, nbits);
     }
   }
