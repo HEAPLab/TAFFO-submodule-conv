@@ -180,17 +180,11 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, Fi
     bool precise = false;
     tmp.convert(APFloatBase::IEEEdouble(), APFloat::rmTowardNegative, &precise);
     double dblval = tmp.convertToDouble();
-    bool idealSignedness = dblval < 0;
     int nbits = fixpt.scalarBitsAmt();
-    if (std::trunc(dblval) == dblval && (typepol == TypeMatchPolicy::HintOverRangeMaxInt || typepol == TypeMatchPolicy::RangeOverHintMaxInt)) {
-      /* we've got an integer disguised as a float
-       * sneaky bastard, we'll give him the full-fledged integer treatment,
-       * maybe he'll learn next time */
-      fixpt = FixedPointType(idealSignedness, 0, nbits);
-    } else {
-      int intbits = std::ceil(std::log2(std::abs(dblval) + 1.0)) + (idealSignedness ? 1 : 0);
-      fixpt = FixedPointType(idealSignedness, nbits - intbits, nbits);
-    }
+    mdutils::Range range(dblval, dblval);
+    int minflt = isMaxIntPolicy(typepol) ? -1 : 0;
+    mdutils::FPType t = taffo::fixedPointTypeFromRange(range, nullptr, nbits, minflt);
+    fixpt = FixedPointType(&t);
   }
   
   if (convertAPFloat(val, fixval, context, fixpt)) {
