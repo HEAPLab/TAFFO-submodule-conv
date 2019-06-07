@@ -294,6 +294,10 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
   clear(isa<InvokeInst>);
   
   clear(isa<BranchInst>);
+  
+  /* remove old phis manually as DCE cannot remove values having a circular
+   * dependence on a phi */
+  clear(isa<PHINode>);
 
   for (Instruction *v: toErase) {
     v->eraseFromParent();
