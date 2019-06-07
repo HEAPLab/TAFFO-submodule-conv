@@ -429,6 +429,14 @@ struct FloatToFixed : public llvm::ModulePass {
     } else if (GlobalObject *from = dyn_cast<GlobalObject>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
+    } else if (Argument *arg = dyn_cast<Argument>(src)) {
+      MDNode *mdargs = arg->getParent()->getMetadata(FUNCTION_ARGS_METADATA);
+      if (mdargs) {
+	Constant *mdtid = cast<ConstantAsMetadata>(mdargs->getOperand(arg->getArgNo() * 2).get())->getValue();
+	unsigned tid = cast<ConstantInt>(mdtid)->getZExtValue();
+	if (tid == 1U)
+	  md = cast<MDNode>(mdargs->getOperand(arg->getArgNo() * 2 + 1).get());
+      }
     }
     if (!md && target) {
       md = target->getMetadata(INPUT_INFO_METADATA);
