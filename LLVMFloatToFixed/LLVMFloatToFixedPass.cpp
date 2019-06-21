@@ -132,7 +132,7 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
   size_t next = 0;
   while (next < vals.size()) {
     Value *v = vals.at(next);
-    dbgs() << "[V] " << *v << "\n";
+    LLVM_DEBUG(dbgs() << "[V] " << *v << "\n");
     SmallPtrSet<Value*, 5> roots;
     for (Value *oldroot: valueInfo(v)->roots) {
       if (valueInfo(oldroot)->roots.empty())
@@ -150,7 +150,7 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
     for (auto *u: v->users()) {
       if (Instruction *i = dyn_cast<Instruction>(u)) {
         if (functionPool.find(i->getFunction()) != functionPool.end()) {
-          dbgs() << "old function: skipped " << *u << "\n";
+          LLVM_DEBUG(dbgs() << "old function: skipped " << *u << "\n");
           continue;
         }
       }
@@ -173,7 +173,7 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
         valueInfo(u)->origType = u->getType();
       }
 
-      dbgs() << "[U] " << *u << "\n";
+      LLVM_DEBUG(dbgs() << "[U] " << *u << "\n");
       vals.push_back(u);
       if (PHINode *phi = dyn_cast<PHINode>(u))
         openPhiLoop(phi);

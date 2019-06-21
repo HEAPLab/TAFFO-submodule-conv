@@ -223,7 +223,7 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
     cpMetaData(bci,gep);
     bci->setName(gep->getName() + ".haxfixp");
     bci->insertAfter(gep);
-    dbgs() << "*** UGLY HACK ***: inserted bitcast " << *bci << "\n";
+    LLVM_DEBUG(dbgs() << "*** UGLY HACK ***: inserted bitcast " << *bci << "\n");
     return bci;
   }
   
@@ -369,7 +369,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
   
   Function *newF = functionPool[oldF];
   if (!newF) {
-    dbgs() << "[Info] no function clone for instruction" << *(call->getInstruction()) << ", engaging fallback\n";
+    LLVM_DEBUG(dbgs() << "[Info] no function clone for instruction" << *(call->getInstruction()) << ", engaging fallback\n");
     return Unsupported;
   }
   
