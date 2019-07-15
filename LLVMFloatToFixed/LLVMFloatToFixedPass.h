@@ -423,9 +423,11 @@ struct FloatToFixed : public llvm::ModulePass {
     using namespace llvm;
     MDNode *md = nullptr;
     MDNode *targetMD = nullptr;
+    MDNode *constInfoMD = nullptr;
     if (Instruction *from = dyn_cast<Instruction>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
+      constInfoMD = from->getMetadata(CONST_INFO_METADATA);
     } else if (GlobalObject *from = dyn_cast<GlobalObject>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
@@ -457,6 +459,14 @@ struct FloatToFixed : public llvm::ModulePass {
         to->setMetadata(TARGET_METADATA, targetMD);
     }
 
+    if (constInfoMD) {
+      if (Instruction *to = dyn_cast<Instruction>(dst)) {
+	Instruction *from = cast<Instruction>(src);
+	if (to->getNumOperands() == from->getNumOperands())
+	  to->setMetadata(CONST_INFO_METADATA, constInfoMD);
+      }
+    }
+
     return dst;
   }
   void updateFPTypeMetadata(llvm::Value *v, bool isSigned, int fracBitsAmt, int bitsAmt) {
@@ -472,6 +482,28 @@ struct FloatToFixed : public llvm::ModulePass {
     newII->IType.reset(new FPType(bitsAmt, fracBitsAmt, isSigned));
 
     mdmgr.setMDInfoMetadata(v, newII);
+  }
+  void updateConstTypeMetadata(llvm::Value *v, unsigned opIdx, const FixedPointType &t) {
+    using namespace llvm;
+    using namespace mdutils;
+    Instruction *i = cast<Instruction>(v);
+    const Value *op = i->getOperand(opIdx);
+    if (!isa<Constant>(op))
+      return;
+
+    MetadataManager& mdmgr = MetadataManager::getMetadataManager();
+    SmallVector<InputInfo *, 2U> cinfo;
+    mdmgr.retrieveConstInfo(*i, cinfo);
+    if (cinfo.empty())
+      return;
+
+    assert(opIdx < cinfo.size() && "Const info metadata has wrong number of fields.");
+    if (cinfo[opIdx] != nullptr) {
+      InputInfo newII = *cinfo[opIdx];
+      newII.IType.reset(new FPType(t.scalarBitsAmt(), t.scalarFracBitsAmt(), t.scalarIsSigned()));
+      cinfo[opIdx] = &newII;
+      mdmgr.setConstInfoMetadata(*i, cinfo);
+    }
   }
 
   int getLoopNestingLevelOfValue(llvm::Value *v);

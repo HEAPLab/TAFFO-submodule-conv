@@ -506,20 +506,26 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
     if (!val1 || !val2)
       return nullptr;
     IRBuilder<> builder(instr);
+    Value *fixop;
     
     if (opc == Instruction::FAdd) {
-      return builder.CreateBinOp(Instruction::Add, val1, val2);
+      fixop = builder.CreateBinOp(Instruction::Add, val1, val2);
     
     } else if (opc == Instruction::FSub) {
       // TODO: improve overflow resistance by shifting late
-      return builder.CreateBinOp(Instruction::Sub, val1, val2);
+      fixop = builder.CreateBinOp(Instruction::Sub, val1, val2);
     
     } else if (opc == Instruction::FRem) {
       if (fixpt.scalarIsSigned())
-        return builder.CreateBinOp(Instruction::SRem, val1, val2);
+        fixop = builder.CreateBinOp(Instruction::SRem, val1, val2);
       else
-        return builder.CreateBinOp(Instruction::URem, val1, val2);
+        fixop = builder.CreateBinOp(Instruction::URem, val1, val2);
     }
+
+    updateConstTypeMetadata(fixop, 0U, fixpt);
+    updateConstTypeMetadata(fixop, 1U, fixpt);
+
+    return fixop;
 
   } else if (opc == Instruction::FMul) {
     FixedPointType intype1 = fixpt, intype2 = fixpt;
@@ -541,6 +547,8 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
     cpMetaData(ext2,val2);
     cpMetaData(fixop,instr);
     updateFPTypeMetadata(fixop, intermtype.scalarIsSigned(), intype1.scalarFracBitsAmt(), intermtype.scalarBitsAmt());
+    updateConstTypeMetadata(fixop, 0U, intype1);
+    updateConstTypeMetadata(fixop, 1U, intype2);
     return genConvertFixedToFixed(fixop, intermtype, fixpt, instr);
     
   } else if (opc == Instruction::FDiv) {
@@ -568,6 +576,8 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
     cpMetaData(ext2,val2);
     cpMetaData(fixop,instr);
     updateFPTypeMetadata(fixop, fixoptype.scalarIsSigned(), fixoptype.scalarFracBitsAmt(), fixoptype.scalarBitsAmt());
+    updateConstTypeMetadata(fixop, 0U, intermtype);
+    updateConstTypeMetadata(fixop, 1U, intype2);
     return genConvertFixedToFixed(fixop, fixoptype, fixpt, instr);
   }
   
