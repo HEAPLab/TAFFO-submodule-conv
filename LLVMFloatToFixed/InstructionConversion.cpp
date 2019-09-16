@@ -515,7 +515,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
       // TODO: improve overflow resistance by shifting late
       fixop = builder.CreateBinOp(Instruction::Sub, val1, val2);
     
-    } else if (opc == Instruction::FRem) {
+    } else /* if (opc == Instruction::FRem) */ {
       if (fixpt.scalarIsSigned())
         fixop = builder.CreateBinOp(Instruction::SRem, val1, val2);
       else
