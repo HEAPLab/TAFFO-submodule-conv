@@ -546,7 +546,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
     cpMetaData(ext1,val1);
     cpMetaData(ext2,val2);
     cpMetaData(fixop,instr);
-    updateFPTypeMetadata(fixop, intermtype.scalarIsSigned(), intype1.scalarFracBitsAmt(), intermtype.scalarBitsAmt());
+    updateFPTypeMetadata(fixop, intermtype.scalarIsSigned(), intermtype.scalarFracBitsAmt(), intermtype.scalarBitsAmt());
     updateConstTypeMetadata(fixop, 0U, intype1);
     updateConstTypeMetadata(fixop, 1U, intype2);
     return genConvertFixedToFixed(fixop, intermtype, fixpt, instr);
