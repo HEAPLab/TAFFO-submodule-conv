@@ -25,7 +25,9 @@ using namespace taffo;
 
 Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt, TypeMatchPolicy typepol)
 {
-  if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
+  if (UndefValue *undef = dyn_cast<UndefValue>(flt)) {
+    return UndefValue::get(getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt));
+  } if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
     return convertGlobalVariable(gvar, fixpt, typepol);
   } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
     return convertLiteral(fpc, nullptr, fixpt, typepol);
