@@ -369,6 +369,9 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         *(newValueInfo(placehValue)) = *(valueInfo(oldIt));
         operandPool[placehValue] = newIt;
         
+        valueInfo(placehValue)->isArgumentPlaceholder = true;
+        newVals.insert(placehValue);
+        
         /* No need to mark the argument itself, readLocalMetadata will
          * do it in a bit as its metadata has been cloned as well */
       }

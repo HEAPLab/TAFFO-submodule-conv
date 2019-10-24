@@ -52,6 +52,8 @@ struct ValueInfo {
    * produces a floating point value */
   bool noTypeConversion = false;
   
+  bool isArgumentPlaceholder = false;
+  
   // significant iff origType is a float or a pointer to a float
   // and if operation == Convert
   FixedPointType fixpType;
