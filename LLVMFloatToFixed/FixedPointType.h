@@ -102,6 +102,15 @@ public:
   inline bool isInvalid(void) const {
     return !structData && (scalarData.bitsAmt == 0);
   }
+  inline bool isRecursivelyInvalid(void) const {
+    if (!structData)
+      return scalarData.bitsAmt == 0;
+    for (FixedPointType& fpt: *structData) {
+      if (fpt.isRecursivelyInvalid())
+        return true;
+    }
+    return false;
+  }
   
   FixedPointType unwrapIndexList(llvm::Type *valType, const llvm::iterator_range<const llvm::Use*> indices);
   FixedPointType unwrapIndexList(llvm::Type *valType, llvm::ArrayRef<unsigned> indices);

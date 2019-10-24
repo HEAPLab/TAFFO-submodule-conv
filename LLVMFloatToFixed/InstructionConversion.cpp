@@ -208,15 +208,14 @@ Value *FloatToFixed::convertStore(StoreInst *store)
 
 Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
 {
-  if (valueInfo(gep)->noTypeConversion)
-    return Unsupported;
-  
   IRBuilder <> builder (gep);
   Value *newval = matchOp(gep->getPointerOperand());
   if (!newval)
-    return nullptr;
+    return valueInfo(gep)->noTypeConversion ? Unsupported : nullptr;
   
   if (!isConvertedFixedPoint(newval)) {
+    if (valueInfo(gep)->noTypeConversion)
+      return Unsupported;
     /* till we can flag a structure for conversion we bitcast away the
      * item pointer to a fixed point type and hope everything still works */
     BitCastInst *bci = new BitCastInst(gep, getLLVMFixedPointTypeForFloatType(gep->getType(), fixpt));
@@ -231,6 +230,11 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
 
   Type *type = gep->getPointerOperand()->getType();
   fixpt = tempFixpt.unwrapIndexList(type, gep->indices());
+  
+  /* if conversion is disabled, we can extract values that didn't get a type change,
+   * but we cannot extract values that didn't */
+  if (valueInfo(gep)->noTypeConversion && !fixpt.isRecursivelyInvalid())
+    return Unsupported;
 
   std::vector<Value*> idxlist(gep->indices().begin(), gep->indices().end());
   return builder.CreateInBoundsGEP(newval, idxlist);
