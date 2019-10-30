@@ -46,8 +46,8 @@ bool FloatToFixed::runOnModule(Module &m)
   vals.insert(vals.begin(), global.begin(), global.end());
   MetadataCount = vals.size();
 
-  propagateCall(vals, global);
   sortQueue(vals);
+  propagateCall(vals, global);
   LLVM_DEBUG(printConversionQueue(vals));
   ConversionCount = vals.size();
 
@@ -343,7 +343,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     SmallVector<ReturnInst*,100> returns;
     CloneFunctionInto(newF, oldF, mapArgs, true, returns);
     
-    SmallPtrSet<Value *, 32> newVals; //propagate fixp conversion
+    std::vector<Value *> newVals; //propagate fixp conversion
     oldIt = oldF->arg_begin();
     newIt = newF->arg_begin();
     for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
@@ -370,17 +370,17 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         operandPool[placehValue] = newIt;
         
         valueInfo(placehValue)->isArgumentPlaceholder = true;
-        newVals.insert(placehValue);
+        newVals.push_back(placehValue);
         
         /* No need to mark the argument itself, readLocalMetadata will
          * do it in a bit as its metadata has been cloned as well */
       }
     }
     
-    newVals.insert(global.begin(), global.end());
+    newVals.insert(newVals.end(), global.begin(), global.end());
     SmallPtrSet<Value*, 32> localFix;
     readLocalMetadata(*newF, localFix);
-    newVals.insert(localFix.begin(), localFix.end());
+    newVals.insert(newVals.end(), localFix.begin(), localFix.end());
     
     /* Make sure that the new arguments have correct ValueInfo */
     oldIt = oldF->arg_begin();
@@ -396,11 +396,14 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     for (ReturnInst *v : returns) {
       if (!hasInfo(call.getInstruction()))
         continue;
-      newVals.insert(v);
+      newVals.push_back(v);
       demandValueInfo(v)->fixpType = valueInfo(call.getInstruction())->fixpType;
       valueInfo(v)->origType = nullptr;
       valueInfo(v)->fixpTypeRootDistance = 0;
     }
+    
+    LLVM_DEBUG(dbgs() << "Sorting queue of new function " << newF->getName() << "\n");
+    sortQueue(newVals);
     
     oldFuncs.insert(oldF);
     
@@ -479,10 +482,16 @@ Function* FloatToFixed::createFixFun(CallSite* call, bool *old)
     return newF;
   }
   if (old) *old = false;
+  
+  Type *retType = oldF->getReturnType();
+  if (hasInfo(call->getInstruction())) {
+    if (!valueInfo(call->getInstruction())->noTypeConversion)
+      retType = getLLVMFixedPointTypeForFloatValue(call->getInstruction());
+  }
 
   FunctionType *newFunTy = FunctionType::get(
       isFloatType(oldF->getReturnType()) ?
-      getLLVMFixedPointTypeForFloatValue(call->getInstruction()) :
+      retType :
       oldF->getReturnType(),
       typeArgs, oldF->isVarArg());
 
