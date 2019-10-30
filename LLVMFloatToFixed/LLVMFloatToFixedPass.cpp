@@ -81,7 +81,6 @@ void FloatToFixed::openPhiLoop(PHINode *phi)
     return;
   }
   
-  info.phi = phi;
   info.placeh_noconv = createPlaceholder(phi->getType(), phi->getParent(), "phi_noconv");
   *(newValueInfo(info.placeh_noconv)) = *(valueInfo(phi));
   phi->replaceAllUsesWith(info.placeh_noconv);
@@ -98,7 +97,7 @@ void FloatToFixed::openPhiLoop(PHINode *phi)
   
   LLVM_DEBUG(dbgs() << "created placeholder (non-converted=[" << *info.placeh_noconv << "], converted=[" << *info.placeh_conv << "]) for phi " << *phi << "\n");
   
-  phiReplacementData.push_back(info);
+  phiReplacementData[phi] = info;
 }
 
 
@@ -106,8 +105,9 @@ void FloatToFixed::closePhiLoops()
 {
   LLVM_DEBUG(dbgs() << __PRETTY_FUNCTION__ << " begin\n");
   
-  for (PHIInfo& info: phiReplacementData) {
-    PHINode *origphi = info.phi;
+  for (auto data: phiReplacementData) {
+    PHINode *origphi = data.first;
+    PHIInfo& info = data.second;
     Value *substphi = operandPool[origphi];
     
     LLVM_DEBUG(dbgs() << "restoring data flow of phi " << *origphi << "\n");
@@ -299,6 +299,7 @@ void FloatToFixed::cleanup(const std::vector<Value*>& q)
   
   /* remove old phis manually as DCE cannot remove values having a circular
    * dependence on a phi */
+  phiReplacementData.clear();
   clear(isa<PHINode>);
 
   for (Instruction *v: toErase) {
@@ -424,8 +425,13 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     Value *val = vals[removej];
     bool toDelete = false;
     if (Instruction *inst = dyn_cast<Instruction>(val)) {
-      if (oldFuncs.count(inst->getFunction()))
+      if (oldFuncs.count(inst->getFunction())) {
         toDelete = true;
+        if (PHINode *phi = dyn_cast_or_null<PHINode>(inst)) {
+          /* the new phis are added by sortQueue() */
+          phiReplacementData.erase(phi);
+        }
+      }
     } else if (Argument *arg = dyn_cast<Argument>(val)) {
       if (oldFuncs.count(arg->getParent()))
         toDelete = true;

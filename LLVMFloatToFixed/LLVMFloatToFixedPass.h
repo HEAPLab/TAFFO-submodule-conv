@@ -6,6 +6,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
@@ -62,7 +63,6 @@ struct ValueInfo {
 
 
 struct PHIInfo {
-  llvm::PHINode *phi;
   llvm::Value *placeh_noconv;
   llvm::Value *placeh_conv;
 };
@@ -86,7 +86,7 @@ struct FloatToFixed : public llvm::ModulePass {
   /* to not be accessed directly, use valueInfo() */
   llvm::DenseMap<llvm::Value *, std::shared_ptr<ValueInfo>> info;
   
-  llvm::SmallVector<PHIInfo, 8> phiReplacementData;
+  llvm::ValueMap<llvm::PHINode *, PHIInfo> phiReplacementData;
   
   FloatToFixed(): ModulePass(ID) { };
   void getAnalysisUsage(llvm::AnalysisUsage &) const override;
