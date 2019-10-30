@@ -472,8 +472,8 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
   if (Function* f = dyn_cast<Function>(ret->getParent()->getParent())) {
     if (!f->getReturnType()->isIntegerTy()) {
       //the function doesn't return a fixp, don't convert the ret
-      Value *newval = operandPool[oldv];
-      v = oldv->getType()->isFloatingPointTy()
+      Value *newval = matchOp(oldv);
+      v = isConvertedFixedPoint(newval)
           ? genConvertFixToFloat(newval, fixPType(newval), oldv->getType())
           : newval;
       
