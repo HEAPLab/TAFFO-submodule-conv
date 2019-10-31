@@ -459,35 +459,22 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 
 Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
 {
-  Value *v;
   Value *oldv = ret->getReturnValue();
   
   if (!oldv) // AKA return void
     return ret;
   
-  if (oldv->getType()->isIntegerTy() || valueInfo(ret)->noTypeConversion) {
+  if (!isFloatingPointToConvert(ret) || valueInfo(ret)->noTypeConversion) {
     //if return an int we shouldn't return a fix point, go into fallback
     return Unsupported;
   }
-  if (Function* f = dyn_cast<Function>(ret->getParent()->getParent())) {
-    if (!f->getReturnType()->isIntegerTy()) {
-      //the function doesn't return a fixp, don't convert the ret
-      Value *newval = matchOp(oldv);
-      v = isConvertedFixedPoint(newval)
-          ? genConvertFixToFloat(newval, fixPType(newval), oldv->getType())
-          : newval;
-      
-      // check return type
-      if (f->getReturnType() != v->getType())
-        return nullptr;
-      
-      ret->setOperand(0,v);
-      return ret;
-    }
-  }
-
-  /* force the value returned to be of the correct type */
-  v = translateOrMatchOperandAndType(ret->getOperand(0), fixpt);
+  
+  Function* f = dyn_cast<Function>(ret->getParent()->getParent());
+  Value *v = translateOrMatchAnyOperandAndType(oldv, fixpt);
+  
+  // check return type
+  if (f->getReturnType() != v->getType())
+    return nullptr;
   
   ret->setOperand(0,v);
   return ret;

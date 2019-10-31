@@ -414,9 +414,14 @@ struct FloatToFixed : public llvm::ModulePass {
       return false;
     if (vi->fixpType.isInvalid())
       return false;
-    llvm::Type *fuwt = taffo::fullyUnwrapPointerOrArrayType(val->getType());
+    llvm::Type *ty;
+    if (llvm::ReturnInst *ret = llvm::dyn_cast<llvm::ReturnInst>(val))
+      ty = ret->getReturnValue()->getType();
+    else
+      ty = val->getType();
+    llvm::Type *fuwt = taffo::fullyUnwrapPointerOrArrayType(ty);
     if (!fuwt->isStructTy()) {
-      if (!taffo::isFloatType(val->getType()))
+      if (!taffo::isFloatType(ty))
         return false;
     }
     return true;
