@@ -71,7 +71,7 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
         tmp << res->getName().str() << ".";
       else if (val->hasName())
         tmp << val->getName().str() << ".";
-      tmp << fixPType(val);
+      tmp << fixpt;
       res->setName(tmp.str());
     } else if (valueInfo(val)->noTypeConversion) {
       std::string tmpstore;
