@@ -84,9 +84,10 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointTy
   
   Constant *oldinit = glob->getInitializer();
   Constant *newinit = nullptr;
-  if (oldinit && !oldinit->isNullValue())
-    newinit = convertConstant(oldinit, fixpt, typepol);
-  else
+  if (oldinit && !oldinit->isNullValue()) {
+    /* global variables can be written to, so we always convert them to the type allocated by the DTA */
+    newinit = convertConstant(oldinit, fixpt, TypeMatchPolicy::ForceHint);
+  } else
     newinit = Constant::getNullValue(newt);
   
   GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(), newinit);
@@ -177,7 +178,7 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, Fi
   APFloat val = fpc->getValueAPF();
   APSInt fixval;
   
-  if (typepol != TypeMatchPolicy::ForceHint) {
+  if (!isHintPreferredPolicy(typepol)) {
     APFloat tmp(val);
     bool precise = false;
     tmp.convert(APFloatBase::IEEEdouble(), APFloat::rmTowardNegative, &precise);

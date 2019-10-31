@@ -124,6 +124,9 @@ struct FloatToFixed : public llvm::ModulePass {
   bool isMaxIntPolicy(TypeMatchPolicy tmp) {
     return tmp == TypeMatchPolicy::RangeOverHintMaxInt || tmp == TypeMatchPolicy::HintOverRangeMaxInt;
   };
+  bool isHintPreferredPolicy(TypeMatchPolicy tmp) {
+    return tmp == TypeMatchPolicy::HintOverRangeMaxInt || tmp == TypeMatchPolicy::HintOverRangeMaxFrac || tmp == TypeMatchPolicy::ForceHint;
+  }
 
   /* convert* functions return nullptr if the conversion cannot be
    * recovered, and Unsupported to trigger the fallback behavior */
