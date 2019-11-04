@@ -368,8 +368,6 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 
   if (isSpecialFunction(oldF))
     return Unsupported;
-  if (valueInfo(call->getInstruction())->noTypeConversion)
-    return Unsupported;
   
   Function *newF = functionPool[oldF];
   if (!newF) {
