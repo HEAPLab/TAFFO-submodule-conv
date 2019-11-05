@@ -34,7 +34,7 @@ void FloatToFixed::readGlobalMetadata(Module &m, SmallPtrSetImpl<Value *> &varia
 }
 
 
-void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &variables)
+void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &variables, bool argumentsOnly)
 {
   MetadataManager &MDManager = MetadataManager::getMetadataManager();
 
@@ -50,6 +50,9 @@ void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &vari
     arg++;
   }
 
+  if (argumentsOnly)
+    return;
+
   for (inst_iterator iIt = inst_begin(&f), iItEnd = inst_end(&f); iIt != iItEnd; iIt++) {
     MDInfo *MDI = MDManager.retrieveMDInfo(&(*iIt));
     if (MDI) {
@@ -62,8 +65,15 @@ void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &vari
 void FloatToFixed::readAllLocalMetadata(Module &m, SmallPtrSetImpl<Value *> &res)
 {
   for (Function &f: m.functions()) {
+    bool argsOnly = false;
+    if (f.getMetadata(SOURCE_FUN_METADATA)) {
+      LLVM_DEBUG(dbgs() << __FUNCTION__ << " skipping function body of " << f.getName() << " because it is cloned\n");
+      functionPool[&f] = nullptr;
+      argsOnly = true;
+    }
+    
     SmallPtrSet<Value*, 32> t;
-    readLocalMetadata(f, t);
+    readLocalMetadata(f, t, argsOnly);
     res.insert(t.begin(), t.end());
 
     /* Otherwise dce pass ignore the function

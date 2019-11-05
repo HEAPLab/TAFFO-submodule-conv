@@ -93,7 +93,7 @@ struct FloatToFixed : public llvm::ModulePass {
   bool runOnModule(llvm::Module &M) override;
 
   void readGlobalMetadata(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *> &res, bool functionAnnotation = false);
-  void readLocalMetadata(llvm::Function &f, llvm::SmallPtrSetImpl<llvm::Value *> &res);
+  void readLocalMetadata(llvm::Function &f, llvm::SmallPtrSetImpl<llvm::Value *> &res, bool onlyArguments = false);
   void readAllLocalMetadata(llvm::Module &m, llvm::SmallPtrSetImpl<llvm::Value *> &res);
   bool parseMetaData(llvm::SmallPtrSetImpl<llvm::Value *> *variables, mdutils::MDInfo *fpInfo, llvm::Value *instr);
   void removeNoFloatTy(llvm::SmallPtrSetImpl<llvm::Value *>& res);

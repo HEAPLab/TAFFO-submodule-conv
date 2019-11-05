@@ -334,15 +334,16 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     LLVM_DEBUG(dbgs() << "Converting function " << oldF->getName() << " : " << *oldF->getType()
                << " into " << newF->getName() << " : " << *newF->getType() << "\n");
     
-    ValueToValueMapTy mapArgs; // Create Val2Val mapping and clone function
+    ValueToValueMapTy origValToCloned; // Create Val2Val mapping and clone function
     Function::arg_iterator newIt = newF->arg_begin();
     Function::arg_iterator oldIt = oldF->arg_begin();
     for (; oldIt != oldF->arg_end() ; oldIt++, newIt++) {
       newIt->setName(oldIt->getName());
-      mapArgs.insert(std::make_pair(oldIt, newIt));
+      origValToCloned.insert(std::make_pair(oldIt, newIt));
     }
     SmallVector<ReturnInst*,100> returns;
-    CloneFunctionInto(newF, oldF, mapArgs, true, returns);
+    CloneFunctionInto(newF, oldF, origValToCloned, true, returns);
+    /* after CloneFunctionInto, valueMap maps all values from the oldF to the newF (not just the arguments) */
     
     std::vector<Value *> newVals; //propagate fixp conversion
     oldIt = oldF->arg_begin();
@@ -428,7 +429,6 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
       if (oldFuncs.count(inst->getFunction())) {
         toDelete = true;
         if (PHINode *phi = dyn_cast_or_null<PHINode>(inst)) {
-          /* the new phis are added by sortQueue() */
           phiReplacementData.erase(phi);
         }
       }
