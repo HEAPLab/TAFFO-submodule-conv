@@ -184,7 +184,7 @@ void FloatToFixed::sortQueue(std::vector<Value *> &vals)
 
   for (Value *v: vals) {
     assert(hasInfo(v) && "all values in the queue should have a valueInfo by now");
-    if (fixPType(v).isInvalid() && !(v->getType()->isVoidTy() && !isa<ReturnInst>(v))) {
+    if (fixPType(v)->isVoid() && !(v->getType()->isVoidTy() && !isa<ReturnInst>(v))) {
       LLVM_DEBUG(dbgs() << "[WARNING] Value " << *v << " will not be converted because its metadata is incomplete\n");
       valueInfo(v)->noTypeConversion = true;
     }
@@ -350,10 +350,10 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     newIt = newF->arg_begin();
     for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
       if (oldIt->getType() != newIt->getType()){
-        FixedPointType fixtype = valueInfo(oldIt)->fixpType;
+        TypeOverlay *fixtype = valueInfo(oldIt)->fixpType;
         
         //append fixp info to arg name
-        newIt->setName(newIt->getName() + "." + fixtype.toString());
+        newIt->setName(newIt->getName() + "." + fixtype->toString());
         
         /* Create a fake value to maintain type consistency because
          * createFixFun has RAUWed all arguments
@@ -456,13 +456,13 @@ Function* FloatToFixed::createFixFun(CallSite* call, bool *old)
   }
 
   std::vector<Type*> typeArgs;
-  std::vector<std::pair<int, FixedPointType>> fixArgs; //for match already converted function
+  std::vector<std::pair<int, TypeOverlay *>> fixArgs; //for match already converted function
 
   std::string suffix;
   if(isFloatType(oldF->getReturnType())) { //ret value in signature
-    FixedPointType retValType = valueInfo(call->getInstruction())->fixpType;
-    suffix = retValType.toString();
-    fixArgs.push_back(std::pair<int, FixedPointType>(-1, retValType));
+    TypeOverlay *retValType = valueInfo(call->getInstruction())->fixpType;
+    suffix = retValType->toString();
+    fixArgs.push_back(std::pair<int, TypeOverlay *>(-1, retValType));
   } else {
     suffix = "fixp";
   }
@@ -472,7 +472,7 @@ Function* FloatToFixed::createFixFun(CallSite* call, bool *old)
     Value *v = dyn_cast<Value>(arg);
     Type* newTy;
     if (hasInfo(v)) {
-      fixArgs.push_back(std::pair<int, FixedPointType>(i,valueInfo(v)->fixpType));
+      fixArgs.push_back(std::pair<int, TypeOverlay *>(i,valueInfo(v)->fixpType));
       newTy = getLLVMFixedPointTypeForFloatValue(v);
     } else {
       newTy = v->getType();
@@ -527,7 +527,7 @@ void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
   for (Value *val: vals) {
     dbgs() << "bt=" << valueInfo(val)->isBacktrackingNode << " ";
     dbgs() << "noconv=" << valueInfo(val)->noTypeConversion << " ";
-    dbgs() << "type=" << valueInfo(val)->fixpType << " ";
+    dbgs() << "type=" << *(valueInfo(val)->fixpType) << " ";
     if (Instruction *i = dyn_cast<Instruction>(val)) {
       dbgs() << " fun='" << i->getFunction()->getName() << "' ";
     }

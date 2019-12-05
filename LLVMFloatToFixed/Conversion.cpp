@@ -85,7 +85,7 @@ Value *FloatToFixed::createPlaceholder(Type *type, BasicBlock *where, StringRef 
 
 
 /* also inserts the new value in the basic blocks, alongside the old one */
-Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& fixpt)
+Value *FloatToFixed::convertSingleValue(Module& m, Value *val, TypeOverlay *&fixpt)
 {
   Value *res = Unsupported;
   
@@ -112,12 +112,12 @@ Value *FloatToFixed::convertSingleValue(Module& m, Value *val, FixedPointType& f
 
 
 /* do not use on pointer operands */
-Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt, Instruction *ip, TypeMatchPolicy typepol)
+Value *FloatToFixed::translateOrMatchOperand(Value *val, TypeOverlay *&iofixpt, Instruction *ip, TypeMatchPolicy typepol)
 {
   if (typepol == TypeMatchPolicy::ForceHint) {
-    FixedPointType origfixpt = iofixpt;
+    TypeOverlay *origfixpt = iofixpt;
     llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip, TypeMatchPolicy::RangeOverHintMaxFrac);
-    return genConvertFixedToFixed(tmp, iofixpt, origfixpt, ip);
+    return genConvertFixedToFixed(tmp, cast<FixedPointTypeOverlay>(iofixpt), cast<FixedPointTypeOverlay>(origfixpt), ip);
   }
   
   assert(val->getType()->getNumContainedTypes() == 0 && "translateOrMatchOperand val is not a scalar value");
@@ -153,11 +153,11 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
     return res;
   } else if (SIToFPInst *instr = dyn_cast<SIToFPInst>(val)) {
     Value *intparam = instr->getOperand(0);
-    iofixpt = FixedPointType(intparam->getType(), true);
+    iofixpt = TypeOverlay::get(intparam->getType(), true);
     return intparam;
   } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(val)) {
     Value *intparam = instr->getOperand(0);
-    iofixpt = FixedPointType(intparam->getType(), true);
+    iofixpt = TypeOverlay::get(intparam->getType(), true);
     return intparam;
   }
   
@@ -167,22 +167,23 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType& iofixpt
   if (mdutils::InputInfo *ii = dyn_cast_or_null<mdutils::InputInfo>(mdi)) {
     if (ii->IRange) {
       FixedPointTypeGenError err;
-      mdutils::FPType fpt = taffo::fixedPointTypeFromRange(*(ii->IRange), &err, iofixpt.scalarBitsAmt());
+      FixedPointTypeOverlay *FXT = cast<FixedPointTypeOverlay>(iofixpt);
+      mdutils::FPType fpt = taffo::fixedPointTypeFromRange(*(ii->IRange), &err, FXT->getSize());
       if (err != FixedPointTypeGenError::InvalidRange)
-        iofixpt = FixedPointType(&fpt);
+        iofixpt = TypeOverlay::get(&fpt);
     }
   }
   
-  return genConvertFloatToFix(val, iofixpt, ip);
+  return genConvertFloatToFix(val, cast<FixedPointTypeOverlay>(iofixpt), ip);
 }
 
 
-Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixpt, Instruction *ip)
+Value *FloatToFixed::genConvertFloatToFix(Value *flt, FixedPointTypeOverlay *fixpt, Instruction *ip)
 {
   assert(flt->getType()->isFloatingPointTy() && "genConvertFloatToFixed called on a non-float scalar");
   
   if (Constant *c = dyn_cast<Constant>(flt)) {
-    FixedPointType fixptcopy = fixpt;
+    TypeOverlay *fixptcopy = fixpt;
     Value *res = convertConstant(c, fixptcopy, TypeMatchPolicy::ForceHint);
     assert(fixptcopy == fixpt && "why is there a pointer here?");
     return res;
@@ -209,18 +210,18 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
     Value *intparam = instr->getOperand(0);
     return cpMetaData(builder.CreateShl(
               cpMetaData(builder.CreateIntCast(intparam, destt, true),flt,ip),
-            fixpt.scalarFracBitsAmt()),flt,ip);
+            fixpt->getPointPos()),flt,ip);
   } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(flt)) {
     Value *intparam = instr->getOperand(0);
     return cpMetaData(builder.CreateShl(
               cpMetaData(builder.CreateIntCast(intparam, destt, false),flt,ip),
-            fixpt.scalarFracBitsAmt()),flt,ip);
+            fixpt->getPointPos()),flt,ip);
   } else {
-    double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
+    double twoebits = pow(2.0, fixpt->getPointPos());
     Value *interm = cpMetaData(builder.CreateFMul(
           cpMetaData(ConstantFP::get(flt->getType(), twoebits),flt,ip),
         flt),flt,ip);
-    if (fixpt.scalarIsSigned()) {
+    if (fixpt->getSigned()) {
       return cpMetaData(builder.CreateFPToSI(interm, destt),flt,ip);
     } else {
       return cpMetaData(builder.CreateFPToUI(interm, destt),flt,ip);
@@ -229,7 +230,7 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType& fixp
 }
 
 
-Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& srct, const FixedPointType& destt, Instruction *ip)
+Value *FloatToFixed::genConvertFixedToFixed(Value *fix, FixedPointTypeOverlay *srct, FixedPointTypeOverlay *destt, Instruction *ip)
 {
   if (srct == destt)
     return fix;
@@ -238,7 +239,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");
   assert(llvmsrct->isIntegerTy() && "cannot change fixed point format of a float");
   
-  Type *llvmdestt = destt.scalarToLLVMType(fix->getContext());
+  Type *llvmdestt = destt->scalarToLLVMType(fix->getContext());
   
   Instruction *fixinst = dyn_cast<Instruction>(fix);
   if (!ip && fixinst)
@@ -248,7 +249,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   IRBuilder<> builder(ip);
 
   auto genSizeChange = [&](Value *fix) -> Value* {
-    if (srct.scalarIsSigned()) {
+    if (srct->getSigned()) {
       return cpMetaData(builder.CreateSExtOrTrunc(fix, llvmdestt),fix);
     } else {
       return cpMetaData(builder.CreateZExtOrTrunc(fix, llvmdestt),fix);
@@ -256,11 +257,11 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
   };
   
   auto genPointMovement = [&](Value *fix) -> Value* {
-    int deltab = destt.scalarFracBitsAmt() - srct.scalarFracBitsAmt();
+    int deltab = destt->getPointPos() - srct->getPointPos();
     if (deltab > 0) {
       return cpMetaData(builder.CreateShl(fix, deltab),fix);
     } else if (deltab < 0) {
-      if (srct.scalarIsSigned()) {
+      if (srct->getSigned()) {
         return cpMetaData(builder.CreateAShr(fix, -deltab),fix);
       } else {
         return cpMetaData(builder.CreateLShr(fix, -deltab),fix);
@@ -269,24 +270,18 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType& sr
     return fix;
   };
   
-  if (destt.scalarBitsAmt() > srct.scalarBitsAmt())
+  if (destt->getSize() > srct->getSize())
     return genPointMovement(genSizeChange(fix));
   return genSizeChange(genPointMovement(fix));
 }
 
 
-Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixpt, Type *destt)
+Value *FloatToFixed::genConvertFixToFloat(Value *fix, FixedPointTypeOverlay *fixpt, Type *destt)
 {
-  LLVM_DEBUG(dbgs() << "******** trace: genConvertFixToFloat ";
-  fix->print(dbgs());
-  dbgs() << " -> ";
-  destt->print(dbgs());
-  dbgs() << "\n";);
+  LLVM_DEBUG(dbgs() << "******** trace: genConvertFixToFloat " << *fix << " -> " << *destt << "\n");
   
   if (!fix->getType()->isIntegerTy()) {
-    LLVM_DEBUG(errs() << "can't wrap-convert to flt non integer value ";
-          fix->print(errs());
-          errs() << "\n");
+    LLVM_DEBUG(errs() << "can't wrap-convert to flt non integer value " << *fix << "\n");
     return nullptr;
   }
   
@@ -302,17 +297,17 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
     }
     IRBuilder<> builder(ip);
     
-    Value *floattmp = fixpt.scalarIsSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
+    Value *floattmp = fixpt->getSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
     cpMetaData(floattmp,fix);
-    double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
+    double twoebits = pow(2.0, fixpt->getPointPos());
     return cpMetaData(builder.CreateFDiv(floattmp,
                                          cpMetaData(ConstantFP::get(destt, twoebits), fix)),fix);
     
   } else if (Constant *cst = dyn_cast<Constant>(fix)) {
-    Constant *floattmp = fixpt.scalarIsSigned() ?
+    Constant *floattmp = fixpt->getSigned() ?
       ConstantExpr::getSIToFP(cst, destt) :
       ConstantExpr::getUIToFP(cst, destt);
-    double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
+    double twoebits = pow(2.0, fixpt->getPointPos());
     return ConstantExpr::getFDiv(floattmp, ConstantFP::get(destt, twoebits));
   }
   
@@ -320,7 +315,7 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType& fixp
 }
 
 
-Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPointType& baset, bool *hasfloats)
+Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, TypeOverlay *baset, bool *hasfloats)
 {
   if (srct->isPointerTy()) {
     Type *enc = getLLVMFixedPointTypeForFloatType(srct->getPointerElementType(), baset, hasfloats);
@@ -339,10 +334,11 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPoi
     SmallVector<Type *, 2> elems;
     bool allinvalid = true;
     for (int i=0; i<srct->getStructNumElements(); i++) {
-      const FixedPointType& fpelemt = baset.structItem(i);
+      StructTypeOverlay *structt = cast<StructTypeOverlay>(baset);
+      TypeOverlay *fpelemt = structt->item(i);
       Type *baseelemt = srct->getStructElementType(i);
       Type *newelemt;
-      if (!fpelemt.isInvalid()) {
+      if (!fpelemt->isVoid()) {
         allinvalid = false;
         newelemt = getLLVMFixedPointTypeForFloatType(baseelemt, fpelemt, hasfloats);
       } else {
@@ -357,7 +353,7 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPoi
   } else if (srct->isFloatingPointTy()) {
     if (hasfloats)
       *hasfloats = true;
-    return baset.scalarToLLVMType(srct->getContext());
+    return baset->scalarToLLVMType(srct->getContext());
     
   }
   LLVM_DEBUG(
@@ -373,7 +369,7 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, const FixedPoi
 
 Type *FloatToFixed::getLLVMFixedPointTypeForFloatValue(Value *val)
 {
-  FixedPointType& fpt = fixPType(val);
+  TypeOverlay *fpt = fixPType(val);
   return getLLVMFixedPointTypeForFloatType(val->getType(), fpt);
 }
 

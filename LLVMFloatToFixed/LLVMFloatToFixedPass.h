@@ -12,7 +12,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "TypeUtils.h"
 #include "Metadata.h"
-#include "FixedPointType.h"
+#include "TypeOverlay.h"
 #include "InputInfo.h"
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
@@ -57,7 +57,7 @@ struct ValueInfo {
   
   // significant iff origType is a float or a pointer to a float
   // and if operation == Convert
-  FixedPointType fixpType;
+  TypeOverlay *fixpType = VoidTypeOverlay::get();
   llvm::Type *origType = nullptr;
 };
 
@@ -70,7 +70,7 @@ struct PHIInfo {
 
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
-  FixedPointType defaultFixpType;
+  FixedPointTypeOverlay *defaultFixpType;
   
   /** Map from original values to converted values.
    *  Values not to be converted do not appear in the map.
@@ -107,7 +107,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Function *createFixFun(llvm::CallSite* call, bool *old);
   void printConversionQueue(std::vector<llvm::Value*> vals);
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
-  llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, FixedPointType& fixpt);
+  llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, TypeOverlay *&fixpt);
   
   llvm::Value *createPlaceholder(llvm::Type *type, llvm::BasicBlock *where, llvm::StringRef name);
   
@@ -131,30 +131,30 @@ struct FloatToFixed : public llvm::ModulePass {
   /* convert* functions return nullptr if the conversion cannot be
    * recovered, and Unsupported to trigger the fallback behavior */
   
-  llvm::Constant *convertConstant(llvm::Constant *flt, FixedPointType& fixpt, TypeMatchPolicy typepol);
-  llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob, FixedPointType& fixpt, TypeMatchPolicy typepol);
-  llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, FixedPointType& fixpt, TypeMatchPolicy typepol);
-  llvm::Constant *convertConstantAggregate(llvm::ConstantAggregate *cag, FixedPointType& fixpt, TypeMatchPolicy typepol);
-  llvm::Constant *convertConstantDataSequential(llvm::ConstantDataSequential *, const FixedPointType&);
-  template <class T> llvm::Constant *createConstantDataSequential(llvm::ConstantDataSequential *, const FixedPointType&);
-  llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *, FixedPointType&, TypeMatchPolicy typepol);
-  bool convertAPFloat(llvm::APFloat, llvm::APSInt&, llvm::Instruction *, const FixedPointType&);
+  llvm::Constant *convertConstant(llvm::Constant *flt, TypeOverlay *&fixpt, TypeMatchPolicy typepol);
+  llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob, TypeOverlay *&fixpt, TypeMatchPolicy typepol);
+  llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp, TypeOverlay *&fixpt, TypeMatchPolicy typepol);
+  llvm::Constant *convertConstantAggregate(llvm::ConstantAggregate *cag, TypeOverlay *&fixpt, TypeMatchPolicy typepol);
+  llvm::Constant *convertConstantDataSequential(llvm::ConstantDataSequential *, TypeOverlay *);
+  template <class T> llvm::Constant *createConstantDataSequential(llvm::ConstantDataSequential *, TypeOverlay *);
+  llvm::Constant *convertLiteral(llvm::ConstantFP *flt, llvm::Instruction *, TypeOverlay *&, TypeMatchPolicy typepol);
+  bool convertAPFloat(llvm::APFloat, llvm::APSInt&, llvm::Instruction *, TypeOverlay *);
   
-  llvm::Value *convertInstruction(llvm::Module& m, llvm::Instruction *val, FixedPointType& fixpt);
-  llvm::Value *convertAlloca(llvm::AllocaInst *alloca, const FixedPointType& fixpt);
-  llvm::Value *convertLoad(llvm::LoadInst *load, FixedPointType& fixpt);
+  llvm::Value *convertInstruction(llvm::Module& m, llvm::Instruction *val, TypeOverlay *&fixpt);
+  llvm::Value *convertAlloca(llvm::AllocaInst *alloca, TypeOverlay *&fixpt);
+  llvm::Value *convertLoad(llvm::LoadInst *load, TypeOverlay *&fixpt);
   llvm::Value *convertStore(llvm::StoreInst *load);
-  llvm::Value *convertGep(llvm::GetElementPtrInst *gep, FixedPointType& fixpt);
-  llvm::Value *convertExtractValue(llvm::ExtractValueInst *exv, FixedPointType& fixpt);
-  llvm::Value *convertInsertValue(llvm::InsertValueInst *inv, FixedPointType& fixpt);
-  llvm::Value *convertPhi(llvm::PHINode *load, FixedPointType& fixpt);
-  llvm::Value *convertSelect(llvm::SelectInst *sel, FixedPointType& fixpt);
-  llvm::Value *convertCall(llvm::CallSite *call, FixedPointType& fixpt);
-  llvm::Value *convertRet(llvm::ReturnInst *ret, FixedPointType& fixpt);
-  llvm::Value *convertBinOp(llvm::Instruction *instr, const FixedPointType& fixpt);
+  llvm::Value *convertGep(llvm::GetElementPtrInst *gep, TypeOverlay *&fixpt);
+  llvm::Value *convertExtractValue(llvm::ExtractValueInst *exv, TypeOverlay *&fixpt);
+  llvm::Value *convertInsertValue(llvm::InsertValueInst *inv, TypeOverlay *&fixpt);
+  llvm::Value *convertPhi(llvm::PHINode *load, TypeOverlay *&fixpt);
+  llvm::Value *convertSelect(llvm::SelectInst *sel, TypeOverlay *&fixpt);
+  llvm::Value *convertCall(llvm::CallSite *call, TypeOverlay *&fixpt);
+  llvm::Value *convertRet(llvm::ReturnInst *ret, TypeOverlay *&fixpt);
+  llvm::Value *convertBinOp(llvm::Instruction *instr, TypeOverlay *&fixpt);
   llvm::Value *convertCmp(llvm::FCmpInst *fcmp);
-  llvm::Value *convertCast(llvm::CastInst *cast, const FixedPointType& fixpt);
-  llvm::Value *fallback(llvm::Instruction *unsupp, FixedPointType& fixpt);
+  llvm::Value *convertCast(llvm::CastInst *cast, TypeOverlay *fixpt);
+  llvm::Value *fallback(llvm::Instruction *unsupp, TypeOverlay *&fixpt);
   
   /** Returns if a function is a library function which shall not
    *  be cloned.
@@ -192,7 +192,7 @@ struct FloatToFixed : public llvm::ModulePass {
    *    val was to be converted but its conversion failed. */
   llvm::Value *translateOrMatchOperand(
     llvm::Value *val,
-    FixedPointType& iofixpt,
+    TypeOverlay *&iofixpt,
     llvm::Instruction *ip = nullptr,
     TypeMatchPolicy typepol = TypeMatchPolicy::RangeOverHintMaxFrac);
   /** Returns a fixed point Value from any Value, whether it should be
@@ -209,7 +209,7 @@ struct FloatToFixed : public llvm::ModulePass {
    *    is an instruction or a constant.
    *  @returns A fixed point value corresponding to val or nullptr if
    *    val was to be converted but its conversion failed. */
-  llvm::Value *translateOrMatchAnyOperand(llvm::Value *val, FixedPointType& iofixpt, llvm::Instruction *ip = nullptr, TypeMatchPolicy typepol = TypeMatchPolicy::RangeOverHintMaxFrac) {
+  llvm::Value *translateOrMatchAnyOperand(llvm::Value *val, TypeOverlay *&iofixpt, llvm::Instruction *ip = nullptr, TypeMatchPolicy typepol = TypeMatchPolicy::RangeOverHintMaxFrac) {
     llvm::Value *res;
     if (val->getType()->getNumContainedTypes() > 0) {
       if (llvm::Constant *cst = llvm::dyn_cast<llvm::Constant>(val)) {
@@ -240,8 +240,8 @@ struct FloatToFixed : public llvm::ModulePass {
    *    is an instruction or a constant.
    *  @returns A fixed point value corresponding to val of type fixpt
    *    or nullptr if val was to be converted but its conversion failed.  */
-  llvm::Value *translateOrMatchOperandAndType(llvm::Value *val, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr) {
-    FixedPointType iofixpt = fixpt;
+  llvm::Value *translateOrMatchOperandAndType(llvm::Value *val, TypeOverlay *fixpt, llvm::Instruction *ip = nullptr) {
+    TypeOverlay *iofixpt = fixpt;
     return translateOrMatchOperand(val, iofixpt, ip, TypeMatchPolicy::ForceHint);
   };
   /** Returns a fixed point Value of a specified fixed point type from any
@@ -256,8 +256,8 @@ struct FloatToFixed : public llvm::ModulePass {
    *    or nullptr if val was to be converted but its conversion failed.
    *    An assertion is raised if the value cannot be converted to
    *    the specified type (for example if it is a pointer)  */
-  llvm::Value *translateOrMatchAnyOperandAndType(llvm::Value *val, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr) {
-    FixedPointType iofixpt = fixpt;
+  llvm::Value *translateOrMatchAnyOperandAndType(llvm::Value *val, TypeOverlay *fixpt, llvm::Instruction *ip = nullptr) {
+    TypeOverlay *iofixpt = fixpt;
     return translateOrMatchAnyOperand(val, iofixpt, ip, TypeMatchPolicy::ForceHint);
   };
   
@@ -290,7 +290,7 @@ struct FloatToFixed : public llvm::ModulePass {
       return bc;
     }
     if (origType->isFloatingPointTy())
-      return genConvertFixToFloat(cvtfallval, fixPType(cvtfallval), origType);
+      return genConvertFixToFloat(cvtfallval, llvm::cast<FixedPointTypeOverlay>(fixPType(cvtfallval)), origType);
     return cvtfallval;
   }
   
@@ -303,7 +303,7 @@ struct FloatToFixed : public llvm::ModulePass {
    *    case val was not to be converted statically. Not required if val
    *    is an instruction or a constant.
    *  @returns The converted value. */
-  llvm::Value *genConvertFloatToFix(llvm::Value *flt, const FixedPointType& fixpt, llvm::Instruction *ip = nullptr);
+  llvm::Value *genConvertFloatToFix(llvm::Value *flt, FixedPointTypeOverlay *fixpt, llvm::Instruction *ip = nullptr);
   /** Generate code for converting the value of a scalar from fixed point to
    *  floating point.
    *  @param flt A fixed point scalar value.
@@ -313,7 +313,7 @@ struct FloatToFixed : public llvm::ModulePass {
    *    case val was not to be converted statically. Not required if val
    *    is an instruction or a constant.
    *  @returns The converted value. */
-  llvm::Value *genConvertFixToFloat(llvm::Value *fix, const FixedPointType& fixpt, llvm::Type *destt);
+  llvm::Value *genConvertFixToFloat(llvm::Value *fix, FixedPointTypeOverlay *fixpt, llvm::Type *destt);
   /** Generate code for converting between two fixed point formats.
    *  @param flt A fixed point scalar value.
    *  @param scrt The fixed point type of the input
@@ -323,7 +323,7 @@ struct FloatToFixed : public llvm::ModulePass {
    *    case val was not to be converted statically. Not required if val
    *    is an instruction or a constant.
    *  @returns The converted value. */
-  llvm::Value *genConvertFixedToFixed(llvm::Value *fix, const FixedPointType& srct, const FixedPointType& destt, llvm::Instruction *ip = nullptr);
+  llvm::Value *genConvertFixedToFixed(llvm::Value *fix, FixedPointTypeOverlay *srct, FixedPointTypeOverlay *destt, llvm::Instruction *ip = nullptr);
 
   /** Transforms a pre-existing LLVM type to a new LLVM
    *  type with integers instead of floating point depending on a
@@ -334,7 +334,7 @@ struct FloatToFixed : public llvm::ModulePass {
    *    will be true if at least one floating point type to transform to
    *    fixed point was encountered.
    *  @returns The new LLVM type.  */
-  llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, const FixedPointType& baset, bool *hasfloats = nullptr);
+  llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, TypeOverlay *baset, bool *hasfloats = nullptr);
   
   llvm::Instruction *getFirstInsertionPointAfter(llvm::Instruction *i) {
     llvm::Instruction *ip = i->getNextNode();
@@ -376,7 +376,7 @@ struct FloatToFixed : public llvm::ModulePass {
     assert((vi != info.end()) && "value with no info");
     return vi->getSecond();
   };
-  FixedPointType& fixPType(llvm::Value *val) {
+  TypeOverlay *&fixPType(llvm::Value *val) {
     auto vi = info.find(val);
     assert((vi != info.end()) && "value with no info");
     return vi->getSecond()->fixpType;
@@ -391,7 +391,7 @@ struct FloatToFixed : public llvm::ModulePass {
     std::shared_ptr<ValueInfo> vi = valueInfo(val);
     if (vi->noTypeConversion)
       return false;
-    if (vi->fixpType.isInvalid())
+    if (vi->fixpType->isVoid())
       return false;
     llvm::Type *fuwt = taffo::fullyUnwrapPointerOrArrayType(vi->origType);
     if (!fuwt->isStructTy()) {
@@ -415,7 +415,7 @@ struct FloatToFixed : public llvm::ModulePass {
     std::shared_ptr<ValueInfo> vi = valueInfo(val);
     if (vi->noTypeConversion)
       return false;
-    if (vi->fixpType.isInvalid())
+    if (vi->fixpType->isVoid())
       return false;
     llvm::Type *ty;
     if (llvm::ReturnInst *ret = llvm::dyn_cast<llvm::ReturnInst>(val))
@@ -493,7 +493,7 @@ struct FloatToFixed : public llvm::ModulePass {
 
     mdmgr.setMDInfoMetadata(v, newII);
   }
-  void updateConstTypeMetadata(llvm::Value *v, unsigned opIdx, const FixedPointType &t) {
+  void updateConstTypeMetadata(llvm::Value *v, unsigned opIdx, TypeOverlay *t) {
     using namespace llvm;
     using namespace mdutils;
     Instruction *i = cast<Instruction>(v);
@@ -510,7 +510,8 @@ struct FloatToFixed : public llvm::ModulePass {
     assert(opIdx < cinfo.size() && "Const info metadata has wrong number of fields.");
     if (cinfo[opIdx] != nullptr) {
       InputInfo newII = *cinfo[opIdx];
-      newII.IType.reset(new FPType(t.scalarBitsAmt(), t.scalarFracBitsAmt(), t.scalarIsSigned()));
+      FixedPointTypeOverlay *fpt = dyn_cast<FixedPointTypeOverlay>(t);
+      newII.IType.reset(new FPType(fpt->getSize(), fpt->getPointPos(), fpt->getSigned()));
       cinfo[opIdx] = &newII;
       mdmgr.setConstInfoMetadata(*i, cinfo);
     }

@@ -24,7 +24,7 @@ using namespace taffo;
 
 
 /* also inserts the new value in the basic blocks, alongside the old one */
-Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointType& fixpt)
+Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, TypeOverlay *&fixpt)
 {
   Value *res = Unsupported;
   
@@ -71,7 +71,7 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
         tmp << res->getName().str() << ".";
       else if (val->hasName())
         tmp << val->getName().str() << ".";
-      tmp << fixpt;
+      tmp << *fixpt;
       res->setName(tmp.str());
     } else if (valueInfo(val)->noTypeConversion) {
       std::string tmpstore;
@@ -89,7 +89,7 @@ Value *FloatToFixed::convertInstruction(Module& m, Instruction *val, FixedPointT
 }
 
 
-Value *FloatToFixed::convertAlloca(AllocaInst *alloca, const FixedPointType& fixpt)
+Value *FloatToFixed::convertAlloca(AllocaInst *alloca, TypeOverlay *&fixpt)
 {
   if (valueInfo(alloca)->noTypeConversion)
     return alloca;
@@ -109,7 +109,7 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca, const FixedPointType& fix
 }
 
 
-Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
+Value *FloatToFixed::convertLoad(LoadInst *load, TypeOverlay *&fixpt)
 {
   Value *ptr = load->getPointerOperand();
   Value *newptr = operandPool[ptr];
@@ -126,7 +126,7 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
     newinst->insertAfter(load);
     if (valueInfo(load)->noTypeConversion) {
       assert(newinst->getType()->isIntegerTy() && "DTA bug; improperly tagged struct/pointer!");
-      return genConvertFixToFloat(newinst, fixPType(newptr), load->getType());
+      return genConvertFixToFloat(newinst, cast<FixedPointTypeOverlay>(fixPType(newptr)), load->getType());
     }
     return newinst;
   }
@@ -150,7 +150,7 @@ Value *FloatToFixed::convertStore(StoreInst *store)
     /* value is converted (thus we can match it) */
     
     if (isConvertedFixedPoint(newptr)) {
-      FixedPointType valtype = fixPType(newptr);
+      TypeOverlay *valtype = fixPType(newptr);
       
       if (peltype->isPointerTy()) {
         /* store <value ptr> into <value ptr> pointer; both are converted
@@ -176,12 +176,12 @@ Value *FloatToFixed::convertStore(StoreInst *store)
   } else {
     /* value is not converted */
     if (isConvertedFixedPoint(newptr)) {
-      FixedPointType valtype = fixPType(newptr);
+      TypeOverlay *valtype = fixPType(newptr);
       
       /* the value to store is not converted but the pointer is */
       if (peltype->isIntegerTy()) {
         /* value is not a pointer; we can convert it to fixed point */
-        newval = genConvertFloatToFix(val, valtype);
+        newval = genConvertFloatToFix(val, cast<FixedPointTypeOverlay>(valtype));
       } else {
         /* value unconverted ptr; dest is converted ptr
          * would be an error; remove this as soon as it is not needed anymore */
@@ -206,7 +206,7 @@ Value *FloatToFixed::convertStore(StoreInst *store)
 }
 
 
-Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
+Value *FloatToFixed::convertGep(GetElementPtrInst *gep, TypeOverlay *&fixpt)
 {
   IRBuilder <> builder (gep);
   Value *newval = matchOp(gep->getPointerOperand());
@@ -218,14 +218,14 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
     return Unsupported;
   }
   
-  FixedPointType tempFixpt = fixPType(newval);
+  TypeOverlay *tempFixpt = fixPType(newval);
 
   Type *type = gep->getPointerOperand()->getType();
-  fixpt = tempFixpt.unwrapIndexList(type, gep->indices());
+  fixpt = tempFixpt->unwrapIndexList(type, gep->indices());
   
   /* if conversion is disabled, we can extract values that didn't get a type change,
    * but we cannot extract values that didn't */
-  if (valueInfo(gep)->noTypeConversion && !fixpt.isRecursivelyInvalid())
+  if (valueInfo(gep)->noTypeConversion && !fixpt->isRecursivelyVoid())
     return Unsupported;
 
   std::vector<Value*> idxlist(gep->indices().begin(), gep->indices().end());
@@ -233,7 +233,7 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
 }
 
 
-Value *FloatToFixed::convertExtractValue(ExtractValueInst *exv, FixedPointType& fixpt)
+Value *FloatToFixed::convertExtractValue(ExtractValueInst *exv, TypeOverlay *&fixpt)
 {
   if (valueInfo(exv)->noTypeConversion)
     return Unsupported;
@@ -245,18 +245,18 @@ Value *FloatToFixed::convertExtractValue(ExtractValueInst *exv, FixedPointType& 
   if (!newval)
     return nullptr;
   
-  FixedPointType baset = fixPType(newval).unwrapIndexList(oldval->getType(), exv->getIndices());
+  TypeOverlay *baset = fixPType(newval)->unwrapIndexList(oldval->getType(), exv->getIndices());
 
   std::vector<unsigned> idxlist(exv->indices().begin(), exv->indices().end());
   Value *newi = builder.CreateExtractValue(newval, idxlist);
-  if (!baset.isInvalid() && newi->getType()->isIntegerTy())
-    return genConvertFixedToFixed(newi, baset, fixpt);
+  if (!baset->isVoid() && newi->getType()->isIntegerTy())
+    return genConvertFixedToFixed(newi, cast<FixedPointTypeOverlay>(baset), cast<FixedPointTypeOverlay>(fixpt));
   fixpt = baset;
   return newi;
 }
 
 
-Value *FloatToFixed::convertInsertValue(InsertValueInst *inv, FixedPointType& fixpt)
+Value *FloatToFixed::convertInsertValue(InsertValueInst *inv, TypeOverlay *&fixpt)
 {
   if (valueInfo(inv)->noTypeConversion)
     return Unsupported;
@@ -268,11 +268,11 @@ Value *FloatToFixed::convertInsertValue(InsertValueInst *inv, FixedPointType& fi
   if (!newAggVal)
     return nullptr;
   
-  FixedPointType baset = fixPType(newAggVal).unwrapIndexList(oldAggVal->getType(), inv->getIndices());
+  TypeOverlay *baset = fixPType(newAggVal)->unwrapIndexList(oldAggVal->getType(), inv->getIndices());
   
   Value *oldInsertVal = inv->getInsertedValueOperand();
   Value *newInsertVal;
-  if (!baset.isInvalid())
+  if (!baset->isVoid())
     newInsertVal = translateOrMatchOperandAndType(oldInsertVal, baset);
   else
     newInsertVal = oldInsertVal;
@@ -285,7 +285,7 @@ Value *FloatToFixed::convertInsertValue(InsertValueInst *inv, FixedPointType& fi
 }
 
 
-Value *FloatToFixed::convertPhi(PHINode *phi, FixedPointType& fixpt)
+Value *FloatToFixed::convertPhi(PHINode *phi, TypeOverlay *&fixpt)
 {
   if (!phi->getType()->isFloatingPointTy() || valueInfo(phi)->noTypeConversion) {
     /* in the conversion chain the floating point number was converted to
@@ -310,7 +310,7 @@ Value *FloatToFixed::convertPhi(PHINode *phi, FixedPointType& fixpt)
   /* if we have to do a type change, create a new phi node. The new type is for
    * sure that of a fixed point value; because the original type was a float
    * and thus all of its incoming values were floats */
-  PHINode *newphi = PHINode::Create(fixpt.scalarToLLVMType(phi->getContext()),
+  PHINode *newphi = PHINode::Create(fixpt->scalarToLLVMType(phi->getContext()),
     phi->getNumIncomingValues());
 
   for (int i=0; i<phi->getNumIncomingValues(); i++) {
@@ -332,7 +332,7 @@ Value *FloatToFixed::convertPhi(PHINode *phi, FixedPointType& fixpt)
 }
 
 
-Value *FloatToFixed::convertSelect(SelectInst *sel, FixedPointType& fixpt)
+Value *FloatToFixed::convertSelect(SelectInst *sel, TypeOverlay *&fixpt)
 {
   if (!isFloatingPointToConvert(sel))
     return Unsupported;
@@ -352,7 +352,7 @@ Value *FloatToFixed::convertSelect(SelectInst *sel, FixedPointType& fixpt)
 }
 
 
-Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
+Value *FloatToFixed::convertCall(CallSite *call, TypeOverlay *&fixpt)
 {
   /* If the function return a float the new return type will be a fix point of type fixpt,
    * otherwise the return type is left unchanged.*/
@@ -372,10 +372,10 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 
   std::vector<Value*> convArgs;
   std::vector<Type*> typeArgs;
-  std::vector<std::pair<int, FixedPointType>> fixArgs; //for match right function
+  std::vector<std::pair<int, TypeOverlay *>> fixArgs; //for match right function
   
   if (isFloatType(oldF->getReturnType())) {
-    fixArgs.push_back(std::pair<int, FixedPointType>(-1, fixpt)); //ret value in signature
+    fixArgs.push_back(std::pair<int, TypeOverlay *>(-1, fixpt)); //ret value in signature
   }
 
   int i=0;
@@ -392,19 +392,19 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
       }
       
     } else if (hasInfo(*call_arg) && valueInfo(*call_arg)->noTypeConversion == false) {
-      FixedPointType argfpt, funfpt;
+      TypeOverlay *argfpt, *funfpt;
       argfpt = fixPType(*call_arg);
       funfpt = fixPType(&(*f_arg));
       if (!(argfpt == funfpt)) {
         LLVM_DEBUG(dbgs() << "CALL: fixed point type mismatch in actual argument " << i << " (" << *f_arg << ") vs. formal argument\n");
-        LLVM_DEBUG(dbgs() << "      (actual " << argfpt.toString() << ", vs. formal " << funfpt.toString() << ")\n");
+        LLVM_DEBUG(dbgs() << "      (actual " << *argfpt << ", vs. formal " << *funfpt << ")\n");
         LLVM_DEBUG(dbgs() << "      making an attempt to ignore the issue because mem2reg can interfere\n");
       }
       thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt, call->getInstruction());
-      fixArgs.push_back(std::pair<int, FixedPointType>(i, funfpt));
+      fixArgs.push_back(std::pair<int, TypeOverlay *>(i, funfpt));
       
     } else {
-      FixedPointType funfpt;
+      TypeOverlay *funfpt;
       funfpt = fixPType(&(*f_arg));
       LLVM_DEBUG(dbgs() << "CALL: formal argument " << i << " (" << *f_arg << ") converted but not actual argument\n");
       LLVM_DEBUG(dbgs() << "      making an attempt to ignore the issue because mem2reg can interfere\n");
@@ -447,7 +447,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType& fixpt)
 }
 
 
-Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
+Value *FloatToFixed::convertRet(ReturnInst *ret, TypeOverlay *&fixpt)
 {
   Value *oldv = ret->getReturnValue();
   
@@ -471,13 +471,14 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType& fixpt)
 }
 
 
-Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixpt)
+Value *FloatToFixed::convertBinOp(Instruction *instr, TypeOverlay *&fixpt_gen)
 {
   /*le istruzioni Instruction::
     [Add,Sub,Mul,SDiv,UDiv,SRem,URem,Shl,LShr,AShr,And,Or,Xor]
     vengono gestite dalla fallback e non in questa funzione */
   if (!instr->getType()->isFloatingPointTy() || valueInfo(instr)->noTypeConversion)
     return Unsupported;
+  FixedPointTypeOverlay *fixpt = cast<FixedPointTypeOverlay>(fixpt_gen);
   
   int opc = instr->getOpcode();
 
@@ -497,7 +498,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
       fixop = builder.CreateBinOp(Instruction::Sub, val1, val2);
     
     } else /* if (opc == Instruction::FRem) */ {
-      if (fixpt.scalarIsSigned())
+      if (fixpt->getSigned())
         fixop = builder.CreateBinOp(Instruction::SRem, val1, val2);
       else
         fixop = builder.CreateBinOp(Instruction::URem, val1, val2);
@@ -509,56 +510,60 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType& fixp
     return fixop;
 
   } else if (opc == Instruction::FMul) {
-    FixedPointType intype1 = fixpt, intype2 = fixpt;
+    TypeOverlay *intype1 = fixpt, *intype2 = fixpt;
     Value *val1 = translateOrMatchOperand(instr->getOperand(0), intype1, instr, TypeMatchPolicy::RangeOverHintMaxInt);
     Value *val2 = translateOrMatchOperand(instr->getOperand(1), intype2, instr, TypeMatchPolicy::RangeOverHintMaxInt);
     if (!val1 || !val2)
       return nullptr;
-    FixedPointType intermtype(
-      fixpt.scalarIsSigned(),
-      intype1.scalarFracBitsAmt() + intype2.scalarFracBitsAmt(),
-      intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
-    Type *dbfxt = intermtype.scalarToLLVMType(instr->getContext());
+    FixedPointTypeOverlay *intype1f = cast<FixedPointTypeOverlay>(intype1);
+    FixedPointTypeOverlay *intype2f = cast<FixedPointTypeOverlay>(intype2);
+    FixedPointTypeOverlay *intermtype = FixedPointTypeOverlay::get(
+      fixpt->getSigned(),
+      intype1f->getPointPos() + intype2f->getPointPos(),
+      intype1f->getSize() + intype2f->getSize());
+    Type *dbfxt = intermtype->scalarToLLVMType(instr->getContext());
     
     IRBuilder<> builder(instr);
-    Value *ext1 = intype1.scalarIsSigned() ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
-    Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+    Value *ext1 = intype1f->getSigned() ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
+    Value *ext2 = intype2f->getSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
     Value *fixop = builder.CreateMul(ext1, ext2);
     cpMetaData(ext1,val1);
     cpMetaData(ext2,val2);
     cpMetaData(fixop,instr);
-    updateFPTypeMetadata(fixop, intermtype.scalarIsSigned(), intermtype.scalarFracBitsAmt(), intermtype.scalarBitsAmt());
-    updateConstTypeMetadata(fixop, 0U, intype1);
-    updateConstTypeMetadata(fixop, 1U, intype2);
+    updateFPTypeMetadata(fixop, intermtype->getSigned(), intermtype->getPointPos(), intermtype->getSize());
+    updateConstTypeMetadata(fixop, 0U, intype1f);
+    updateConstTypeMetadata(fixop, 1U, intype2f);
     return genConvertFixedToFixed(fixop, intermtype, fixpt, instr);
     
   } else if (opc == Instruction::FDiv) {
     // TODO: fix by using HintOverRange when it is actually implemented
-    FixedPointType intype1 = fixpt, intype2 = fixpt;
+    TypeOverlay *intype1 = fixpt, *intype2 = fixpt;
     Value *val1 = translateOrMatchOperand(instr->getOperand(0), intype1, instr, TypeMatchPolicy::RangeOverHintMaxFrac);
     Value *val2 = translateOrMatchOperand(instr->getOperand(1), intype2, instr, TypeMatchPolicy::RangeOverHintMaxInt);
     if (!val1 || !val2)
       return nullptr;
-    FixedPointType intermtype(
-      fixpt.scalarIsSigned(),
-      intype1.scalarFracBitsAmt() + intype2.scalarFracBitsAmt(),
-      intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
-    Type *dbfxt = intermtype.scalarToLLVMType(instr->getContext());
+    FixedPointTypeOverlay *intype1f = cast<FixedPointTypeOverlay>(intype1);
+    FixedPointTypeOverlay *intype2f = cast<FixedPointTypeOverlay>(intype2);
+    FixedPointTypeOverlay *intermtype = FixedPointTypeOverlay::get(
+      fixpt->getSigned(),
+      intype1f->getPointPos() + intype2f->getPointPos(),
+      intype1f->getSize() + intype2f->getSize());
+    Type *dbfxt = intermtype->scalarToLLVMType(instr->getContext());
     
-    FixedPointType fixoptype(
-      fixpt.scalarIsSigned(),
-      intype1.scalarFracBitsAmt(),
-      intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
-    Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype, instr);
+    FixedPointTypeOverlay *fixoptype = FixedPointTypeOverlay::get(
+      fixpt->getSigned(),
+      intype1f->getPointPos(),
+      intype1f->getSize() + intype2f->getSize());
+    Value *ext1 = genConvertFixedToFixed(val1, intype1f, intermtype, instr);
     IRBuilder<> builder(instr);
-    Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
-    Value *fixop = fixpt.scalarIsSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
+    Value *ext2 = intype2f->getSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+    Value *fixop = fixpt->getSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
     cpMetaData(ext1,val1);
     cpMetaData(ext2,val2);
     cpMetaData(fixop,instr);
-    updateFPTypeMetadata(fixop, fixoptype.scalarIsSigned(), fixoptype.scalarFracBitsAmt(), fixoptype.scalarBitsAmt());
+    updateFPTypeMetadata(fixop, fixoptype->getSigned(), fixoptype->getPointPos(), fixoptype->getSize());
     updateConstTypeMetadata(fixop, 0U, intermtype);
-    updateConstTypeMetadata(fixop, 1U, intype2);
+    updateConstTypeMetadata(fixop, 1U, intype2f);
     return genConvertFixedToFixed(fixop, fixoptype, fixpt, instr);
   }
   
@@ -571,27 +576,31 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
   Value *op1 = fcmp->getOperand(0);
   Value *op2 = fcmp->getOperand(1);
   
-  FixedPointType cmptype;
-  FixedPointType t1, t2;
+  FixedPointTypeOverlay *t1, *t2;
   bool hasinfo1 = hasInfo(op1), hasinfo2 = hasInfo(op2);
   if (hasinfo1 && hasinfo2) {
-    t1 = fixPType(op1);
-    t2 = fixPType(op2);
+    t1 = cast<FixedPointTypeOverlay>(fixPType(op1));
+    t2 = cast<FixedPointTypeOverlay>(fixPType(op2));
   } else if (hasinfo1) {
-    t1 = fixPType(op1);
-    t2 = t1;
-    t2.scalarIsSigned() = true;
+    t1 = cast<FixedPointTypeOverlay>(fixPType(op1));
+    t2 = FixedPointTypeOverlay::get(true, t1->getPointPos(), t1->getSize());
   } else if (hasinfo2) {
-    t2 = fixPType(op2);
-    t1 = t2;
-    t1.scalarIsSigned() = true;
+    t2 = cast<FixedPointTypeOverlay>(fixPType(op2));
+    t1 = FixedPointTypeOverlay::get(true, t2->getPointPos(), t2->getSize());
+  } else {
+    /* Both operands are not converted... then what are we even doing here? */
+    LLVM_DEBUG(dbgs() << "scheduled conversion of fcmp, but no operands are converted?\n");
+    return fcmp;
   }
-  bool mixedsign = t1.scalarIsSigned() != t2.scalarIsSigned();
-  int intpart1 = t1.scalarBitsAmt() - t1.scalarFracBitsAmt() + (mixedsign ? t1.scalarIsSigned() : 0);
-  int intpart2 = t2.scalarBitsAmt() - t2.scalarFracBitsAmt() + (mixedsign ? t2.scalarIsSigned() : 0);
-  cmptype.scalarIsSigned() = t1.scalarIsSigned() || t2.scalarIsSigned();
-  cmptype.scalarFracBitsAmt() = std::max(t1.scalarFracBitsAmt(), t2.scalarFracBitsAmt());
-  cmptype.scalarBitsAmt() = std::max(intpart1, intpart2) + cmptype.scalarFracBitsAmt();
+  bool mixedsign = t1->getSigned() != t2->getSigned();
+  int intpart1 = t1->getSize() - t1->getSize() + (mixedsign ? t1->getSigned() : 0);
+  int intpart2 = t2->getSize() - t2->getPointPos() + (mixedsign ? t2->getSigned() : 0);
+  
+  int pointPos = std::max(t1->getPointPos(), t2->getPointPos());
+  FixedPointTypeOverlay *cmptype = FixedPointTypeOverlay::get(
+    t1->getSigned() || t2->getSigned(),
+    pointPos,
+    std::max(intpart1, intpart2) + pointPos);
   
   Value *val1 = translateOrMatchOperandAndType(op1, cmptype, fcmp);
   Value *val2 = translateOrMatchOperandAndType(op2, cmptype, fcmp);
@@ -612,13 +621,13 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
   } else if (pr == CmpInst::FCMP_ONE) {
     ty = CmpInst::ICMP_NE;
   } else if (pr == CmpInst::FCMP_OGT) {
-    ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
+    ty = cmptype->getSigned() ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
   } else if (pr == CmpInst::FCMP_OGE) {
-    ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
+    ty = cmptype->getSigned() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
   } else if (pr == CmpInst::FCMP_OLE) {
-    ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
+    ty = cmptype->getSigned() ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
   } else if (pr == CmpInst::FCMP_OLT) {
-    ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
+    ty = cmptype->getSigned() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
   } else if (pr == CmpInst::FCMP_ORD) {
     ;
     //TODO gestione NaN
@@ -644,7 +653,7 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
 }
 
 
-Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
+Value *FloatToFixed::convertCast(CastInst *cast, TypeOverlay *fixpt)
 {
   /* le istruzioni Instruction::
    * - [FPToSI,FPToUI,SIToFP,UIToFP] vengono gestite qui
@@ -670,10 +679,10 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
   if (operand->getType()->isFloatingPointTy()) {
     /* fptosi, fptoui, fptrunc, fpext */
     if (cast->getOpcode() == Instruction::FPToSI) {
-      return translateOrMatchOperandAndType(operand, FixedPointType(cast->getType(), true), cast);
+      return translateOrMatchOperandAndType(operand, TypeOverlay::get(cast->getType(), true), cast);
 
     } else if (cast->getOpcode() == Instruction::FPToUI) {
-      return translateOrMatchOperandAndType(operand, FixedPointType(cast->getType(), false), cast);
+      return translateOrMatchOperandAndType(operand, TypeOverlay::get(cast->getType(), false), cast);
 
     } else if (cast->getOpcode() == Instruction::FPTrunc ||
                cast->getOpcode() == Instruction::FPExt) {
@@ -684,10 +693,10 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
     Value *val = matchOp(operand);
     
     if (cast->getOpcode() == Instruction::SIToFP) {
-      return genConvertFixedToFixed(val, FixedPointType(val->getType(), true), fixpt, cast);
+      return genConvertFixedToFixed(val, FixedPointTypeOverlay::get(val->getType(), true), dyn_cast<FixedPointTypeOverlay>(fixpt), cast);
 
     } else if (cast->getOpcode() == Instruction::UIToFP) {
-      return genConvertFixedToFixed(val, FixedPointType(val->getType(), false), fixpt, cast);
+      return genConvertFixedToFixed(val, FixedPointTypeOverlay::get(val->getType(), false), dyn_cast<FixedPointTypeOverlay>(fixpt), cast);
     }
   }
 
@@ -695,7 +704,7 @@ Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
 }
 
 
-Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
+Value *FloatToFixed::fallback(Instruction *unsupp, TypeOverlay *&fixpt)
 {
   Value *fallval;
   Value *fixval;
@@ -731,7 +740,8 @@ Value *FloatToFixed::fallback(Instruction *unsupp, FixedPointType& fixpt)
   }
   LLVM_DEBUG(dbgs() << "  mutated operands to:\n" << *tmp << "\n");
   if (tmp->getType()->isFloatingPointTy() && valueInfo(unsupp)->noTypeConversion == false) {
-    Value *fallbackv = genConvertFloatToFix(tmp, fixpt, getFirstInsertionPointAfter(tmp));
+    FixedPointTypeOverlay *FXT = cast<FixedPointTypeOverlay>(fixpt);
+    Value *fallbackv = genConvertFloatToFix(tmp, FXT, getFirstInsertionPointAfter(tmp));
     if (tmp->hasName())
       fallbackv->setName(tmp->getName() + ".fallback");
     return fallbackv;

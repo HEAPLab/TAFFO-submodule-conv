@@ -23,7 +23,7 @@ using namespace taffo;
 #define defaultFixpType @SYNTAX_ERROR@
 
 
-Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt, TypeMatchPolicy typepol)
+Constant *FloatToFixed::convertConstant(Constant *flt, TypeOverlay *&fixpt, TypeMatchPolicy typepol)
 {
   if (UndefValue *undef = dyn_cast<UndefValue>(flt)) {
     return UndefValue::get(getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt));
@@ -45,7 +45,7 @@ Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType& fixpt, Ty
 }
 
 
-Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType& fixpt, TypeMatchPolicy typepol)
+Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, TypeOverlay *&fixpt, TypeMatchPolicy typepol)
 {
   if (cexp->isGEPWithNoNotionalOverIndexing()) {
     Value *newval = operandPool[cexp->getOperand(0)];
@@ -72,7 +72,7 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType& 
 }
 
 
-Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointType& fixpt, TypeMatchPolicy typepol)
+Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, TypeOverlay *&fixpt, TypeMatchPolicy typepol)
 {
   bool hasfloats;
   Type *prevt = glob->getType()->getPointerElementType();
@@ -97,7 +97,7 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointTy
 }
 
 
-Constant *FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, FixedPointType& fixpt, TypeMatchPolicy typepol)
+Constant *FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, TypeOverlay *&fixpt, TypeMatchPolicy typepol)
 {
   std::vector<Constant*> consts;
   for (int i=0; i<cag->getNumOperands(); i++) {
@@ -133,7 +133,7 @@ Constant *FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, FixedPo
 }
 
 
-template <class T> Constant *FloatToFixed::createConstantDataSequential(ConstantDataSequential *cds, const FixedPointType& fixpt)
+template <class T> Constant *FloatToFixed::createConstantDataSequential(ConstantDataSequential *cds, TypeOverlay *fixpt)
 {
   std::vector<T> newConsts;
   
@@ -154,27 +154,29 @@ template <class T> Constant *FloatToFixed::createConstantDataSequential(Constant
 }
 
 
-Constant *FloatToFixed::convertConstantDataSequential(ConstantDataSequential *cds, const FixedPointType& fixpt)
+Constant *FloatToFixed::convertConstantDataSequential(ConstantDataSequential *cds, TypeOverlay *fixpt)
 {
   if (!isFloatType(cds->getElementType()))
     return cds;
   
-  if (fixpt.scalarBitsAmt() <= 8)
+  FixedPointTypeOverlay *FXT = cast<FixedPointTypeOverlay>(fixpt);
+  if (FXT->getSize() <= 8)
     return createConstantDataSequential<uint8_t>(cds, fixpt);
-  else if (fixpt.scalarBitsAmt() <= 16)
+  else if (FXT->getSize() <= 16)
     return createConstantDataSequential<uint16_t>(cds, fixpt);
-  else if (fixpt.scalarBitsAmt() <= 32)
+  else if (FXT->getSize() <= 32)
     return createConstantDataSequential<uint32_t>(cds, fixpt);
-  else if (fixpt.scalarBitsAmt() <= 64)
+  else if (FXT->getSize() <= 64)
     return createConstantDataSequential<uint64_t>(cds, fixpt);
   
-  LLVM_DEBUG(dbgs() << fixpt << " too big for ConstantDataArray/Vector; 64 bit max\n");
+  LLVM_DEBUG(dbgs() << *fixpt << " too big for ConstantDataArray/Vector; 64 bit max\n");
   return nullptr;
 }
 
 
-Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, FixedPointType& fixpt, TypeMatchPolicy typepol)
+Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, TypeOverlay *&fixpt, TypeMatchPolicy typepol)
 {
+  FixedPointTypeOverlay *FXT = cast<FixedPointTypeOverlay>(fixpt);
   APFloat val = fpc->getValueAPF();
   APSInt fixval;
   
@@ -183,15 +185,15 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, Fi
     bool precise = false;
     tmp.convert(APFloatBase::IEEEdouble(), APFloat::rmTowardNegative, &precise);
     double dblval = tmp.convertToDouble();
-    int nbits = fixpt.scalarBitsAmt();
+    int nbits = FXT->getSize();
     mdutils::Range range(dblval, dblval);
     int minflt = isMaxIntPolicy(typepol) ? -1 : 0;
     mdutils::FPType t = taffo::fixedPointTypeFromRange(range, nullptr, nbits, minflt);
-    fixpt = FixedPointType(&t);
+    fixpt = TypeOverlay::get(&t);
   }
   
   if (convertAPFloat(val, fixval, context, fixpt)) {
-    Type *intty = fixpt.scalarToLLVMType(fpc->getContext());
+    Type *intty = fixpt->scalarToLLVMType(fpc->getContext());
     return ConstantInt::get(intty, fixval);
   }
   
@@ -199,15 +201,16 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, Fi
 }
 
 
-bool FloatToFixed::convertAPFloat(APFloat val, APSInt& fixval, Instruction *context, const FixedPointType& fixpt)
+bool FloatToFixed::convertAPFloat(APFloat val, APSInt& fixval, Instruction *context, TypeOverlay *fixpt)
 {
+  FixedPointTypeOverlay *FXT = cast<FixedPointTypeOverlay>(fixpt);
   bool precise = false;
 
-  APFloat exp(pow(2.0, fixpt.scalarFracBitsAmt()));
+  APFloat exp(pow(2.0, FXT->getPointPos()));
   exp.convert(val.getSemantics(), APFloat::rmTowardNegative, &precise);
   val.multiply(exp, APFloat::rmTowardNegative);
 
-  fixval = APSInt(fixpt.scalarBitsAmt(), !fixpt.scalarIsSigned());
+  fixval = APSInt(FXT->getSize(), !FXT->getSigned());
   APFloat::opStatus cvtres = val.convertToInteger(fixval, APFloat::rmTowardNegative, &precise);
   
   if (cvtres != APFloat::opStatus::opOK && context) {
