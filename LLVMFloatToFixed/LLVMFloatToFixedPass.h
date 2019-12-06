@@ -12,7 +12,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "TypeUtils.h"
 #include "Metadata.h"
-#include "TypeOverlay.h"
+#include "FixedPointTypeOverlay.h"
 #include "InputInfo.h"
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__

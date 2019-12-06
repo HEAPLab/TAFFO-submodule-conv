@@ -1,12 +1,14 @@
 add_llvm_library(LLVMFloatToFixed MODULE
-  TypeOverlay.h
-  TypeOverlay.cpp
   LLVMFloatToFixedPass.cpp
   LLVMFloatToFixedPass.h
   MDCollector.cpp
   Conversion.cpp
   ConstantConversion.cpp
   InstructionConversion.cpp
+  TypeOverlay.h
+  TypeOverlay.cpp
+  FixedPointTypeOverlay.h
+  FixedPointTypeOverlay.cpp
   
   PLUGIN_TOOL
   opt

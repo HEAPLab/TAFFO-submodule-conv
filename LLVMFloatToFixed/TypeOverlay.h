@@ -1,14 +1,8 @@
-#include <fstream>
 #include "llvm/Support/Casting.h"
-#include "llvm/Pass.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/User.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 #include "InputInfo.h"
 
@@ -56,8 +50,9 @@ public:
   
   virtual std::string toString() const = 0;
   
-  virtual llvm::Type *scalarToLLVMType(llvm::LLVMContext& ctxt) const { assert(false && "not a scalar"); }
+  virtual llvm::Type *uniformToBaseLLVMType(llvm::LLVMContext& ctxt) const { assert(false && "not a scalar"); }
   
+  virtual bool isUniform() const { return Kind != TOK_Struct; }
   virtual bool isVoid() const { return Kind == TOK_Void; }
   virtual bool isRecursivelyVoid() const { return isVoid(); }
   
@@ -79,34 +74,7 @@ public:
   
   std::string toString() const override { return "<void>"; }
   
-  llvm::Type *scalarToLLVMType(llvm::LLVMContext& ctxt) const override { assert(false && "VoidTypeOverlay cannot be converted to a LLVM type"); }
-};
-
-
-class FixedPointTypeOverlay : public TypeOverlay {
-  bool isSigned;
-  int fracBitsAmt;
-  int bitsAmt;
-  
-  static llvm::DenseMap<uint64_t, FixedPointTypeOverlay *> FXTypes;
-  
-protected:
-  FixedPointTypeOverlay(bool s, int f, int b): TypeOverlay(TOK_FixedPoint), isSigned(s), fracBitsAmt(f), bitsAmt(b) {};
-  
-public:
-  static bool classof(const TypeOverlay *O) { return O->getKind() == TOK_FixedPoint; }
-  static FixedPointTypeOverlay *get(bool s, int f, int b);
-  static FixedPointTypeOverlay *get(llvm::Type *llvmtype, bool signd = true)
-  {
-    return llvm::dyn_cast<FixedPointTypeOverlay>(TypeOverlay::get(llvmtype, signd));
-  }
-  
-  std::string toString() const override;
-  llvm::Type *scalarToLLVMType(llvm::LLVMContext& ctxt) const override;
-  
-  inline bool getSigned() const { return isSigned; };
-  inline int getPointPos() const { return fracBitsAmt; };
-  inline int getSize() const { return bitsAmt; };
+  llvm::Type *uniformToBaseLLVMType(llvm::LLVMContext& ctxt) const override { assert(false && "VoidTypeOverlay cannot be converted to a LLVM type"); }
 };
 
 

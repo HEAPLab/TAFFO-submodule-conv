@@ -239,7 +239,7 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, FixedPointTypeOverlay *s
   assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");
   assert(llvmsrct->isIntegerTy() && "cannot change fixed point format of a float");
   
-  Type *llvmdestt = destt->scalarToLLVMType(fix->getContext());
+  Type *llvmdestt = destt->uniformToBaseLLVMType(fix->getContext());
   
   Instruction *fixinst = dyn_cast<Instruction>(fix);
   if (!ip && fixinst)
@@ -353,7 +353,7 @@ Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, TypeOverlay *b
   } else if (srct->isFloatingPointTy()) {
     if (hasfloats)
       *hasfloats = true;
-    return baset->scalarToLLVMType(srct->getContext());
+    return baset->uniformToBaseLLVMType(srct->getContext());
     
   }
   LLVM_DEBUG(

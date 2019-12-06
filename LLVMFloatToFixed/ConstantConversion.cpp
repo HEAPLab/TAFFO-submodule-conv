@@ -193,7 +193,7 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, Ty
   }
   
   if (convertAPFloat(val, fixval, context, fixpt)) {
-    Type *intty = fixpt->scalarToLLVMType(fpc->getContext());
+    Type *intty = fixpt->uniformToBaseLLVMType(fpc->getContext());
     return ConstantInt::get(intty, fixval);
   }
   
