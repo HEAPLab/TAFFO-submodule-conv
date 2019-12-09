@@ -517,7 +517,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, TypeOverlay *&fixpt_gen)
       return nullptr;
     FixedPointTypeOverlay *intype1f = cast<FixedPointTypeOverlay>(intype1);
     FixedPointTypeOverlay *intype2f = cast<FixedPointTypeOverlay>(intype2);
-    FixedPointTypeOverlay *intermtype = FixedPointTypeOverlay::get(
+    FixedPointTypeOverlay *intermtype = FixedPointTypeOverlay::get(this,
       fixpt->getSigned(),
       intype1f->getPointPos() + intype2f->getPointPos(),
       intype1f->getSize() + intype2f->getSize());
@@ -544,13 +544,13 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, TypeOverlay *&fixpt_gen)
       return nullptr;
     FixedPointTypeOverlay *intype1f = cast<FixedPointTypeOverlay>(intype1);
     FixedPointTypeOverlay *intype2f = cast<FixedPointTypeOverlay>(intype2);
-    FixedPointTypeOverlay *intermtype = FixedPointTypeOverlay::get(
+    FixedPointTypeOverlay *intermtype = FixedPointTypeOverlay::get(this,
       fixpt->getSigned(),
       intype1f->getPointPos() + intype2f->getPointPos(),
       intype1f->getSize() + intype2f->getSize());
     Type *dbfxt = intermtype->getBaseLLVMType(instr->getContext());
     
-    FixedPointTypeOverlay *fixoptype = FixedPointTypeOverlay::get(
+    FixedPointTypeOverlay *fixoptype = FixedPointTypeOverlay::get(this,
       fixpt->getSigned(),
       intype1f->getPointPos(),
       intype1f->getSize() + intype2f->getSize());
@@ -583,10 +583,10 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
     t2 = cast<FixedPointTypeOverlay>(fixPType(op2));
   } else if (hasinfo1) {
     t1 = cast<FixedPointTypeOverlay>(fixPType(op1));
-    t2 = FixedPointTypeOverlay::get(true, t1->getPointPos(), t1->getSize());
+    t2 = FixedPointTypeOverlay::get(this, true, t1->getPointPos(), t1->getSize());
   } else if (hasinfo2) {
     t2 = cast<FixedPointTypeOverlay>(fixPType(op2));
-    t1 = FixedPointTypeOverlay::get(true, t2->getPointPos(), t2->getSize());
+    t1 = FixedPointTypeOverlay::get(this, true, t2->getPointPos(), t2->getSize());
   } else {
     /* Both operands are not converted... then what are we even doing here? */
     LLVM_DEBUG(dbgs() << "scheduled conversion of fcmp, but no operands are converted?\n");
@@ -597,7 +597,7 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
   int intpart2 = t2->getSize() - t2->getPointPos() + (mixedsign ? t2->getSigned() : 0);
   
   int pointPos = std::max(t1->getPointPos(), t2->getPointPos());
-  FixedPointTypeOverlay *cmptype = FixedPointTypeOverlay::get(
+  FixedPointTypeOverlay *cmptype = FixedPointTypeOverlay::get(this,
     t1->getSigned() || t2->getSigned(),
     pointPos,
     std::max(intpart1, intpart2) + pointPos);
@@ -679,10 +679,10 @@ Value *FloatToFixed::convertCast(CastInst *cast, TypeOverlay *fixpt)
   if (operand->getType()->isFloatingPointTy()) {
     /* fptosi, fptoui, fptrunc, fpext */
     if (cast->getOpcode() == Instruction::FPToSI) {
-      return translateOrMatchOperandAndType(operand, TypeOverlay::get(cast->getType(), true), cast);
+      return translateOrMatchOperandAndType(operand, TypeOverlay::get(this, cast->getType(), true), cast);
 
     } else if (cast->getOpcode() == Instruction::FPToUI) {
-      return translateOrMatchOperandAndType(operand, TypeOverlay::get(cast->getType(), false), cast);
+      return translateOrMatchOperandAndType(operand, TypeOverlay::get(this, cast->getType(), false), cast);
 
     } else if (cast->getOpcode() == Instruction::FPTrunc ||
                cast->getOpcode() == Instruction::FPExt) {
@@ -693,10 +693,10 @@ Value *FloatToFixed::convertCast(CastInst *cast, TypeOverlay *fixpt)
     Value *val = matchOp(operand);
     
     if (cast->getOpcode() == Instruction::SIToFP) {
-      return genConvertFixedToFixed(val, FixedPointTypeOverlay::get(val->getType(), true), dyn_cast<FixedPointTypeOverlay>(fixpt), cast);
+      return genConvertFixedToFixed(val, FixedPointTypeOverlay::get(this, val->getType(), true), dyn_cast<FixedPointTypeOverlay>(fixpt), cast);
 
     } else if (cast->getOpcode() == Instruction::UIToFP) {
-      return genConvertFixedToFixed(val, FixedPointTypeOverlay::get(val->getType(), false), dyn_cast<FixedPointTypeOverlay>(fixpt), cast);
+      return genConvertFixedToFixed(val, FixedPointTypeOverlay::get(this, val->getType(), false), dyn_cast<FixedPointTypeOverlay>(fixpt), cast);
     }
   }
 

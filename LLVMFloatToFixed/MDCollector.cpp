@@ -99,20 +99,20 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *ra
       FPType *fpt = dyn_cast_or_null<FPType>(fpInfo->IType.get());
       if (!fpt)
         return false;
-      vi.fixpType = TypeOverlay::get(fpt);
+      vi.fixpType = TypeOverlay::get(this, fpt);
     } else {
-      vi.fixpType = VoidTypeOverlay::get();
+      vi.fixpType = VoidTypeOverlay::get(this);
     }
     
   } else if (StructInfo *fpInfo = dyn_cast<StructInfo>(raw)) {
     if (!instr->getType()->isVoidTy()) {
       assert(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy() && "input info / actual type mismatch");
       int enableConversion = 0;
-      vi.fixpType = TypeOverlay::get(fpInfo, &enableConversion);
+      vi.fixpType = TypeOverlay::get(this, fpInfo, &enableConversion);
       if (enableConversion == 0)
         return false;
     } else {
-      vi.fixpType = VoidTypeOverlay::get();
+      vi.fixpType = VoidTypeOverlay::get(this);
     }
     
   } else {

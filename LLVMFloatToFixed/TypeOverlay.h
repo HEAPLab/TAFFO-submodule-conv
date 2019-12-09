@@ -1,3 +1,6 @@
+#ifndef __TYPE_OVERLAY_H__
+#define __TYPE_OVERLAY_H__
+
 #include "llvm/Support/Casting.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -7,12 +10,10 @@
 #include "InputInfo.h"
 
 
-#ifndef __TYPE_OVERLAY_H__
-#define __TYPE_OVERLAY_H__
-
-
 namespace flttofix {
 
+
+struct FloatToFixed;
 
 /**
  * TypeOverlay is a class which augments a llvm::Type with additional information
@@ -39,17 +40,19 @@ public:
   
 private:
   const TypeOverlayKind Kind;
+  FloatToFixed * const Context;
   
 protected:
-  explicit TypeOverlay(TypeOverlayKind K) : Kind(K) {}
+  explicit TypeOverlay(TypeOverlayKind K, FloatToFixed *C) : Kind(K), Context(C) {}
   
 public:
   TypeOverlay() = delete;
   TypeOverlayKind getKind() const { return Kind; }
+  FloatToFixed *getContext() const { return Context; }
   
-  static TypeOverlay *get(llvm::Type *llvmtype, bool signd = true);
-  static TypeOverlay *get(mdutils::MDInfo *mdnfo, int *enableConversion = nullptr);
-  static TypeOverlay *get(mdutils::TType *mdtype);
+  static TypeOverlay *get(FloatToFixed *C, llvm::Type *llvmtype, bool signd = true);
+  static TypeOverlay *get(FloatToFixed *C, mdutils::MDInfo *mdnfo, int *enableConversion = nullptr);
+  static TypeOverlay *get(FloatToFixed *C, mdutils::TType *mdtype);
   
   virtual std::string toString() const = 0;
   
@@ -64,14 +67,11 @@ public:
 
 class VoidTypeOverlay : public TypeOverlay {
 protected:
-  VoidTypeOverlay(): TypeOverlay(TOK_Void) {}
-  
-private:
-  static VoidTypeOverlay Void;
+  VoidTypeOverlay(FloatToFixed *C): TypeOverlay(TOK_Void, C) {}
   
 public:
   static bool classof(const TypeOverlay *O) { return O->getKind() == TOK_Void; }
-  static VoidTypeOverlay *get() { return &(VoidTypeOverlay::Void); };
+  static VoidTypeOverlay *get(FloatToFixed *C);
   
   std::string toString() const override { return "<void>"; }
 };
@@ -80,18 +80,16 @@ public:
 class StructTypeOverlay : public TypeOverlay {
   llvm::SmallVector<TypeOverlay *, 2> elements;
   
-  static llvm::StringMap<StructTypeOverlay *> StructTypes;
-  
 protected:
   /** Struct type
    *  @param elems List of types, one for each struct field. All elements will be
    *     copied */
-  StructTypeOverlay(const llvm::ArrayRef<TypeOverlay *>& elems);
+  StructTypeOverlay(FloatToFixed *C, const llvm::ArrayRef<TypeOverlay *>& elems);
   virtual ~StructTypeOverlay() {};
   
 public:
   static bool classof(const TypeOverlay *O) { return O->getKind() == TOK_Struct; }
-  static StructTypeOverlay *get(const llvm::ArrayRef<TypeOverlay *>& elems);
+  static StructTypeOverlay *get(FloatToFixed *C, const llvm::ArrayRef<TypeOverlay *>& elems);
 
   std::string toString() const override;
   
@@ -104,7 +102,7 @@ public:
 
 class UniformTypeOverlay: public TypeOverlay {
 protected:
-  UniformTypeOverlay(TypeOverlayKind kind): TypeOverlay(kind) { assert(TOK_Uniform_Begin <= kind && kind << TOK_Uniform_End); };
+  UniformTypeOverlay(TypeOverlayKind kind, FloatToFixed *C): TypeOverlay(kind, C) { assert(TOK_Uniform_Begin <= kind && kind << TOK_Uniform_End); };
   
 public:
   static bool classof(const TypeOverlay *O) { return TOK_Uniform_Begin <= O->getKind() && O->getKind() <= TOK_Uniform_End; }

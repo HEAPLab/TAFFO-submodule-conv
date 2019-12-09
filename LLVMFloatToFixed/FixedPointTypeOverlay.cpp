@@ -8,6 +8,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
+#include "LLVMFloatToFixedPass.h"
 #include "TypeUtils.h"
 #include "FixedPointTypeOverlay.h"
 
@@ -17,10 +18,7 @@ using namespace mdutils;
 using namespace taffo;
 
 
-DenseMap<uint64_t, FixedPointTypeOverlay *> FixedPointTypeOverlay::FXTypes;
-
-
-FixedPointTypeOverlay *FixedPointTypeOverlay::get(bool s, int f, int b)
+FixedPointTypeOverlay *FixedPointTypeOverlay::get(FloatToFixed *C, bool s, int f, int b)
 {
   assert(std::abs(f) < (1 << 28) && std::abs(b) < (1 << 28) && "exceeded max size = 268435455 bits");
   assert(b > 0 && "total number of bits in representation must be > 0");
@@ -28,12 +26,12 @@ FixedPointTypeOverlay *FixedPointTypeOverlay::get(bool s, int f, int b)
     (((uint64_t)f & 0xFFFFFFF) << (28+1)) +
     (((uint64_t)b & 0xFFFFFFF) << (1)) +
     (s & 0x1);
-  auto match = FixedPointTypeOverlay::FXTypes.find(key);
-  if (match != FixedPointTypeOverlay::FXTypes.end())
+  auto match = C->FXTypes.find(key);
+  if (match != C->FXTypes.end())
     return match->getSecond();
   
-  FixedPointTypeOverlay *res = new FixedPointTypeOverlay(s, f, b);
-  FixedPointTypeOverlay::FXTypes[key] = res;
+  FixedPointTypeOverlay *res = new FixedPointTypeOverlay(C,s, f, b);
+  C->FXTypes[key] = res;
   return res;
 }
 

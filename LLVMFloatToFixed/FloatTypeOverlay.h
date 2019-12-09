@@ -1,7 +1,7 @@
-#include "TypeOverlay.h"
-
 #ifndef __FLOAT_TYPE_OVERLAY_H__
 #define __FLOAT_TYPE_OVERLAY_H__
+
+#include "TypeOverlay.h"
 
 
 namespace flttofix {
@@ -9,17 +9,15 @@ namespace flttofix {
 class FloatTypeOverlay : public UniformTypeOverlay {
   llvm::Type::TypeID typeId;
   
-  static llvm::DenseMap<int, FloatTypeOverlay *> FPTypes;
-  
 protected:
-  FloatTypeOverlay(llvm::Type::TypeID TypeId): UniformTypeOverlay(TOK_FixedPoint), typeId(TypeId) {};
+  FloatTypeOverlay(FloatToFixed *C, llvm::Type::TypeID TypeId): UniformTypeOverlay(TOK_Float, C), typeId(TypeId) {};
   
 public:
   static bool classof(const TypeOverlay *O) { return O->getKind() == TOK_Float; }
-  static FloatTypeOverlay *get(llvm::Type::TypeID typeId);
-  static FloatTypeOverlay *get(llvm::Type *llvmtype)
+  static FloatTypeOverlay *get(FloatToFixed *C, llvm::Type::TypeID typeId);
+  static FloatTypeOverlay *get(FloatToFixed *C, llvm::Type *llvmtype)
   {
-    return FloatTypeOverlay::get(llvmtype->getTypeID());
+    return FloatTypeOverlay::get(C, llvmtype->getTypeID());
   }
   
   std::string toString() const override;

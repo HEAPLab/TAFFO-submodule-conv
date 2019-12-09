@@ -153,11 +153,11 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, TypeOverlay *&iofixpt, 
     return res;
   } else if (SIToFPInst *instr = dyn_cast<SIToFPInst>(val)) {
     Value *intparam = instr->getOperand(0);
-    iofixpt = TypeOverlay::get(intparam->getType(), true);
+    iofixpt = TypeOverlay::get(this, intparam->getType(), true);
     return intparam;
   } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(val)) {
     Value *intparam = instr->getOperand(0);
-    iofixpt = TypeOverlay::get(intparam->getType(), true);
+    iofixpt = TypeOverlay::get(this, intparam->getType(), true);
     return intparam;
   }
   
@@ -170,7 +170,7 @@ Value *FloatToFixed::translateOrMatchOperand(Value *val, TypeOverlay *&iofixpt, 
       FixedPointTypeOverlay *FXT = cast<FixedPointTypeOverlay>(iofixpt);
       mdutils::FPType fpt = taffo::fixedPointTypeFromRange(*(ii->IRange), &err, FXT->getSize());
       if (err != FixedPointTypeGenError::InvalidRange)
-        iofixpt = TypeOverlay::get(&fpt);
+        iofixpt = TypeOverlay::get(this, &fpt);
     }
   }
   

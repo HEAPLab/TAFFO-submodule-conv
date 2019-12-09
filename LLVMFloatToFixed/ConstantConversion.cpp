@@ -189,7 +189,7 @@ Constant *FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, Ty
     mdutils::Range range(dblval, dblval);
     int minflt = isMaxIntPolicy(typepol) ? -1 : 0;
     mdutils::FPType t = taffo::fixedPointTypeFromRange(range, nullptr, nbits, minflt);
-    fixpt = TypeOverlay::get(&t);
+    fixpt = TypeOverlay::get(this, &t);
   }
   
   if (convertAPFloat(val, fixval, context, fixpt)) {

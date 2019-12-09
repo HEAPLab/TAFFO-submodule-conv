@@ -1,3 +1,6 @@
+#ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
+#define __LLVM_FLOAT_TO_FIXED_PASS_H__
+
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Constants.h"
@@ -12,11 +15,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "TypeUtils.h"
 #include "Metadata.h"
+#include "TypeOverlay.h"
 #include "FixedPointTypeOverlay.h"
+#include "FloatTypeOverlay.h"
 #include "InputInfo.h"
-
-#ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
-#define __LLVM_FLOAT_TO_FIXED_PASS_H__
 
 
 #define DEBUG_TYPE "taffo-conversion"
@@ -57,7 +59,7 @@ struct ValueInfo {
   
   // significant iff origType is a float or a pointer to a float
   // and if operation == Convert
-  TypeOverlay *fixpType = VoidTypeOverlay::get();
+  TypeOverlay *fixpType;
   llvm::Type *origType = nullptr;
 };
 
@@ -70,6 +72,12 @@ struct PHIInfo {
 
 struct FloatToFixed : public llvm::ModulePass {
   static char ID;
+  
+  static VoidTypeOverlay *Void;
+  static llvm::StringMap<StructTypeOverlay *> StructTypes;
+  static llvm::DenseMap<int, FloatTypeOverlay *> FPTypes;
+  static llvm::DenseMap<uint64_t, FixedPointTypeOverlay *> FXTypes;
+  
   FixedPointTypeOverlay *defaultFixpType;
   
   /** Map from original values to converted values.
@@ -354,6 +362,7 @@ struct FloatToFixed : public llvm::ModulePass {
     auto vi = info.find(val);
     if (vi == info.end()) {
       info[val] = std::make_shared<ValueInfo>(ValueInfo());
+      info[val]->fixpType = VoidTypeOverlay::get(this);
       return info[val];
     } else {
       assert(false && "value already has info!");
@@ -364,8 +373,7 @@ struct FloatToFixed : public llvm::ModulePass {
     auto vi = info.find(val);
     if (vi == info.end()) {
       if (isNew) *isNew = true;
-      info[val] = std::make_shared<ValueInfo>(ValueInfo());
-      return info[val];
+      return newValueInfo(val);
     } else {
       if (isNew) *isNew = false;
       return vi->getSecond();

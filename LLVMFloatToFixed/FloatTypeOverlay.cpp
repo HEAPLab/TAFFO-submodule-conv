@@ -19,13 +19,10 @@ using namespace mdutils;
 using namespace taffo;
 
 
-DenseMap<int, FloatTypeOverlay *> FloatTypeOverlay::FPTypes;
-
-
-FloatTypeOverlay *FloatTypeOverlay::get(Type::TypeID typeId)
+FloatTypeOverlay *FloatTypeOverlay::get(FloatToFixed *C, Type::TypeID typeId)
 {
-  auto existing = FPTypes.find(typeId);
-  if (existing != FPTypes.end()) {
+  auto existing = C->FPTypes.find(typeId);
+  if (existing != C->FPTypes.end()) {
     return existing->getSecond();
   }
   
@@ -36,8 +33,8 @@ FloatTypeOverlay *FloatTypeOverlay::get(Type::TypeID typeId)
     LLVM_DEBUG(dbgs() << "attempted to create a FloatTypeOverlay from non-float type ID " << typeId << "\n");
     return nullptr;
   }
-  FloatTypeOverlay *newT = new FloatTypeOverlay(typeId);
-  FPTypes[typeId] = newT;
+  FloatTypeOverlay *newT = new FloatTypeOverlay(C, typeId);
+  C->FPTypes[typeId] = newT;
   return newT;
 }
 

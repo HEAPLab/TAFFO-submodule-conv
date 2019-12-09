@@ -26,6 +26,12 @@ static RegisterPass<FloatToFixed> X(
   "Floating Point to Fixed Point conversion pass",
   true /* Does not only look at CFG */,
   true /* Optimization Pass */);
+  
+  
+VoidTypeOverlay *FloatToFixed::Void;
+llvm::StringMap<StructTypeOverlay *> FloatToFixed::StructTypes;
+DenseMap<int, FloatTypeOverlay *> FloatToFixed::FPTypes;
+DenseMap<uint64_t, FixedPointTypeOverlay *> FloatToFixed::FXTypes;
 
 
 void FloatToFixed::getAnalysisUsage(llvm::AnalysisUsage &au) const

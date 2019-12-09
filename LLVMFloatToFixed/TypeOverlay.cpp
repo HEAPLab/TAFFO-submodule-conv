@@ -8,6 +8,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
+#include "LLVMFloatToFixedPass.h"
 #include "TypeUtils.h"
 #include "TypeOverlay.h"
 #include "FixedPointTypeOverlay.h"
@@ -18,56 +19,52 @@ using namespace mdutils;
 using namespace taffo;
 
 
-VoidTypeOverlay VoidTypeOverlay::Void;
-llvm::StringMap<StructTypeOverlay *> StructTypeOverlay::StructTypes;
-
-
-TypeOverlay *TypeOverlay::get(llvm::Type *llvmtype, bool signd)
+TypeOverlay *TypeOverlay::get(FloatToFixed *C, llvm::Type *llvmtype, bool signd)
 {
   if (llvmtype->isIntegerTy()) {
-    return FixedPointTypeOverlay::get(signd, 0, llvmtype->getIntegerBitWidth());
+    return FixedPointTypeOverlay::get(C, signd, 0, llvmtype->getIntegerBitWidth());
   }
-  return VoidTypeOverlay::get();
+  return VoidTypeOverlay::get(C);
 }
 
 
-TypeOverlay *TypeOverlay::get(mdutils::MDInfo *mdnfo, int *enableConversion)
+TypeOverlay *TypeOverlay::get(FloatToFixed *C, mdutils::MDInfo *mdnfo, int *enableConversion)
 {
   if (!mdnfo) {
-    return VoidTypeOverlay::get();
+    return VoidTypeOverlay::get(C);
     
   } else if (InputInfo *ii = dyn_cast<InputInfo>(mdnfo)) {
     if (ii->IEnableConversion) {
       if (enableConversion) (*enableConversion)++;
-      return TypeOverlay::get(ii->IType.get());
+      return TypeOverlay::get(C, ii->IType.get());
     } else {
-      return VoidTypeOverlay::get();
+      return VoidTypeOverlay::get(C);
     }
     
   } else if (StructInfo *si = dyn_cast<StructInfo>(mdnfo)) {
     SmallVector<TypeOverlay *, 2> elems;
     for (auto i = si->begin(); i != si->end(); i++) {
-      elems.push_back(TypeOverlay::get(i->get(), enableConversion));
+      elems.push_back(TypeOverlay::get(C, i->get(), enableConversion));
     }
-    return StructTypeOverlay::get(elems);
+    return StructTypeOverlay::get(C, elems);
     
   }
   
   assert(false && "BUG: unknown type of MDInfo");
-  return VoidTypeOverlay::get();
+  return VoidTypeOverlay::get(C);
 }
 
 
-TypeOverlay *TypeOverlay::get(mdutils::TType *mdtype)
+TypeOverlay *TypeOverlay::get(FloatToFixed *C, mdutils::TType *mdtype)
 {
   if (!mdtype) {
-    return VoidTypeOverlay::get();
+    return VoidTypeOverlay::get(C);
   } else if (FPType *fpt = dyn_cast_or_null<FPType>(mdtype)) {
-    return FixedPointTypeOverlay::get(fpt->isSigned(), fpt->getPointPos(), fpt->getWidth());
+    return FixedPointTypeOverlay::get(C, fpt->isSigned(), fpt->getPointPos(), fpt->getWidth());
   }
   
   assert(false && "BUG: unknown TType");
-  return VoidTypeOverlay::get();
+  return VoidTypeOverlay::get(C);
 }
 
 
@@ -129,24 +126,32 @@ raw_ostream& operator<<(raw_ostream& stm, const TypeOverlay& f)
 }
 
 
-StructTypeOverlay::StructTypeOverlay(const ArrayRef<TypeOverlay *>& elems) : TypeOverlay(TOK_Struct)
+VoidTypeOverlay *VoidTypeOverlay::get(FloatToFixed *C)
+{
+  if (C->Void == nullptr)
+    C->Void = new VoidTypeOverlay(C);
+  return C->Void;
+}
+
+
+StructTypeOverlay::StructTypeOverlay(FloatToFixed *C, const ArrayRef<TypeOverlay *>& elems) : TypeOverlay(TOK_Struct, C)
 {
   elements.insert(elements.begin(), elems.begin(), elems.end());
 }
 
 
-StructTypeOverlay *StructTypeOverlay::get(const llvm::ArrayRef<TypeOverlay *>& elems)
+StructTypeOverlay *StructTypeOverlay::get(FloatToFixed *C, const llvm::ArrayRef<TypeOverlay *>& elems)
 {
-  StructTypeOverlay *res = new StructTypeOverlay(elems);
+  StructTypeOverlay *res = new StructTypeOverlay(C, elems);
   std::string key = res->toString();
   
-  auto match = StructTypeOverlay::StructTypes.find(key);
-  if (match != StructTypeOverlay::StructTypes.end()) {
+  auto match = C->StructTypes.find(key);
+  if (match != C->StructTypes.end()) {
     delete res;
     return match->second;
   }
   
-  StructTypeOverlay::StructTypes[key] = res;
+  C->StructTypes[key] = res;
   return res;
 }
 
