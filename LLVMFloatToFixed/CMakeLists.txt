@@ -9,6 +9,8 @@ add_llvm_library(LLVMFloatToFixed MODULE
   TypeOverlay.cpp
   FixedPointTypeOverlay.h
   FixedPointTypeOverlay.cpp
+  FloatTypeOverlay.h
+  FloatTypeOverlay.cpp
   
   PLUGIN_TOOL
   opt

@@ -6,7 +6,7 @@
 
 namespace flttofix {
 
-class FixedPointTypeOverlay : public TypeOverlay {
+class FixedPointTypeOverlay : public UniformTypeOverlay {
   bool isSigned;
   int fracBitsAmt;
   int bitsAmt;
@@ -14,7 +14,7 @@ class FixedPointTypeOverlay : public TypeOverlay {
   static llvm::DenseMap<uint64_t, FixedPointTypeOverlay *> FXTypes;
   
 protected:
-  FixedPointTypeOverlay(bool s, int f, int b): TypeOverlay(TOK_FixedPoint), isSigned(s), fracBitsAmt(f), bitsAmt(b) {};
+  FixedPointTypeOverlay(bool s, int f, int b): UniformTypeOverlay(TOK_FixedPoint), isSigned(s), fracBitsAmt(f), bitsAmt(b) {};
   
 public:
   static bool classof(const TypeOverlay *O) { return O->getKind() == TOK_FixedPoint; }
@@ -25,7 +25,7 @@ public:
   }
   
   std::string toString() const override;
-  llvm::Type *uniformToBaseLLVMType(llvm::LLVMContext& ctxt) const override;
+  llvm::Type *getBaseLLVMType(llvm::LLVMContext& ctxt) const override;
   
   inline bool getSigned() const { return isSigned; };
   inline int getPointPos() const { return fracBitsAmt; };

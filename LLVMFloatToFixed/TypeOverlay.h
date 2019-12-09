@@ -31,7 +31,10 @@ public:
   enum TypeOverlayKind {
     TOK_Void,
     TOK_Struct,
-    TOK_FixedPoint
+    TOK_Uniform_Begin,
+    TOK_FixedPoint,
+    TOK_Float,
+    TOK_Uniform_End
   };
   
 private:
@@ -49,8 +52,6 @@ public:
   static TypeOverlay *get(mdutils::TType *mdtype);
   
   virtual std::string toString() const = 0;
-  
-  virtual llvm::Type *uniformToBaseLLVMType(llvm::LLVMContext& ctxt) const { assert(false && "not a scalar"); }
   
   virtual bool isUniform() const { return Kind != TOK_Struct; }
   virtual bool isVoid() const { return Kind == TOK_Void; }
@@ -73,8 +74,6 @@ public:
   static VoidTypeOverlay *get() { return &(VoidTypeOverlay::Void); };
   
   std::string toString() const override { return "<void>"; }
-  
-  llvm::Type *uniformToBaseLLVMType(llvm::LLVMContext& ctxt) const override { assert(false && "VoidTypeOverlay cannot be converted to a LLVM type"); }
 };
 
 
@@ -100,6 +99,17 @@ public:
   
   inline int size(void) const { return elements.size(); }
   inline TypeOverlay *item(int n) const { return elements[n]; }
+};
+
+
+class UniformTypeOverlay: public TypeOverlay {
+protected:
+  UniformTypeOverlay(TypeOverlayKind kind): TypeOverlay(kind) { assert(TOK_Uniform_Begin <= kind && kind << TOK_Uniform_End); };
+  
+public:
+  static bool classof(const TypeOverlay *O) { return TOK_Uniform_Begin <= O->getKind() && O->getKind() <= TOK_Uniform_End; }
+  
+  virtual llvm::Type *getBaseLLVMType(llvm::LLVMContext& ctxt) const = 0;
 };
 
 

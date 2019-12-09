@@ -310,7 +310,7 @@ Value *FloatToFixed::convertPhi(PHINode *phi, TypeOverlay *&fixpt)
   /* if we have to do a type change, create a new phi node. The new type is for
    * sure that of a fixed point value; because the original type was a float
    * and thus all of its incoming values were floats */
-  PHINode *newphi = PHINode::Create(fixpt->uniformToBaseLLVMType(phi->getContext()),
+  PHINode *newphi = PHINode::Create(cast<UniformTypeOverlay>(fixpt)->getBaseLLVMType(phi->getContext()),
     phi->getNumIncomingValues());
 
   for (int i=0; i<phi->getNumIncomingValues(); i++) {
@@ -521,7 +521,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, TypeOverlay *&fixpt_gen)
       fixpt->getSigned(),
       intype1f->getPointPos() + intype2f->getPointPos(),
       intype1f->getSize() + intype2f->getSize());
-    Type *dbfxt = intermtype->uniformToBaseLLVMType(instr->getContext());
+    Type *dbfxt = intermtype->getBaseLLVMType(instr->getContext());
     
     IRBuilder<> builder(instr);
     Value *ext1 = intype1f->getSigned() ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
@@ -548,7 +548,7 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, TypeOverlay *&fixpt_gen)
       fixpt->getSigned(),
       intype1f->getPointPos() + intype2f->getPointPos(),
       intype1f->getSize() + intype2f->getSize());
-    Type *dbfxt = intermtype->uniformToBaseLLVMType(instr->getContext());
+    Type *dbfxt = intermtype->getBaseLLVMType(instr->getContext());
     
     FixedPointTypeOverlay *fixoptype = FixedPointTypeOverlay::get(
       fixpt->getSigned(),

@@ -17,7 +17,7 @@ using namespace mdutils;
 using namespace taffo;
 
 
-llvm::DenseMap<uint64_t, FixedPointTypeOverlay *> FixedPointTypeOverlay::FXTypes;
+DenseMap<uint64_t, FixedPointTypeOverlay *> FixedPointTypeOverlay::FXTypes;
 
 
 FixedPointTypeOverlay *FixedPointTypeOverlay::get(bool s, int f, int b)
@@ -52,7 +52,7 @@ std::string FixedPointTypeOverlay::toString() const
 }
 
 
-Type *FixedPointTypeOverlay::uniformToBaseLLVMType(LLVMContext& ctxt) const
+Type *FixedPointTypeOverlay::getBaseLLVMType(LLVMContext& ctxt) const
 {
   return Type::getIntNTy(ctxt, bitsAmt);
 }
