@@ -40,10 +40,10 @@ public:
   
 private:
   const TypeOverlayKind Kind;
-  FloatToFixed * const Context;
   
 protected:
   explicit TypeOverlay(TypeOverlayKind K, FloatToFixed *C) : Kind(K), Context(C) {}
+  FloatToFixed * const Context;
   
 public:
   TypeOverlay() = delete;
@@ -62,6 +62,8 @@ public:
   
   TypeOverlay *unwrapIndexList(llvm::Type *valType, const llvm::iterator_range<const llvm::Use*> indices);
   TypeOverlay *unwrapIndexList(llvm::Type *valType, llvm::ArrayRef<unsigned> indices);
+  
+  llvm::Type *overlayOnBaseType(llvm::Type *T, bool *performedReplacement = nullptr) const;
 };
 
 
@@ -108,6 +110,11 @@ public:
   static bool classof(const TypeOverlay *O) { return TOK_Uniform_Begin <= O->getKind() && O->getKind() <= TOK_Uniform_End; }
   
   virtual llvm::Type *getBaseLLVMType(llvm::LLVMContext& ctxt) const = 0;
+  
+  virtual llvm::Value *genCastFrom(llvm::Value *I, UniformTypeOverlay *IType) const;
+  virtual llvm::Value *genCastFrom(llvm::Instruction *I, UniformTypeOverlay *IType) const;
+  virtual llvm::Value *genCastFrom(llvm::Argument *A, UniformTypeOverlay *IType) const;
+  virtual llvm::Value *genCastFrom(llvm::Value *I, UniformTypeOverlay *IType, llvm::Instruction *IInsertBefore) const { assert(false && "!IMPL"); }
 };
 
 

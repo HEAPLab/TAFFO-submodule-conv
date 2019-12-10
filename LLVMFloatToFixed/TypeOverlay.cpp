@@ -119,6 +119,57 @@ TypeOverlay *TypeOverlay::unwrapIndexList(llvm::Type *valType, llvm::ArrayRef<un
 }
 
 
+Type *TypeOverlay::overlayOnBaseType(Type *srct, bool *changed) const
+{
+  if (srct->isPointerTy()) {
+    Type *enc = overlayOnBaseType(srct->getPointerElementType(), changed);
+    if (enc)
+      return enc->getPointerTo();
+    return nullptr;
+    
+  } else if (srct->isArrayTy()) {
+    int nel = srct->getArrayNumElements();
+    Type *enc = overlayOnBaseType(srct->getArrayElementType(), changed);
+    if (enc)
+      return ArrayType::get(enc, nel);
+    return nullptr;
+    
+  } else if (srct->isStructTy()) {
+    SmallVector<Type *, 2> elems;
+    bool allinvalid = true;
+    for (int i=0; i<srct->getStructNumElements(); i++) {
+      const StructTypeOverlay *structt = cast<StructTypeOverlay>(this);
+      TypeOverlay *fpelemt = structt->item(i);
+      Type *baseelemt = srct->getStructElementType(i);
+      Type *newelemt;
+      if (!fpelemt->isVoid()) {
+        allinvalid = false;
+        newelemt = fpelemt->overlayOnBaseType(baseelemt, changed);
+      } else {
+        newelemt = baseelemt;
+      }
+      elems.push_back(newelemt);
+    }
+    if (!allinvalid)
+      return StructType::get(srct->getContext(), elems, dyn_cast<StructType>(srct)->isPacked());
+    return srct;
+    
+  } else if (srct->isFloatingPointTy() || srct->isIntegerTy()) {
+    if (!this->isVoid()) {
+      if (changed)
+        *changed = true;
+      return cast<UniformTypeOverlay>(this)->getBaseLLVMType(srct->getContext());
+    }
+    return srct;
+    
+  }
+  LLVM_DEBUG(dbgs() << "getLLVMFixedPointTypeForFloatType given unexpected type " << *srct << "\n");
+  if (changed)
+    *changed = false;
+  return srct;
+}
+
+
 raw_ostream& operator<<(raw_ostream& stm, const TypeOverlay& f)
 {
   stm << f.toString();
@@ -180,4 +231,32 @@ bool StructTypeOverlay::isRecursivelyVoid() const
   }
   return false;
 }
+
+
+Value *UniformTypeOverlay::genCastFrom(llvm::Value *I, UniformTypeOverlay *IType) const
+{
+  if (Instruction *i = dyn_cast<Instruction>(I))
+    return genCastFrom(i, IType);
+  else if (Argument *v = dyn_cast<Argument>(I))
+    return genCastFrom(v, IType);
+  assert(false && "genCastFrom: value not an instruction or an argument");
+}
+
+
+Value *UniformTypeOverlay::genCastFrom(Instruction *I, UniformTypeOverlay *IType) const
+{
+  Instruction *ip = getFirstInsertionPointAfter(I);
+  return genCastFrom(I, IType, ip);
+};
+
+
+Value *UniformTypeOverlay::genCastFrom(Argument *arg, UniformTypeOverlay *IType) const
+{
+  Function *fun = arg->getParent();
+  BasicBlock& firstbb = fun->getEntryBlock();
+  Instruction *ip = &(*firstbb.getFirstInsertionPt());
+  return genCastFrom(arg, IType, ip);
+}
+
+
 

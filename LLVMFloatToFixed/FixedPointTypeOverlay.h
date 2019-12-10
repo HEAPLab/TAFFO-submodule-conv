@@ -6,6 +6,8 @@
 
 namespace flttofix {
 
+class FloatTypeOverlay;
+
 class FixedPointTypeOverlay : public UniformTypeOverlay {
   bool isSigned;
   int fracBitsAmt;
@@ -28,6 +30,11 @@ public:
   inline bool getSigned() const { return isSigned; };
   inline int getPointPos() const { return fracBitsAmt; };
   inline int getSize() const { return bitsAmt; };
+  
+  using UniformTypeOverlay::genCastFrom;
+  llvm::Value *genCastFrom(llvm::Value *I, UniformTypeOverlay *IType, llvm::Instruction *IInsertBefore) const override;
+  llvm::Value *genCastFrom(llvm::Value *I, FixedPointTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
+  llvm::Value *genCastFrom(llvm::Value *I, FloatTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
 };
 
 }

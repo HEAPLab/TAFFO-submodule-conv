@@ -189,181 +189,31 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, FixedPointTypeOverlay *fix
     return res;
   }
 
-  if (Instruction *i = dyn_cast<Instruction>(flt)) {
-    if (!ip)
-      ip = getFirstInsertionPointAfter(i);
-  } else if (Argument *arg = dyn_cast<Argument>(flt)) {
-    Function *fun = arg->getParent();
-    BasicBlock& firstbb = fun->getEntryBlock();
-    ip = &(*firstbb.getFirstInsertionPt());
-  }
-  assert(ip && "ip is mandatory if not passing an instruction/constant value");
-  
-  FloatToFixCount++;
-  FloatToFixWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(flt)));
-  
-  IRBuilder<> builder(ip);
-  Type *destt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
-  
-  /* insert new instructions before ip */
-  if (SIToFPInst *instr = dyn_cast<SIToFPInst>(flt)) {
-    Value *intparam = instr->getOperand(0);
-    return cpMetaData(builder.CreateShl(
-              cpMetaData(builder.CreateIntCast(intparam, destt, true),flt,ip),
-            fixpt->getPointPos()),flt,ip);
-  } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(flt)) {
-    Value *intparam = instr->getOperand(0);
-    return cpMetaData(builder.CreateShl(
-              cpMetaData(builder.CreateIntCast(intparam, destt, false),flt,ip),
-            fixpt->getPointPos()),flt,ip);
-  } else {
-    double twoebits = pow(2.0, fixpt->getPointPos());
-    Value *interm = cpMetaData(builder.CreateFMul(
-          cpMetaData(ConstantFP::get(flt->getType(), twoebits),flt,ip),
-        flt),flt,ip);
-    if (fixpt->getSigned()) {
-      return cpMetaData(builder.CreateFPToSI(interm, destt),flt,ip);
-    } else {
-      return cpMetaData(builder.CreateFPToUI(interm, destt),flt,ip);
-    }
-  }
+  FloatTypeOverlay *fltt = FloatTypeOverlay::get(this, flt->getType());
+  if (ip)
+    return fixpt->genCastFrom(flt, fltt, ip);
+  return fixpt->genCastFrom(flt, fltt);
 }
 
 
 Value *FloatToFixed::genConvertFixedToFixed(Value *fix, FixedPointTypeOverlay *srct, FixedPointTypeOverlay *destt, Instruction *ip)
 {
-  if (srct == destt)
-    return fix;
-  
-  Type *llvmsrct = fix->getType();
-  assert(llvmsrct->isSingleValueType() && "cannot change fixed point format of a pointer");
-  assert(llvmsrct->isIntegerTy() && "cannot change fixed point format of a float");
-  
-  Type *llvmdestt = destt->getBaseLLVMType(fix->getContext());
-  
-  Instruction *fixinst = dyn_cast<Instruction>(fix);
-  if (!ip && fixinst)
-    ip = getFirstInsertionPointAfter(fixinst);
-  assert(ip && "ip required when converted value not an instruction");
-
-  IRBuilder<> builder(ip);
-
-  auto genSizeChange = [&](Value *fix) -> Value* {
-    if (srct->getSigned()) {
-      return cpMetaData(builder.CreateSExtOrTrunc(fix, llvmdestt),fix);
-    } else {
-      return cpMetaData(builder.CreateZExtOrTrunc(fix, llvmdestt),fix);
-    }
-  };
-  
-  auto genPointMovement = [&](Value *fix) -> Value* {
-    int deltab = destt->getPointPos() - srct->getPointPos();
-    if (deltab > 0) {
-      return cpMetaData(builder.CreateShl(fix, deltab),fix);
-    } else if (deltab < 0) {
-      if (srct->getSigned()) {
-        return cpMetaData(builder.CreateAShr(fix, -deltab),fix);
-      } else {
-        return cpMetaData(builder.CreateLShr(fix, -deltab),fix);
-      }
-    }
-    return fix;
-  };
-  
-  if (destt->getSize() > srct->getSize())
-    return genPointMovement(genSizeChange(fix));
-  return genSizeChange(genPointMovement(fix));
+  if (ip)
+    return destt->genCastFrom(fix, srct, ip);
+  return destt->genCastFrom(fix, srct);
 }
 
 
 Value *FloatToFixed::genConvertFixToFloat(Value *fix, FixedPointTypeOverlay *fixpt, Type *destt)
 {
-  LLVM_DEBUG(dbgs() << "******** trace: genConvertFixToFloat " << *fix << " -> " << *destt << "\n");
-  
-  if (!fix->getType()->isIntegerTy()) {
-    LLVM_DEBUG(errs() << "can't wrap-convert to flt non integer value " << *fix << "\n");
-    return nullptr;
-  }
-  
-  FixToFloatCount++;
-  FixToFloatWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), this->getLoopNestingLevelOfValue(fix)));
-  
-  if (isa<Instruction>(fix) || isa<Argument>(fix)) {
-    Instruction *ip = nullptr;
-    if (Instruction *i = dyn_cast<Instruction>(fix)) {
-      ip = getFirstInsertionPointAfter(i);
-    } else if (Argument *arg = dyn_cast<Argument>(fix)){
-      ip = &(*(arg->getParent()->getEntryBlock().getFirstInsertionPt()));
-    }
-    IRBuilder<> builder(ip);
-    
-    Value *floattmp = fixpt->getSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
-    cpMetaData(floattmp,fix);
-    double twoebits = pow(2.0, fixpt->getPointPos());
-    return cpMetaData(builder.CreateFDiv(floattmp,
-                                         cpMetaData(ConstantFP::get(destt, twoebits), fix)),fix);
-    
-  } else if (Constant *cst = dyn_cast<Constant>(fix)) {
-    Constant *floattmp = fixpt->getSigned() ?
-      ConstantExpr::getSIToFP(cst, destt) :
-      ConstantExpr::getUIToFP(cst, destt);
-    double twoebits = pow(2.0, fixpt->getPointPos());
-    return ConstantExpr::getFDiv(floattmp, ConstantFP::get(destt, twoebits));
-  }
-  
-  llvm_unreachable("unrecognized value type passed to genConvertFixToFloat");
+  FloatTypeOverlay *destto = FloatTypeOverlay::get(this, destt);
+  return destto->genCastFrom(fix, fixpt);
 }
 
 
 Type *FloatToFixed::getLLVMFixedPointTypeForFloatType(Type *srct, TypeOverlay *baset, bool *hasfloats)
 {
-  if (srct->isPointerTy()) {
-    Type *enc = getLLVMFixedPointTypeForFloatType(srct->getPointerElementType(), baset, hasfloats);
-    if (enc)
-      return enc->getPointerTo();
-    return nullptr;
-    
-  } else if (srct->isArrayTy()) {
-    int nel = srct->getArrayNumElements();
-    Type *enc = getLLVMFixedPointTypeForFloatType(srct->getArrayElementType(), baset, hasfloats);
-    if (enc)
-      return ArrayType::get(enc, nel);
-    return nullptr;
-    
-  } else if (srct->isStructTy()) {
-    SmallVector<Type *, 2> elems;
-    bool allinvalid = true;
-    for (int i=0; i<srct->getStructNumElements(); i++) {
-      StructTypeOverlay *structt = cast<StructTypeOverlay>(baset);
-      TypeOverlay *fpelemt = structt->item(i);
-      Type *baseelemt = srct->getStructElementType(i);
-      Type *newelemt;
-      if (!fpelemt->isVoid()) {
-        allinvalid = false;
-        newelemt = getLLVMFixedPointTypeForFloatType(baseelemt, fpelemt, hasfloats);
-      } else {
-        newelemt = baseelemt;
-      }
-      elems.push_back(newelemt);
-    }
-    if (!allinvalid)
-      return StructType::get(srct->getContext(), elems, dyn_cast<StructType>(srct)->isPacked());
-    return srct;
-    
-  } else if (srct->isFloatingPointTy()) {
-    if (hasfloats)
-      *hasfloats = true;
-    return cast<UniformTypeOverlay>(baset)->getBaseLLVMType(srct->getContext());
-    
-  }
-  LLVM_DEBUG(
-    dbgs() << "getLLVMFixedPointTypeForFloatType given unexpected non-float type ";
-    srct->print(dbgs());
-    dbgs() << "\n";
-  );
-  if (hasfloats)
-    *hasfloats = false;
-  return srct;
+  return baset->overlayOnBaseType(srct, hasfloats);
 }
 
 

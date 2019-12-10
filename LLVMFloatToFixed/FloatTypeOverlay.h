@@ -6,6 +6,8 @@
 
 namespace flttofix {
 
+class FixedPointTypeOverlay;
+
 class FloatTypeOverlay : public UniformTypeOverlay {
   llvm::Type::TypeID typeId;
   
@@ -24,6 +26,11 @@ public:
   llvm::Type *getBaseLLVMType(llvm::LLVMContext& ctxt) const override;
   
   inline llvm::Type::TypeID getTypeId() { return typeId; }
+  
+  using UniformTypeOverlay::genCastFrom;
+  llvm::Value *genCastFrom(llvm::Value *I, UniformTypeOverlay *IType, llvm::Instruction *IInsertBefore) const override;
+  llvm::Value *genCastFrom(llvm::Value *I, FixedPointTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
+  llvm::Value *genCastFrom(llvm::Value *I, FloatTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
 };
 
 }

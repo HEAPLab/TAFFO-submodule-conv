@@ -7,11 +7,13 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include "LLVMFloatToFixedPass.h"
 #include "TypeUtils.h"
 #include "FloatTypeOverlay.h"
+#include "FixedPointTypeOverlay.h"
 
 using namespace llvm;
 using namespace flttofix;
@@ -64,5 +66,63 @@ std::string FloatTypeOverlay::toString() const
 Type *FloatTypeOverlay::getBaseLLVMType(LLVMContext& ctxt) const
 {
   return Type::getPrimitiveType(ctxt, typeId);
+}
+
+
+Value *FloatTypeOverlay::genCastFrom(Value *I, UniformTypeOverlay *IType, Instruction *IInsertBefore) const
+{
+  switch (IType->getKind()) {
+    case TypeOverlay::TOK_FixedPoint:
+      return genCastFrom(I, cast<FixedPointTypeOverlay>(IType), IInsertBefore);
+    case TypeOverlay::TOK_Float:
+      return genCastFrom(I, cast<FloatTypeOverlay>(IType), IInsertBefore);
+    default:
+      llvm_unreachable("genCastFrom IType not an uniform");
+  }
+  return nullptr;
+}
+
+
+Value *FloatTypeOverlay::genCastFrom(Value *fix, FixedPointTypeOverlay *fixpt, Instruction *IInsertBefore) const
+{
+  LLVM_DEBUG(dbgs() << "******** trace: genConvertFixToFloat " << *fix << " -> " << *this << "\n");
+  
+  if (!fix->getType()->isIntegerTy()) {
+    LLVM_DEBUG(errs() << "can't wrap-convert to flt non integer value " << *fix << "\n");
+    return nullptr;
+  }
+  
+  FixToFloatCount++;
+  FixToFloatWeight += std::pow(2, std::min((int)(sizeof(int)*8-1), Context->getLoopNestingLevelOfValue(fix)));
+  
+  Type *destt = getBaseLLVMType(fix->getContext());
+  
+  if (Constant *cst = dyn_cast<Constant>(fix)) {
+    Constant *floattmp = fixpt->getSigned() ?
+      ConstantExpr::getSIToFP(cst, destt) :
+      ConstantExpr::getUIToFP(cst, destt);
+    double twoebits = pow(2.0, fixpt->getPointPos());
+    return ConstantExpr::getFDiv(floattmp, ConstantFP::get(destt, twoebits));
+  }
+  
+  IRBuilder<> builder(IInsertBefore);
+  
+  Value *floattmp = fixpt->getSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
+  Context->cpMetaData(floattmp,fix);
+  double twoebits = pow(2.0, fixpt->getPointPos());
+  return Context->cpMetaData(builder.CreateFDiv(floattmp,
+                                       Context->cpMetaData(ConstantFP::get(destt, twoebits), fix)),fix);
+}
+
+
+Value *FloatTypeOverlay::genCastFrom(Value *I, FloatTypeOverlay *IType, Instruction *IInsertBefore) const
+{
+  assert(I->getType()->getTypeID() == IType->typeId && "value has type incompatible with its type overlay");
+  if (this == IType)
+    return I;
+    
+  IRBuilder<> builder(IInsertBefore);
+  Type *DestTy = getBaseLLVMType(I->getContext());
+  return builder.CreateFPCast(I, DestTy);
 }
 
