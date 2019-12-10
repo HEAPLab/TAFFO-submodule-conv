@@ -548,3 +548,16 @@ void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
   }
   dbgs() << "\n\n";
 }
+
+
+Instruction *flttofix::getFirstInsertionPointAfter(Instruction *i)
+{
+  Instruction *ip = i->getNextNode();
+  if (!ip) {
+    LLVM_DEBUG(dbgs() << "warning: getFirstInsertionPointAfter on a BB-terminating inst\n");
+    return nullptr;
+  }
+  if (isa<PHINode>(ip))
+    ip = ip->getParent()->getFirstNonPHI();
+  return ip;
+}

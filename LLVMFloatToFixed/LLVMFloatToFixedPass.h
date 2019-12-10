@@ -344,17 +344,6 @@ struct FloatToFixed : public llvm::ModulePass {
    *  @returns The new LLVM type.  */
   llvm::Type *getLLVMFixedPointTypeForFloatType(llvm::Type *ftype, TypeOverlay *baset, bool *hasfloats = nullptr);
   
-  llvm::Instruction *getFirstInsertionPointAfter(llvm::Instruction *i) {
-    llvm::Instruction *ip = i->getNextNode();
-    if (!ip) {
-      LLVM_DEBUG(llvm::dbgs() << "warning: getFirstInsertionPointAfter on a BB-terminating inst\n");
-      return nullptr;
-    }
-    if (llvm::isa<llvm::PHINode>(ip))
-      ip = ip->getParent()->getFirstNonPHI();
-    return ip;
-  }
-  
   llvm::Type *getLLVMFixedPointTypeForFloatValue(llvm::Value *val);
   
   std::shared_ptr<ValueInfo> newValueInfo(llvm::Value *val) {
@@ -527,6 +516,15 @@ struct FloatToFixed : public llvm::ModulePass {
 
   int getLoopNestingLevelOfValue(llvm::Value *v);
 };
+
+
+/** Returns the first valid insertion point following a given instruction,
+ *  in the form of an instruction.
+ *  @param i The instruction which must precede the insertion point.
+ *  @returns An instruction, contained in the same basic block as `i`, that
+ *    follows `i`. New instructions shall be inserted *before* the returned
+ *    instruction. */
+llvm::Instruction *getFirstInsertionPointAfter(llvm::Instruction *i);
 
 
 }
