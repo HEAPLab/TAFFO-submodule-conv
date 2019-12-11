@@ -25,12 +25,12 @@ public:
   std::string toString() const override;
   llvm::Type *getBaseLLVMType(llvm::LLVMContext& ctxt) const override;
   
-  inline llvm::Type::TypeID getTypeId() { return typeId; }
+  inline llvm::Type::TypeID getTypeId() const { return typeId; }
   
   using UniformTypeOverlay::genCastFrom;
-  llvm::Value *genCastFrom(llvm::Value *I, UniformTypeOverlay *IType, llvm::Instruction *IInsertBefore) const override;
-  llvm::Value *genCastFrom(llvm::Value *I, FixedPointTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
-  llvm::Value *genCastFrom(llvm::Value *I, FloatTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
+  llvm::Value *genCastFrom(llvm::Value *I, const UniformTypeOverlay *IType, llvm::Instruction *IInsertBefore) const override;
+  llvm::Value *genCastFrom(llvm::Value *I, const FixedPointTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
+  llvm::Value *genCastFrom(llvm::Value *I, const FloatTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
 };
 
 }

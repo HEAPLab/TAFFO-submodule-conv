@@ -32,9 +32,18 @@ public:
   inline int getSize() const { return bitsAmt; };
   
   using UniformTypeOverlay::genCastFrom;
-  llvm::Value *genCastFrom(llvm::Value *I, UniformTypeOverlay *IType, llvm::Instruction *IInsertBefore) const override;
-  llvm::Value *genCastFrom(llvm::Value *I, FixedPointTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
-  llvm::Value *genCastFrom(llvm::Value *I, FloatTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
+  llvm::Value *genCastFrom(llvm::Value *I, const UniformTypeOverlay *IType, llvm::Instruction *IInsertBefore) const override;
+  llvm::Value *genCastFrom(llvm::Value *I, const FixedPointTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
+  llvm::Value *genCastFrom(llvm::Value *I, const FloatTypeOverlay *IType, llvm::Instruction *IInsertBefore) const;
+  
+  llvm::Value *genCastOnlyIfNotFixedPoint(llvm::Value *I, const UniformTypeOverlay *IType, const FixedPointTypeOverlay **OutIType, llvm::Instruction *IInsertBefore) const;
+  
+  llvm::Value *genAdd(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const override;
+  llvm::Value *genSub(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const override;
+  llvm::Value *genRem(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const override;
+  llvm::Value *genMul(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const override;
+  llvm::Value *genDiv(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const override;
+  llvm::Value *genCmp(llvm::CmpInst::Predicate Pred, llvm::Value *IThis, llvm::Value *IOther, const UniformTypeOverlay *OtherType, llvm::Instruction *IInsertBefore) const override;
 };
 
 }

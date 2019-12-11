@@ -111,10 +111,16 @@ public:
   
   virtual llvm::Type *getBaseLLVMType(llvm::LLVMContext& ctxt) const = 0;
   
-  virtual llvm::Value *genCastFrom(llvm::Value *I, UniformTypeOverlay *IType) const;
-  virtual llvm::Value *genCastFrom(llvm::Instruction *I, UniformTypeOverlay *IType) const;
-  virtual llvm::Value *genCastFrom(llvm::Argument *A, UniformTypeOverlay *IType) const;
-  virtual llvm::Value *genCastFrom(llvm::Value *I, UniformTypeOverlay *IType, llvm::Instruction *IInsertBefore) const { assert(false && "!IMPL"); }
+  virtual llvm::Value *genCastFrom(llvm::Value *I, const UniformTypeOverlay *IType) const;
+  virtual llvm::Value *genCastFrom(llvm::Instruction *I, const UniformTypeOverlay *IType) const;
+  virtual llvm::Value *genCastFrom(llvm::Argument *A, const UniformTypeOverlay *IType) const;
+  virtual llvm::Value *genCastFrom(llvm::Value *I, const UniformTypeOverlay *IType, llvm::Instruction *IInsertBefore) const { assert(false && "!IMPL"); }
+  virtual llvm::Value *genAdd(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const { assert(false && "!IMPL"); }
+  virtual llvm::Value *genSub(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const { assert(false && "!IMPL"); }
+  virtual llvm::Value *genRem(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const { assert(false && "!IMPL"); }
+  virtual llvm::Value *genMul(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const { assert(false && "!IMPL"); }
+  virtual llvm::Value *genDiv(llvm::Value *A, const UniformTypeOverlay *AType, llvm::Value *B, const UniformTypeOverlay *BType, llvm::Instruction *IInsertBefore) const { assert(false && "!IMPL"); }
+  virtual llvm::Value *genCmp(llvm::CmpInst::Predicate Pred, llvm::Value *IThis, llvm::Value *IOther, const UniformTypeOverlay *OtherType, llvm::Instruction *IInsertBefore) const { assert(false && "!IMPL"); }
 };
 
 

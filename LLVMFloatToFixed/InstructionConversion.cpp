@@ -478,35 +478,27 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, TypeOverlay *&fixpt_gen)
     vengono gestite dalla fallback e non in questa funzione */
   if (!instr->getType()->isFloatingPointTy() || valueInfo(instr)->noTypeConversion)
     return Unsupported;
-  FixedPointTypeOverlay *fixpt = cast<FixedPointTypeOverlay>(fixpt_gen);
+  UniformTypeOverlay *fixpt = cast<UniformTypeOverlay>(fixpt_gen);
   
   int opc = instr->getOpcode();
+  Value *fixop;
 
   if (opc == Instruction::FAdd || opc == Instruction::FSub || opc == Instruction::FRem) {
     Value *val1 = translateOrMatchOperandAndType(instr->getOperand(0), fixpt, instr);
     Value *val2 = translateOrMatchOperandAndType(instr->getOperand(1), fixpt, instr);
     if (!val1 || !val2)
       return nullptr;
-    IRBuilder<> builder(instr);
-    Value *fixop;
     
     if (opc == Instruction::FAdd) {
-      fixop = builder.CreateBinOp(Instruction::Add, val1, val2);
-    
+      fixop = fixpt->genAdd(val1, fixpt, val2, fixpt, instr);
     } else if (opc == Instruction::FSub) {
-      // TODO: improve overflow resistance by shifting late
-      fixop = builder.CreateBinOp(Instruction::Sub, val1, val2);
-    
+      fixop = fixpt->genSub(val1, fixpt, val2, fixpt, instr);
     } else /* if (opc == Instruction::FRem) */ {
-      if (fixpt->getSigned())
-        fixop = builder.CreateBinOp(Instruction::SRem, val1, val2);
-      else
-        fixop = builder.CreateBinOp(Instruction::URem, val1, val2);
+      fixop = fixpt->genRem(val1, fixpt, val2, fixpt, instr);
     }
 
     updateConstTypeMetadata(fixop, 0U, fixpt);
     updateConstTypeMetadata(fixop, 1U, fixpt);
-
     return fixop;
 
   } else if (opc == Instruction::FMul) {
@@ -515,25 +507,9 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, TypeOverlay *&fixpt_gen)
     Value *val2 = translateOrMatchOperand(instr->getOperand(1), intype2, instr, TypeMatchPolicy::RangeOverHintMaxInt);
     if (!val1 || !val2)
       return nullptr;
-    FixedPointTypeOverlay *intype1f = cast<FixedPointTypeOverlay>(intype1);
-    FixedPointTypeOverlay *intype2f = cast<FixedPointTypeOverlay>(intype2);
-    FixedPointTypeOverlay *intermtype = FixedPointTypeOverlay::get(this,
-      fixpt->getSigned(),
-      intype1f->getPointPos() + intype2f->getPointPos(),
-      intype1f->getSize() + intype2f->getSize());
-    Type *dbfxt = intermtype->getBaseLLVMType(instr->getContext());
-    
-    IRBuilder<> builder(instr);
-    Value *ext1 = intype1f->getSigned() ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
-    Value *ext2 = intype2f->getSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
-    Value *fixop = builder.CreateMul(ext1, ext2);
-    cpMetaData(ext1,val1);
-    cpMetaData(ext2,val2);
-    cpMetaData(fixop,instr);
-    updateFPTypeMetadata(fixop, intermtype->getSigned(), intermtype->getPointPos(), intermtype->getSize());
-    updateConstTypeMetadata(fixop, 0U, intype1f);
-    updateConstTypeMetadata(fixop, 1U, intype2f);
-    return genConvertFixedToFixed(fixop, intermtype, fixpt, instr);
+      
+    return fixpt->genMul(val1, cast<UniformTypeOverlay>(intype1), val2, cast<UniformTypeOverlay>(intype2), instr);
+    return fixop;
     
   } else if (opc == Instruction::FDiv) {
     // TODO: fix by using HintOverRange when it is actually implemented
@@ -542,29 +518,8 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, TypeOverlay *&fixpt_gen)
     Value *val2 = translateOrMatchOperand(instr->getOperand(1), intype2, instr, TypeMatchPolicy::RangeOverHintMaxInt);
     if (!val1 || !val2)
       return nullptr;
-    FixedPointTypeOverlay *intype1f = cast<FixedPointTypeOverlay>(intype1);
-    FixedPointTypeOverlay *intype2f = cast<FixedPointTypeOverlay>(intype2);
-    FixedPointTypeOverlay *intermtype = FixedPointTypeOverlay::get(this,
-      fixpt->getSigned(),
-      intype1f->getPointPos() + intype2f->getPointPos(),
-      intype1f->getSize() + intype2f->getSize());
-    Type *dbfxt = intermtype->getBaseLLVMType(instr->getContext());
-    
-    FixedPointTypeOverlay *fixoptype = FixedPointTypeOverlay::get(this,
-      fixpt->getSigned(),
-      intype1f->getPointPos(),
-      intype1f->getSize() + intype2f->getSize());
-    Value *ext1 = genConvertFixedToFixed(val1, intype1f, intermtype, instr);
-    IRBuilder<> builder(instr);
-    Value *ext2 = intype2f->getSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
-    Value *fixop = fixpt->getSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
-    cpMetaData(ext1,val1);
-    cpMetaData(ext2,val2);
-    cpMetaData(fixop,instr);
-    updateFPTypeMetadata(fixop, fixoptype->getSigned(), fixoptype->getPointPos(), fixoptype->getSize());
-    updateConstTypeMetadata(fixop, 0U, intermtype);
-    updateConstTypeMetadata(fixop, 1U, intype2f);
-    return genConvertFixedToFixed(fixop, fixoptype, fixpt, instr);
+      
+    return fixpt->genDiv(val1, cast<UniformTypeOverlay>(intype1), val2, cast<UniformTypeOverlay>(intype2), instr);
   }
   
   return Unsupported;
@@ -576,80 +531,32 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
   Value *op1 = fcmp->getOperand(0);
   Value *op2 = fcmp->getOperand(1);
   
-  FixedPointTypeOverlay *t1, *t2;
+  TypeOverlay *t1, *t2;
   bool hasinfo1 = hasInfo(op1), hasinfo2 = hasInfo(op2);
   if (hasinfo1 && hasinfo2) {
-    t1 = cast<FixedPointTypeOverlay>(fixPType(op1));
-    t2 = cast<FixedPointTypeOverlay>(fixPType(op2));
+    t1 = cast<UniformTypeOverlay>(fixPType(op1));
+    t2 = cast<UniformTypeOverlay>(fixPType(op2));
   } else if (hasinfo1) {
-    t1 = cast<FixedPointTypeOverlay>(fixPType(op1));
-    t2 = FixedPointTypeOverlay::get(this, true, t1->getPointPos(), t1->getSize());
+    t1 = cast<UniformTypeOverlay>(fixPType(op1));
+    t2 = t1;
   } else if (hasinfo2) {
-    t2 = cast<FixedPointTypeOverlay>(fixPType(op2));
-    t1 = FixedPointTypeOverlay::get(this, true, t2->getPointPos(), t2->getSize());
+    t2 = cast<UniformTypeOverlay>(fixPType(op2));
+    t1 = t2;
   } else {
     /* Both operands are not converted... then what are we even doing here? */
     LLVM_DEBUG(dbgs() << "scheduled conversion of fcmp, but no operands are converted?\n");
     return fcmp;
   }
-  bool mixedsign = t1->getSigned() != t2->getSigned();
-  int intpart1 = t1->getSize() - t1->getSize() + (mixedsign ? t1->getSigned() : 0);
-  int intpart2 = t2->getSize() - t2->getPointPos() + (mixedsign ? t2->getSigned() : 0);
+  Value *matchop1 = translateOrMatchOperand(op1, t1, fcmp);
+  Value *matchop2 = translateOrMatchOperand(op2, t2, fcmp);
   
-  int pointPos = std::max(t1->getPointPos(), t2->getPointPos());
-  FixedPointTypeOverlay *cmptype = FixedPointTypeOverlay::get(this,
-    t1->getSigned() || t2->getSigned(),
-    pointPos,
-    std::max(intpart1, intpart2) + pointPos);
+  UniformTypeOverlay *matcht1 = cast<UniformTypeOverlay>(t1);
+  UniformTypeOverlay *matcht2 = cast<UniformTypeOverlay>(t2);
   
-  Value *val1 = translateOrMatchOperandAndType(op1, cmptype, fcmp);
-  Value *val2 = translateOrMatchOperandAndType(op2, cmptype, fcmp);
-  
-  IRBuilder<> builder(fcmp->getNextNode());
-  CmpInst::Predicate ty;
-  int pr = fcmp->getPredicate();
-  bool swapped = false;
-
-  //se unordered swappo, converto con la int, e poi mi ricordo di riswappare
-  if (!CmpInst::isOrdered(fcmp->getPredicate())) {
-    pr = fcmp->getInversePredicate();
-    swapped = true;
+  if (isa<FixedPointTypeOverlay>(matcht1)) {
+    return matcht1->genCmp(fcmp->getPredicate(), matchop1, matchop2, matcht2, fcmp);
   }
-
-  if (pr == CmpInst::FCMP_OEQ){
-    ty = CmpInst::ICMP_EQ;
-  } else if (pr == CmpInst::FCMP_ONE) {
-    ty = CmpInst::ICMP_NE;
-  } else if (pr == CmpInst::FCMP_OGT) {
-    ty = cmptype->getSigned() ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
-  } else if (pr == CmpInst::FCMP_OGE) {
-    ty = cmptype->getSigned() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
-  } else if (pr == CmpInst::FCMP_OLE) {
-    ty = cmptype->getSigned() ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
-  } else if (pr == CmpInst::FCMP_OLT) {
-    ty = cmptype->getSigned() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
-  } else if (pr == CmpInst::FCMP_ORD) {
-    ;
-    //TODO gestione NaN
-  } else if (pr == CmpInst::FCMP_TRUE) {
-    /* there is no integer-only always-true / always-false comparison
-     * operator... so we roll out our own by producing a tautology */
-    return builder.CreateICmpEQ(
-      ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0),
-      ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0));
-  } else if (pr == CmpInst::FCMP_FALSE) {
-    return builder.CreateICmpNE(
-      ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0),
-      ConstantInt::get(Type::getInt32Ty(fcmp->getContext()),0));
-  }
-
-  if (swapped) {
-    ty = CmpInst::getInversePredicate(ty);
-  }
-
-  return val1 && val2
-    ? builder.CreateICmp(ty, val1, val2)
-    : nullptr;
+  return matcht2->genCmp(fcmp->getInversePredicate(), matchop2, matchop1, matcht1, fcmp);
 }
 
 

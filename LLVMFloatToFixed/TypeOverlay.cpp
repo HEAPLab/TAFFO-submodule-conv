@@ -233,7 +233,7 @@ bool StructTypeOverlay::isRecursivelyVoid() const
 }
 
 
-Value *UniformTypeOverlay::genCastFrom(llvm::Value *I, UniformTypeOverlay *IType) const
+Value *UniformTypeOverlay::genCastFrom(llvm::Value *I, const UniformTypeOverlay *IType) const
 {
   if (Instruction *i = dyn_cast<Instruction>(I))
     return genCastFrom(i, IType);
@@ -243,14 +243,14 @@ Value *UniformTypeOverlay::genCastFrom(llvm::Value *I, UniformTypeOverlay *IType
 }
 
 
-Value *UniformTypeOverlay::genCastFrom(Instruction *I, UniformTypeOverlay *IType) const
+Value *UniformTypeOverlay::genCastFrom(Instruction *I, const UniformTypeOverlay *IType) const
 {
   Instruction *ip = getFirstInsertionPointAfter(I);
   return genCastFrom(I, IType, ip);
 };
 
 
-Value *UniformTypeOverlay::genCastFrom(Argument *arg, UniformTypeOverlay *IType) const
+Value *UniformTypeOverlay::genCastFrom(Argument *arg, const UniformTypeOverlay *IType) const
 {
   Function *fun = arg->getParent();
   BasicBlock& firstbb = fun->getEntryBlock();

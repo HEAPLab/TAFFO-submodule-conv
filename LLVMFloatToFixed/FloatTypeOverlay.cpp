@@ -69,7 +69,7 @@ Type *FloatTypeOverlay::getBaseLLVMType(LLVMContext& ctxt) const
 }
 
 
-Value *FloatTypeOverlay::genCastFrom(Value *I, UniformTypeOverlay *IType, Instruction *IInsertBefore) const
+Value *FloatTypeOverlay::genCastFrom(Value *I, const UniformTypeOverlay *IType, Instruction *IInsertBefore) const
 {
   switch (IType->getKind()) {
     case TypeOverlay::TOK_FixedPoint:
@@ -83,7 +83,7 @@ Value *FloatTypeOverlay::genCastFrom(Value *I, UniformTypeOverlay *IType, Instru
 }
 
 
-Value *FloatTypeOverlay::genCastFrom(Value *fix, FixedPointTypeOverlay *fixpt, Instruction *IInsertBefore) const
+Value *FloatTypeOverlay::genCastFrom(Value *fix, const FixedPointTypeOverlay *fixpt, Instruction *IInsertBefore) const
 {
   LLVM_DEBUG(dbgs() << "******** trace: genConvertFixToFloat " << *fix << " -> " << *this << "\n");
   
@@ -115,7 +115,7 @@ Value *FloatTypeOverlay::genCastFrom(Value *fix, FixedPointTypeOverlay *fixpt, I
 }
 
 
-Value *FloatTypeOverlay::genCastFrom(Value *I, FloatTypeOverlay *IType, Instruction *IInsertBefore) const
+Value *FloatTypeOverlay::genCastFrom(Value *I, const FloatTypeOverlay *IType, Instruction *IInsertBefore) const
 {
   assert(I->getType()->getTypeID() == IType->typeId && "value has type incompatible with its type overlay");
   if (this == IType)
