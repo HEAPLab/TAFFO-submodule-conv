@@ -7,6 +7,8 @@ add_llvm_library(LLVMFloatToFixed MODULE
   Conversion.cpp
   ConstantConversion.cpp
   InstructionConversion.cpp
+  TAFFOMath.h
+  TAFFOMath.cpp
   
   PLUGIN_TOOL
   opt
