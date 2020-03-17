@@ -750,17 +750,19 @@ void FloatToFixed::populateFunction(
 void generateFirst(Module *m, llvm::StringRef &fName) {
   Function *tmp = nullptr;
   // get function
-  for (auto &i : taffo::HandledFunction::handledFunctions())
+  for (auto &i : taffo::HandledFunction::handledFunctions()) {
     if (taffo::start_with(fName, i)) {
       tmp = m->getFunction(i);
     }
-  assert(tmp && "function is null");
-  // check if alredy populated
-  if (tmp->isDeclaration()) {
-    BasicBlock::Create(m->getContext(), fName + ".entry", tmp);
-    BasicBlock *where = &(tmp->getEntryBlock());
-    IRBuilder<> builder(where, where->getFirstInsertionPt());
-    builder.CreateRet(ConstantFP::get(tmp->getReturnType(), 0.0f));
+    if (tmp == nullptr)
+      continue;
+    // check if alredy populated
+    if (tmp->isDeclaration()) {
+      BasicBlock::Create(m->getContext(), fName + ".entry", tmp);
+      BasicBlock *where = &(tmp->getEntryBlock());
+      IRBuilder<> builder(where, where->getFirstInsertionPt());
+      builder.CreateRet(ConstantFP::get(tmp->getReturnType(), 0.0f));
+    }
   }
 }
 
