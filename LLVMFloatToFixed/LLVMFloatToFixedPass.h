@@ -283,7 +283,7 @@ struct FloatToFixed : public llvm::ModulePass {
     /*Nel caso in cui la chiave (valore rimosso in precedenze) è un float
       il rispettivo value è un fix che deve essere convertito in float per retrocompatibilità.
       Se la chiave non è un float allora uso il rispettivo value associato così com'è.*/
-    if (cvtfallval->getType()->isPointerTy() && cvtfallval->getType() != origType) {
+    if (cvtfallval->getType()->isPointerTy()) {
       llvm::BitCastInst *bc = new llvm::BitCastInst(cvtfallval, origType);
       cpMetaData(bc,cvtfallval);
       bc->insertBefore(ip);
