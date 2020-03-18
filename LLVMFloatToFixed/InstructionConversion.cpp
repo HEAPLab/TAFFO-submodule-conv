@@ -214,8 +214,16 @@ Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType& fixpt)
     return valueInfo(gep)->noTypeConversion ? Unsupported : nullptr;
   
   if (!isConvertedFixedPoint(newval)) {
-    /* just replace the arguments, they should stay the same type */
-    return Unsupported;
+    if (valueInfo(gep)->noTypeConversion)
+      return Unsupported;
+    /* till we can flag a structure for conversion we bitcast away the
+     * item pointer to a fixed point type and hope everything still works */
+    BitCastInst *bci = new BitCastInst(gep, getLLVMFixedPointTypeForFloatType(gep->getType(), fixpt));
+    cpMetaData(bci,gep);
+    bci->setName(gep->getName() + ".haxfixp");
+    bci->insertAfter(gep);
+    LLVM_DEBUG(dbgs() << "*** UGLY HACK ***: inserted bitcast " << *bci << "\n");
+    return bci;
   }
   
   FixedPointType tempFixpt = fixPType(newval);
