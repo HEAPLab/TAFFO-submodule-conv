@@ -14,10 +14,12 @@
 #include "Metadata.h"
 #include "FixedPointType.h"
 #include "InputInfo.h"
+#include "handle.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include <llvm/Transforms/Utils/ValueMapper.h>
 
 #ifndef __LLVM_FLOAT_TO_FIXED_PASS_H__
 #define __LLVM_FLOAT_TO_FIXED_PASS_H__
-
 
 #define DEBUG_TYPE "taffo-conversion"
 #define DEBUG_ANNOTATION "annotation"
@@ -104,7 +106,28 @@ struct FloatToFixed : public llvm::ModulePass {
   void sortQueue(std::vector<llvm::Value*> &vals);
   void cleanup(const std::vector<llvm::Value*>& queue);
   void propagateCall(std::vector<llvm::Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global);
-  llvm::Function *createFixFun(llvm::CallSite* call, bool *old);
+  llvm::Function *createFixFun(llvm::CallSite *call, bool *old, bool *special);
+  /* used to create new special function*/
+    void FixFunction(Function *NewFunc, Function *OldFunc, ValueToValueMapTy &VMap,  SmallVectorImpl<ReturnInst *> &Returns , 
+    SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
+        &to_change);
+  void getFunctionInto(
+      Function *NewFunc, Function *OldFunc,
+      SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
+          &to_change);
+  void populateFunction(Function *NewFunc, Function *OldFunc,
+                        ValueToValueMapTy &VMap, bool ModuleLevelChanges,
+                        SmallVectorImpl<ReturnInst *> &Returns,
+                        const char *NameSuffix = "",
+                        ClonedCodeInfo *CodeInfo = nullptr,
+                        ValueMapTypeRemapper *TypeMapper = nullptr,
+                        ValueMaterializer *Materializer = nullptr);
+  /* create sin and cos*/
+  void
+  createSinCos(llvm::Function *newf, llvm::Function *oldf,
+               SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
+                   &to_change);
+
   void printConversionQueue(std::vector<llvm::Value*> vals);
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
   llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, FixedPointType& fixpt);
@@ -159,9 +182,10 @@ struct FloatToFixed : public llvm::ModulePass {
   /** Returns if a function is a library function which shall not
    *  be cloned.
    *  @param f The function to check */
-  bool isSpecialFunction(const llvm::Function* f) {
+  bool isSpecialFunction(const llvm::Function *f) {
     llvm::StringRef fName = f->getName();
-    return fName.startswith("llvm.") || f->getBasicBlockList().size() == 0;
+    return (fName.startswith("llvm.") || f->getBasicBlockList().size() == 0) &&
+           !taffo::HandledFunction::isHandled(f);
   };
 
   /** Returns the converted Value matching a non-converted Value.
