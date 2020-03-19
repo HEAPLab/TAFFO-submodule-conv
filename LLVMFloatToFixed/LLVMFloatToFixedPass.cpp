@@ -11,6 +11,7 @@
 #include <llvm/Transforms/Utils/ValueMapper.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include "LLVMFloatToFixedPass.h"
+#include "TAFFOMath.h"
 #include "TypeUtils.h"
 
 
@@ -320,8 +321,9 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
       continue;
     
     bool alreadyHandledNewF;
+    bool specialFunction = false;
     Function *oldF = call.getCalledFunction();
-    Function *newF = createFixFun(&call, &alreadyHandledNewF);
+    Function *newF = createFixFun(&call, &alreadyHandledNewF, &specialFunction);
     if (!newF) {
       LLVM_DEBUG(dbgs() << "Attempted to clone function " << oldF->getName() << " but failed\n");
       continue;
@@ -330,7 +332,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
       oldFuncs.insert(oldF);
       continue;
     }
-    
+
     LLVM_DEBUG(dbgs() << "Converting function " << oldF->getName() << " : " << *oldF->getType()
                << " into " << newF->getName() << " : " << *newF->getType() << "\n");
     
@@ -341,13 +343,21 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
       newIt->setName(oldIt->getName());
       origValToCloned.insert(std::make_pair(oldIt, newIt));
     }
-    SmallVector<ReturnInst*,100> returns;
-    CloneFunctionInto(newF, oldF, origValToCloned, true, returns);
-    /* after CloneFunctionInto, valueMap maps all values from the oldF to the newF (not just the arguments) */
-    
-    std::vector<Value *> newVals; //propagate fixp conversion
+    SmallVector<ReturnInst *, 100> returns;
+
+    if (!specialFunction) {
+      CloneFunctionInto(newF, oldF, origValToCloned, true, returns);
+    } else {
+      populateFunction(newF, oldF, origValToCloned, true, returns);
+    }
+
+    /* after CloneFunctionInto, valueMap maps all values from the oldF to the
+     * newF (not just the arguments) */
+
+    std::vector<Value *> newVals; // propagate fixp conversion
     oldIt = oldF->arg_begin();
     newIt = newF->arg_begin();
+    if (!specialFunction)
     for (int i=0; oldIt != oldF->arg_end() ; oldIt++, newIt++,i++) {
       if (oldIt->getType() != newIt->getType()){
         FixedPointType fixtype = valueInfo(oldIt)->fixpType;
@@ -408,8 +418,8 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     sortQueue(newVals);
     
     oldFuncs.insert(oldF);
-    
     /* Put the instructions from the new function in */
+    if (!specialFunction)
     for (Value *val : newVals){
       if (Instruction *inst = dyn_cast<Instruction>(val)) {
         if (inst->getFunction()==newF){
@@ -442,13 +452,15 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
   vals.resize(removei);
 }
 
-
-Function* FloatToFixed::createFixFun(CallSite* call, bool *old)
-{
+Function *FloatToFixed::createFixFun(CallSite *call, bool *old, bool *special) {
   Function *oldF = call->getCalledFunction();
   assert(oldF && "bitcasted function pointers and such not handled atm");
-  if (isSpecialFunction(oldF))
+  if (isSpecialFunction(oldF)) {
     return nullptr;
+  }
+  if (taffo::HandledFunction::isHandled(oldF)) {
+    *special = true;
+  }
 
   if (!oldF->getMetadata(SOURCE_FUN_METADATA)) {
     LLVM_DEBUG(dbgs() << "createFixFun: function " << oldF->getName() << " not a clone; ignoring\n");
