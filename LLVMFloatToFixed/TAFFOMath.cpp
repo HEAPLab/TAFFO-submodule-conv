@@ -1,6 +1,8 @@
 #include "TAFFOMath.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 
 using namespace flttofix;
 using namespace llvm;
@@ -90,7 +92,7 @@ inline void createFixedPointFromConst(
  * @param fxpret output of the function *
  * */
 inline void getFixedFromRet(FloatToFixed *ref, Function *oldf,
-                            FixedPointType &fxpret) {
+                            FixedPointType &fxpret, bool& found) {
   for (auto i : oldf->users()) {
     if (isa<llvm::CallInst>(i)) {
       llvm::CallInst *callInst = dyn_cast<llvm::CallInst>(i);
@@ -99,27 +101,35 @@ inline void getFixedFromRet(FloatToFixed *ref, Function *oldf,
         LLVM_DEBUG(dbgs() << "\nReturn type: Scalar bits "
                           << fxpret.scalarBitsAmt() << "Fractional bits"
                           << fxpret.scalarFracBitsAmt() << "\n");
+        found = true;
+        return;
       }
     }
   }
+  found = false;
+
 }
 
 inline void getFixedFromArg(FloatToFixed *ref, Function *oldf,
-                            FixedPointType &fxparg, int n) {
-
+                            FixedPointType &fxparg, int n, bool& found) {
   for (auto arg = oldf->arg_begin(); arg != oldf->arg_end(); ++arg) {
     if (n == 0) {
+
+      LLVM_DEBUG(dbgs() << "Try n: " << n << "\n");
       if (ref->hasInfo(arg)) {
+        LLVM_DEBUG(dbgs() << "arg: "<< "\n");
         fxparg = ref->valueInfo(arg)->fixpType;
         LLVM_DEBUG(dbgs() << "\nReturn arg: Scalar bits "
                           << fxparg.scalarBitsAmt() << "Fractional bits"
                           << fxparg.scalarFracBitsAmt() << "\n");
+        found = true;
+        return;
       }
-      return;
+      
     }
     --n;
-    assert(n >= 0 && "Try to access invalid argument");
   }
+  found = false;
 }
 
 inline llvm::GlobalVariable *
@@ -136,7 +146,43 @@ createGlobalConst(llvm::Module *module, llvm::StringRef Name, llvm::Type *Ty,
 }
 
 namespace flttofix {
-void FloatToFixed::createSinCos(
+
+bool partialSpecialCall(llvm::Function *oldf , bool& foundRet, flttofix::FixedPointType& fxpret, SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
+        &to_change){
+  Module* m = oldf->getParent();
+  StringRef fName = oldf->getName();
+  BasicBlock *where = &(oldf->getEntryBlock());
+      IRBuilder<> builder(where, where->getFirstInsertionPt());
+      Value* generic;
+      Value* ret;
+      if(foundRet){
+        auto int_type = fxpret.scalarToLLVMType(oldf->getContext());
+        ret = builder.CreateAlloca(int_type, nullptr);
+        builder.CreateStore(ConstantInt::get(int_type, 1212), ret);
+        ret = builder.CreateLoad(ret);
+      }
+      else{
+        auto float_type = oldf->getReturnType();
+        ret = builder.CreateAlloca(float_type, nullptr);
+        builder.CreateStore(ConstantFP::get(float_type, 1212.0), ret);
+        ret = builder.CreateLoad(ret);
+      }      
+      auto end = BasicBlock::Create(m->getContext(), "end", oldf);
+      auto trap = Intrinsic::getDeclaration(m, Intrinsic::trap);
+      builder.CreateCall(trap);
+      builder.CreateBr(end);
+      builder.SetInsertPoint(end);
+      builder.CreateRet(ConstantFP::get(oldf->getReturnType(), 1212.0f));
+      to_change.push_back({end, {ret}});
+      LLVM_DEBUG(dbgs() << "Not handled\n");
+      return false;
+      
+
+
+}
+
+
+bool FloatToFixed::createSinCos(
     llvm::Function *newfs, llvm::Function *oldf,
     SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
         &to_change) {
@@ -149,16 +195,21 @@ void FloatToFixed::createSinCos(
   DataLayout dataLayout(oldf->getParent());
   LLVM_DEBUG(dbgs() << "\nGet Context " << &cont << "\n");
   // get first basick block of function
-  BasicBlock::Create(cont, "Entry.sin", oldf);
+  BasicBlock::Create(cont, "Entry", oldf);
   BasicBlock *where = &(oldf->getEntryBlock());
   LLVM_DEBUG(dbgs() << "\nGet entry point " << where);
   IRBuilder<> builder(where, where->getFirstInsertionPt());
   // get return type fixed point
   flttofix::FixedPointType fxpret;
   flttofix::FixedPointType fxparg;
-  getFixedFromRet(this, oldf, fxpret);
+  bool foundRet = false;
+  bool foundArg = false;
+  getFixedFromRet(this, oldf, fxpret, foundRet);
   // get argument fixed point
-  getFixedFromArg(this, oldf, fxparg, 0);
+  getFixedFromArg(this, oldf, fxparg, 0, foundArg);
+  if(!foundRet || !foundArg){
+      return partialSpecialCall(oldf , foundRet, fxpret, to_change);
+  }
   TaffoMathConstant::pair_ftp_value<llvm::Value *> arg(fxparg);
   arg.value = oldf->arg_begin();
   auto int_type = fxparg.scalarToLLVMType(cont);
@@ -676,6 +727,7 @@ void FloatToFixed::createSinCos(
   auto tmp10 = builder.Insert(ConstantFP::get(oldf->getReturnType(), 2.0f));
   auto tmp11 = builder.CreateRet(tmp10);
   to_change.push_back({end, {ret}});
+  return true;
 }
 
 void FloatToFixed::populateFunction(
@@ -684,9 +736,11 @@ void FloatToFixed::populateFunction(
     const char *NameSuffix, ClonedCodeInfo *CodeInfo,
     ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer) {
   llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>, 10> savedMetadata;
+  OldFunc->setLinkage(GlobalVariable::LinkageTypes::InternalLinkage);
+  NewFunc->setLinkage(GlobalVariable::LinkageTypes::InternalLinkage);
   OldFunc->getAllMetadata(savedMetadata);
   // remove old body
-  if (OldFunc->begin() == OldFunc->end()) {
+  if (OldFunc->begin() != OldFunc->end()) {
     LLVM_DEBUG(dbgs() << "\ndelete body"
                       << "\n");
     OldFunc->deleteBody();
@@ -694,14 +748,16 @@ void FloatToFixed::populateFunction(
 
   SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3> to_change;
   getFunctionInto(NewFunc, OldFunc, to_change);
-  LLVM_DEBUG(dbgs() << "\nstart clone"
+  LLVM_DEBUG(dbgs() << "start clone"
                     << "\n");
-
-  LLVM_DEBUG(dbgs() << "\nNew func " << NewFunc << "\n");
+  OldFunc->dump();
   CloneFunctionInto(NewFunc, OldFunc, VMap, true, Returns);
   LLVM_DEBUG(dbgs() << "end clone"
                     << "\n");
+  LLVM_DEBUG(dbgs() << "\nstart fixFun" << "\n");
  FixFunction(NewFunc, OldFunc, VMap, Returns, to_change);
+ NewFunc->dump();
+ LLVM_DEBUG(dbgs() << "end fixFun" << "\n");
   for (auto &MD : savedMetadata) {
     OldFunc->setMetadata(MD.first, MD.second);
     NewFunc->setMetadata(MD.first, MD.second);
@@ -731,25 +787,26 @@ void generateFirst(Module *m, llvm::StringRef &fName) {
   }
 }
 
-void FloatToFixed::getFunctionInto(
+bool FloatToFixed::getFunctionInto(
     Function *NewFunc, Function *OldFunc,
     SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
         &to_change) {
 
   llvm::StringRef fName = OldFunc->getName();
 
-  if (taffo::start_with(fName, "sin") || taffo::start_with(fName, "cos")) {
+  if (taffo::start_with(fName, "sin") || taffo::start_with(fName, "cos") || taffo::start_with(fName, "_ZSt3cos") || taffo::start_with(fName, "_ZSt3sin")) {
     generateFirst(OldFunc->getParent(), fName);
-    createSinCos(NewFunc, OldFunc, to_change);
+    return createSinCos(NewFunc, OldFunc, to_change);
   }
 }
 
 void FloatToFixed::FixFunction(Function *NewFunc, Function *OldFunc, ValueToValueMapTy &VMap,  SmallVectorImpl<ReturnInst *> &Returns , 
     SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
         &to_change) {
-llvm::StringRef fName = OldFunc->getName();
 
-  if (taffo::start_with(fName, "sin") || taffo::start_with(fName, "cos")) {
+  llvm::StringRef fName = OldFunc->getName();
+
+  if (taffo::start_with(fName, "sin") || taffo::start_with(fName, "cos") || taffo::start_with(fName, "_ZSt3cos") || taffo::start_with(fName, "_ZSt3sin")) {
  for (auto i : to_change) {
       // to_change.push_back({to_remove, {arg.value, arg_value, body}});
       if (i.first->getName().equals("to_remove")) {

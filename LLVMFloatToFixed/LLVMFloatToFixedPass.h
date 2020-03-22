@@ -112,7 +112,7 @@ struct FloatToFixed : public llvm::ModulePass {
     void FixFunction(Function *NewFunc, Function *OldFunc, ValueToValueMapTy &VMap,  SmallVectorImpl<ReturnInst *> &Returns , 
     SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
         &to_change);
-  void getFunctionInto(
+  bool getFunctionInto(
       Function *NewFunc, Function *OldFunc,
       SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
           &to_change);
@@ -124,7 +124,7 @@ struct FloatToFixed : public llvm::ModulePass {
                         ValueMapTypeRemapper *TypeMapper = nullptr,
                         ValueMaterializer *Materializer = nullptr);
   /* create sin and cos*/
-  void
+  bool
   createSinCos(llvm::Function *newf, llvm::Function *oldf,
                SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
                    &to_change);
