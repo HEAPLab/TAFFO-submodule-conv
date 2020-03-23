@@ -189,7 +189,7 @@ bool FloatToFixed::createSinCos(
 
   //
   Value *generic;
-  bool isSin = oldf->getName().find("sin") == 0;
+  bool isSin = oldf->getName().find("sin") == 0 || oldf->getName().find("_ZSt3sin") ;
   // retrive context used in later instruction
   llvm::LLVMContext &cont(oldf->getContext());
   DataLayout dataLayout(oldf->getParent());
