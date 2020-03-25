@@ -61,20 +61,20 @@ const double zero = 0.0f;
 const double one = 1.0f;
 const double minus_one = -1.0f;
 
-/** used to couple fixedpoint to corrisponding value
+/** used to couple fixedpoint to corresponding value
  * @param T lenght of array
- * @param U type of llvm to cuple
+ * @param U type of llvm to couple
  */
 template <typename U, int T = 0> struct pair_ftp_value {
-  flttofix::FixedPointType fpt[T];
-  U value[T];
+  SmallVector<flttofix::FixedPointType, T> fpt;
+  SmallVector<U, T> value;
   pair_ftp_value() {}
-  pair_ftp_value(const flttofix::FixedPointType &fpt) : fpt(fpt), value() {}
+  pair_ftp_value(const SmallVector<flttofix::FixedPointType, T>  &fpt) : fpt(fpt), value() {}
   ~pair_ftp_value() {}
 };
 /** partial specialization for T=0
  * @param T lenght of array
- * @param U type of llvm to cuple
+ * @param U type of llvm to couple
  */
 template <typename U> struct pair_ftp_value<U, 0> {
   flttofix::FixedPointType fpt;
