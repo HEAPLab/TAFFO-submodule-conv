@@ -403,11 +403,12 @@ bool FloatToFixed::createSinCos(
   auto truefxpret = fxpret;
   LLVM_DEBUG(dbgs() << "fxpret: " << fxpret.scalarBitsAmt() <<  " frac part: " << fxpret.scalarFracBitsAmt() << " difference: " << fxpret.scalarBitsAmt() - fxpret.scalarFracBitsAmt() <<"\n" );
   if ((fxpret.scalarBitsAmt() - fxpret.scalarFracBitsAmt()) < 4) {    
-      fxpret = flttofix::FixedPointType(fxpret.scalarIsSigned(),
+      fxpret = flttofix::FixedPointType(true,
                                         fxpret.scalarBitsAmt() - 4,
                                         fxpret.scalarBitsAmt());
       LLVM_DEBUG(dbgs() << "New fxpret: " << fxpret << "\n");    
   }
+
 
   auto int_type = fxpret.scalarToLLVMType(cont);
   // create local variable
@@ -542,11 +543,21 @@ bool FloatToFixed::createSinCos(
   to_change.push_back({to_remove, {arg.value, arg_value, body}});
   arg.value = arg_value;
   BasicBlock *return_point = BasicBlock::Create(cont, "return_point", oldf);
-
+  // handle unsigned arg
   if(!fxparg.scalarIsSigned()){
     builder.CreateStore(builder.CreateLShr(builder.CreateLoad(arg_value), ConstantInt::get(int_type, 1)),arg_value);
     fxparg.scalarFracBitsAmt() = fxparg.scalarFracBitsAmt() - 1;
     fxparg.scalarIsSigned()=true;
+  }
+
+  //handle too small arg
+  {
+    int diff =fxparg.scalarBitsAmt()- fxparg.scalarFracBitsAmt();
+  if(diff < 4){
+    builder.CreateStore(builder.CreateLShr(builder.CreateLoad(arg_value), ConstantInt::get(int_type, 4-diff)),arg_value);
+    fxparg.scalarFracBitsAmt() = fxparg.scalarFracBitsAmt() - (4-diff);
+    fxparg.scalarIsSigned()=true;
+  }
   }
   
   // handle negative
@@ -912,7 +923,7 @@ bool FloatToFixed::createSinCos(
         builder.CreateSub(zero_arg, builder.CreateLoad(arg_value)));
     builder.CreateStore(generic, arg_value);
   }
-  if(!(fxpret == truefxpret)){
+  if(fxpret.scalarFracBitsAmt() != truefxpret.scalarFracBitsAmt()){
   builder.CreateStore(builder.CreateShl(builder.CreateLoad(arg_value), truefxpret.scalarFracBitsAmt() - fxpret.scalarFracBitsAmt()), arg_value);
   }
   auto ret = builder.CreateLoad(arg_value);
