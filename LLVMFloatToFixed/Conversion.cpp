@@ -48,7 +48,7 @@ void FloatToFixed::performConversion(
     if (Instruction *i = dyn_cast<Instruction>(v))
       LLVM_DEBUG(dbgs() << "  [function] " << i->getFunction()->getName() << "\n");
     
-    Value *newv = convertSingleValue(m, v, valueInfo(v)->fixpType);
+    Value *newv = convertSingleValue(m, v, *valueInfo(v)->destType.getFixPtr());
     if (newv) {
       operandPool[v] = newv;
     }
