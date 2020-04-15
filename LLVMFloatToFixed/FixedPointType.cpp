@@ -21,13 +21,13 @@ using namespace taffo;
 
 FixedPointType::FixedPointType() {
     structData = nullptr;
-    scalarData = {false, 0, 0};
+    scalarData = {false, 0, 0, FloatStandard::Float_NotFloat};
 }
 
 
 FixedPointType::FixedPointType(bool s, int f, int b) {
     structData = nullptr;
-    scalarData = {s, f, b};
+    scalarData = {s, f, b, FloatStandard::Float_NotFloat};
 }
 
 
@@ -56,12 +56,20 @@ FixedPointType::FixedPointType(const ArrayRef<FixedPointType> &elems) {
 FixedPointType::FixedPointType(TType *mdtype) {
     structData = nullptr;
     FPType *fpt;
+    FloatType *flt;
     if (mdtype && (fpt = dyn_cast<FPType>(mdtype))) {
         scalarData.bitsAmt = fpt->getWidth();
         scalarData.fracBitsAmt = fpt->getPointPos();
         scalarData.isSigned = fpt->isSigned();
-    } else {
-        scalarData = {false, 0, 0};
+        scalarData.floatStandard = FloatStandard::Float_NotFloat;
+    } if (mdtype && (flt = dyn_cast<FloatType>(mdtype))) {
+        scalarData.bitsAmt = 0;
+        scalarData.fracBitsAmt = 0;
+        scalarData.isSigned = true;
+        scalarData.floatStandard = static_cast<FloatStandard>(flt->getStandard());
+
+    }else {
+        scalarData = {false, 0, 0, FloatStandard::Float_NotFloat};
     }
 }
 
@@ -93,17 +101,43 @@ FixedPointType FixedPointType::get(MDInfo *mdnfo, int *enableConversion) {
 
 Type *FixedPointType::scalarToLLVMType(LLVMContext &ctxt) const {
     assert(!structData && "fixed point type not a scalar");
-    return Type::getIntNTy(ctxt, scalarData.bitsAmt);
+    if (scalarData.floatStandard == Float_NotFloat){
+        return Type::getIntNTy(ctxt, scalarData.bitsAmt);
+    }else{
+        switch (scalarData.floatStandard) {
+            case Float_half: /*16-bit floating-point value*/
+                return Type::getHalfTy(ctxt);
+            case Float_float:    /*32-bit floating-point value*/
+                return Type::getFloatTy(ctxt);
+            case Float_double:    /*64-bit floating-point value*/
+                return Type::getDoubleTy(ctxt);
+            case Float_fp128:    /*128-bit floating-point value (112-bit mantissa)*/
+                return Type::getFP128Ty(ctxt);
+            case Float_x86_fp80:    /*80-bit floating-point value (X87)*/
+                return Type::getX86_FP80Ty(ctxt);
+            case Float_ppc_fp128:    /*128-bit floating-point value (two 64-bits)*/
+                return Type::getPPC_FP128Ty(ctxt);
+            case Float_NotFloat:
+            default:
+                llvm_unreachable("This should've been handled before");
+        }
+    }
+
 }
 
 
 std::string FixedPointType::Primitive::toString() const {
     std::stringstream stm;
-    if (isSigned)
-        stm << "s";
-    else
-        stm << "u";
-    stm << bitsAmt - fracBitsAmt << "_" << fracBitsAmt << "fixp";
+    if (floatStandard == Float_NotFloat) {
+        if (isSigned)
+            stm << "s";
+        else
+            stm << "u";
+
+        stm << bitsAmt - fracBitsAmt << "_" << fracBitsAmt << "fixp";
+    } else {
+        stm << floatStandard << "flp";
+    }
     return stm.str();
 }
 

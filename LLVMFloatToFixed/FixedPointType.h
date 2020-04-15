@@ -20,16 +20,29 @@ namespace flttofix {
 
 
     class FixedPointType {
+
+        enum FloatStandard {
+            Float_NotFloat=-1,
+            Float_half=0, /*16-bit floating-point value*/
+            Float_float,    /*32-bit floating-point value*/
+            Float_double,    /*64-bit floating-point value*/
+            Float_fp128,    /*128-bit floating-point value (112-bit mantissa)*/
+            Float_x86_fp80,    /*80-bit floating-point value (X87)*/
+            Float_ppc_fp128    /*128-bit floating-point value (two 64-bits)*/};
     private:
         struct Primitive {
             bool isSigned;
             int fracBitsAmt;
             int bitsAmt;
 
+            FloatStandard floatStandard;
+
+
             bool operator==(const Primitive &rhs) const {
                 return this->isSigned == rhs.isSigned &&
                        this->fracBitsAmt == rhs.fracBitsAmt &&
-                       this->bitsAmt == rhs.bitsAmt;
+                       this->bitsAmt == rhs.bitsAmt &&
+                       this->floatStandard == rhs.floatStandard;
             };
 
             std::string toString() const;
@@ -78,21 +91,25 @@ namespace flttofix {
 
         inline int &scalarFracBitsAmt(void) {
             assert(!structData && "fixed point type not a scalar");
+            assert(scalarData.floatStandard==Float_NotFloat && "this type is a float!");
             return scalarData.fracBitsAmt;
         };
 
         inline int scalarFracBitsAmt(void) const {
             assert(!structData && "fixed point type not a scalar");
+            assert(scalarData.floatStandard==Float_NotFloat && "this type is a float!");
             return scalarData.fracBitsAmt;
         };
 
         inline int &scalarBitsAmt(void) {
             assert(!structData && "fixed point type not a scalar");
+            assert(scalarData.floatStandard==Float_NotFloat && "this type is a float!");
             return scalarData.bitsAmt;
         };
 
         inline int scalarBitsAmt(void) const {
             assert(!structData && "fixed point type not a scalar");
+            assert(scalarData.floatStandard==Float_NotFloat && "this type is a float!");
             return scalarData.bitsAmt;
         };
 
@@ -112,12 +129,12 @@ namespace flttofix {
         }
 
         inline bool isInvalid(void) const {
-            return !structData && (scalarData.bitsAmt == 0);
+            return !structData && (scalarData.bitsAmt == 0) && (scalarData.floatStandard == Float_NotFloat);
         }
 
         inline bool isRecursivelyInvalid(void) const {
             if (!structData)
-                return scalarData.bitsAmt == 0;
+                return isInvalid();
             for (FixedPointType &fpt: *structData) {
                 if (fpt.isRecursivelyInvalid())
                     return true;
