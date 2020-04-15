@@ -94,7 +94,7 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *ra
         if (!instr->getType()->isVoidTy()) {
             assert(!(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy()) &&
                    "input info / actual type mismatch");
-            FPType *fpt = dyn_cast_or_null<FPType>(fpInfo->IType.get());
+            TType *fpt = dyn_cast_or_null<TType>(fpInfo->IType.get());
             if (!fpt)
                 return false;
             vi.fixpType = FixedPointType(fpt);
