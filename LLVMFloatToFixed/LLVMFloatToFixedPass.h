@@ -43,36 +43,6 @@ extern llvm::Value *Unsupported;
 namespace flttofix {
 
 
-    class DestType {
-        enum ObjectType {
-            DT_Invalid, DT_Float, DT_Fixed
-        };
-
-
-    public:
-        DestType(FixedPointType fxpt){
-            objType=DT_Fixed;
-            fixPtr = make_shared<FixedPointType>(fxpt);
-        }
-
-        DestType(){
-            objType=DT_Invalid;
-        }
-
-        const shared_ptr<FixedPointType> getFixPtr() const {
-            return fixPtr;
-        }
-
-        ObjectType getObjType() const {
-            return objType;
-        }
-
-    private:
-        shared_ptr<FixedPointType> fixPtr;
-        ObjectType objType=DT_Invalid;
-
-    };
-
     struct ValueInfo {
         bool isBacktrackingNode;
         bool isRoot;
@@ -87,7 +57,7 @@ namespace flttofix {
 
         // significant iff origType is a float or a pointer to a float
         // and if operation == Convert
-        DestType destType;
+        FixedPointType fixpType;
         llvm::Type *origType = nullptr;
     };
 
@@ -298,10 +268,9 @@ namespace flttofix {
                     res = matchOp(val);
                     if (res) {
                         if (typepol == TypeMatchPolicy::ForceHint)
-                            assert(iofixpt == *valueInfo(res)->destType.getFixPtr() && "type mismatch on reference Value");
+                            assert(iofixpt == valueInfo(res)->fixpType && "type mismatch on reference Value");
                         else
-                            //iofixpt = valueInfo(res)->fixpType;
-                            iofixpt = *valueInfo(res)->destType.getFixPtr();
+                            iofixpt = valueInfo(res)->fixpType;
                     }
                 }
             } else {
@@ -472,8 +441,7 @@ namespace flttofix {
         FixedPointType &fixPType(llvm::Value *val) {
             auto vi = info.find(val);
             assert((vi != info.end()) && "value with no info");
-            //return vi->getSecond()->fixpType;
-            return *vi->getSecond()->destType.getFixPtr();
+            return vi->getSecond()->fixpType;
         };
 
         bool hasInfo(llvm::Value *val) {
@@ -486,7 +454,7 @@ namespace flttofix {
             std::shared_ptr<ValueInfo> vi = valueInfo(val);
             if (vi->noTypeConversion)
                 return false;
-            if ((*(vi->destType.getFixPtr())).isInvalid())
+            if (vi->fixpType.isInvalid())
                 return false;
             llvm::Type *fuwt = taffo::fullyUnwrapPointerOrArrayType(vi->origType);
             if (!fuwt->isStructTy()) {
@@ -511,7 +479,7 @@ namespace flttofix {
             std::shared_ptr<ValueInfo> vi = valueInfo(val);
             if (vi->noTypeConversion)
                 return false;
-            if ((*(vi->destType.getFixPtr())).isInvalid())
+            if (vi->fixpType.isInvalid())
                 return false;
             llvm::Type *ty;
             if (llvm::ReturnInst *ret = llvm::dyn_cast<llvm::ReturnInst>(val))

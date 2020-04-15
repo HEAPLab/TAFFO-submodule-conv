@@ -344,7 +344,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         newIt = newF->arg_begin();
         for (int i = 0; oldIt != oldF->arg_end(); oldIt++, newIt++, i++) {
             if (oldIt->getType() != newIt->getType()) {
-                FixedPointType fixtype = *valueInfo(oldIt)->destType.getFixPtr();
+                FixedPointType fixtype = valueInfo(oldIt)->fixpType;
 
                 //append fixp info to arg name
                 newIt->setName(newIt->getName() + "." + fixtype.toString());
@@ -393,7 +393,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
             if (!hasInfo(call.getInstruction()))
                 continue;
             newVals.push_back(v);
-            *demandValueInfo(v)->destType.getFixPtr() = *valueInfo(call.getInstruction())->destType.getFixPtr();
+            demandValueInfo(v)->fixpType = valueInfo(call.getInstruction())->fixpType;
             valueInfo(v)->origType = nullptr;
             valueInfo(v)->fixpTypeRootDistance = 0;
         }
@@ -453,7 +453,7 @@ Function *FloatToFixed::createFixFun(CallSite *call, bool *old) {
 
     std::string suffix;
     if (isFloatType(oldF->getReturnType())) { //ret value in signature
-        FixedPointType retValType = *valueInfo(call->getInstruction())->destType.getFixPtr();
+        FixedPointType retValType = valueInfo(call->getInstruction())->fixpType;
         suffix = retValType.toString();
         fixArgs.push_back(std::pair<int, FixedPointType>(-1, retValType));
     } else {
@@ -465,7 +465,7 @@ Function *FloatToFixed::createFixFun(CallSite *call, bool *old) {
         Value *v = dyn_cast<Value>(arg);
         Type *newTy;
         if (hasInfo(v)) {
-            fixArgs.push_back(std::pair<int, FixedPointType>(i, *valueInfo(v)->destType.getFixPtr()));
+            fixArgs.push_back(std::pair<int, FixedPointType>(i, valueInfo(v)->fixpType));
             newTy = getLLVMFixedPointTypeForFloatValue(v);
         } else {
             newTy = v->getType();
@@ -519,7 +519,7 @@ void FloatToFixed::printConversionQueue(std::vector<Value *> vals) {
     for (Value *val: vals) {
         dbgs() << "bt=" << valueInfo(val)->isBacktrackingNode << " ";
         dbgs() << "noconv=" << valueInfo(val)->noTypeConversion << " ";
-        dbgs() << "type=" << *(valueInfo(val)->destType.getFixPtr()) << " ";
+        dbgs() << "type=" << valueInfo(val)->fixpType << " ";
         if (Instruction *i = dyn_cast<Instruction>(val)) {
             dbgs() << " fun='" << i->getFunction()->getName() << "' ";
         }

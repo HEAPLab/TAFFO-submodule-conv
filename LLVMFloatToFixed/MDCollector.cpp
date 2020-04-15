@@ -97,11 +97,9 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *ra
             FPType *fpt = dyn_cast_or_null<FPType>(fpInfo->IType.get());
             if (!fpt)
                 return false;
-            //vi.fixpType = FixedPointType(fpt);
-            vi.destType = DestType(FixedPointType(fpt));
+            vi.fixpType = FixedPointType(fpt);
         } else {
-            //vi.fixpType = FixedPointType();
-            vi.destType = DestType(FixedPointType());
+            vi.fixpType = FixedPointType();
         }
 
     } else if (StructInfo *fpInfo = dyn_cast<StructInfo>(raw)) {
@@ -109,13 +107,11 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *ra
             assert(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy() &&
                    "input info / actual type mismatch");
             int enableConversion = 0;
-            //vi.fixpType = FixedPointType::get(fpInfo, &enableConversion);
-            vi.destType = DestType(FixedPointType::get(fpInfo, &enableConversion));
+            vi.fixpType = FixedPointType::get(fpInfo, &enableConversion);
             if (enableConversion == 0)
                 return false;
         } else {
-
-            vi.destType = DestType(FixedPointType());
+            vi.fixpType = FixedPointType();
         }
 
     } else {
