@@ -82,6 +82,11 @@ void FloatToFixed::readAllLocalMetadata(Module &m, SmallPtrSetImpl<Value *> &res
 
 
 bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *raw, Value *instr) {
+    dbgs() << "Collecting metadata for:";
+    instr->print(dbgs());
+    dbgs()<<"\n";;
+
+
     ValueInfo vi;
 
     vi.isBacktrackingNode = false;
@@ -95,8 +100,10 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *ra
             assert(!(fullyUnwrapPointerOrArrayType(instr->getType())->isStructTy()) &&
                    "input info / actual type mismatch");
             TType *fpt = dyn_cast_or_null<TType>(fpInfo->IType.get());
-            if (!fpt)
+            if (!fpt) {
+                LLVM_DEBUG(dbgs() << "Failed to get Metadata.\n");
                 return false;
+            }
             vi.fixpType = FixedPointType(fpt);
         } else {
             vi.fixpType = FixedPointType();
@@ -108,8 +115,10 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *ra
                    "input info / actual type mismatch");
             int enableConversion = 0;
             vi.fixpType = FixedPointType::get(fpInfo, &enableConversion);
-            if (enableConversion == 0)
+            if (enableConversion == 0) {
+                LLVM_DEBUG(dbgs() << "Conversion not enabled.\n");
                 return false;
+            }
         } else {
             vi.fixpType = FixedPointType();
         }

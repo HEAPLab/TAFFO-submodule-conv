@@ -241,11 +241,10 @@ fi
 while [[ $feedback_stop -eq 0 ]]; do
   ###
   ###  TAFFO Data Type Allocation
-  ###
+  ### -forcefloat 0 \
   ${OPT} \
     -load "$TUNERLIB" \
     -taffodta -globaldce \
-    -forcefloat 0 \
     ${dta_flags} \
     -S -o "${output_file}.4.magiclangtmp.ll" "${output_file}.3.magiclangtmp.ll" || exit $?
 

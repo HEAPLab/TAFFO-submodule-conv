@@ -1,9 +1,10 @@
 #include <stdio.h>
+#include <math.h>
 double calledSum(double a, double b);
 int main(){
-    float a __attribute((annotate("target('a') scalar(range(1,25) error(0.8))")));
-    float b __attribute((annotate("target('b') scalar(range(1,2) error(0.9))")));
-    float c __attribute((annotate("target('c')")));
+    float a __attribute((annotate("scalar(range(1,25))")));
+    float b __attribute((annotate("scalar(range(1,2))")));
+    float c __attribute((annotate("")));
 
     scanf("%f", &a);
     scanf("%f", &b);

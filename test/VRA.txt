@@ -1,122 +1,34 @@
 Args: /opt/llvm/build/bin/opt -debug -load /home/nicola/dev/TAFFO/dist/usr/local/lib/TaffoVRA.so -mem2reg -taffoVRA -S -o a.3.magiclangtmp.ll a.2.magiclangtmp.ll 
 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
 	discovered a new reachable node %entry
 	discovered a new reachable node %entry
-	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-	discovered a new reachable node %entry
-	discovered a new reachable node %entry
-	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[harvestMetadata] Considering input metadata of instruction   %a = alloca float, align 4, !taffo.initweight !4, !taffo.target !5, !taffo.info !6 (weight=0)
-[harvestMetadata] Considering input metadata of instruction   %b = alloca float, align 4, !taffo.initweight !4, !taffo.target !9, !taffo.info !10 (weight=0)
-	discovered a new reachable node %entry
-	discovered a new reachable node %entry
+[harvestMetadata] Considering input metadata of instruction   %x = alloca float, align 4, !taffo.initweight !4, !taffo.target !5, !taffo.info !6 (weight=0)
+[harvestMetadata] Considering input metadata of instruction   %y = alloca float, align 4, !taffo.initweight !4, !taffo.target !8, !taffo.info !9 (weight=0)
 
 [TAFFO][VRA] Processing function main...
 [TAFFO][VRA] Loading argument ranges: 
-[TAFFO][VRA]  %a1 = bitcast float* %a to i8*, !taffo.initweight !13, !taffo.target !5, !taffo.info !6 : [1.000000, 25.000000]
-[TAFFO][VRA]  %b2 = bitcast float* %b to i8*, !taffo.initweight !13, !taffo.target !9, !taffo.info !10 : [1.000000, 2.000000]
-[TAFFO][VRA]  %c3 = bitcast float* %c to i8* : (operand range is null) null range!
-[TAFFO][VRA]  call void @llvm.var.annotation(i8* %c3, i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.3, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.1, i32 0, i32 0), i32 6) : indices: 
-indices: 
-(skipping intrinsic llvm.var.annotation) null range!
-[TAFFO][VRA]  %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %a), !taffo.initweight !13, !taffo.target !5, !taffo.info !6 : indices: 
+[TAFFO][VRA]  %x1 = bitcast float* %x to i8*, !taffo.initweight !11, !taffo.target !5, !taffo.info !6 : [1.000000, 25.000000]
+[TAFFO][VRA]  %y2 = bitcast float* %y to i8*, !taffo.initweight !11, !taffo.target !8, !taffo.info !9 : [7.000000, 14.000000]
+[TAFFO][VRA]  %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i32 0, i32 0), float* %x), !taffo.initweight !11, !taffo.target !5, !taffo.info !6 : indices: 
 (call to unknown function __isoc99_scanf) null range!
-[TAFFO][VRA]  %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %b), !taffo.initweight !13, !taffo.target !9, !taffo.info !10 : (call to unknown function __isoc99_scanf) null range!
-[TAFFO][VRA]  %0 = load float, float* %a, align 4, !taffo.initweight !13, !taffo.target !5, !taffo.info !6 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
+[TAFFO][VRA]  %call3 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i32 0, i32 0), float* %y), !taffo.initweight !11, !taffo.target !8, !taffo.info !9 : (call to unknown function __isoc99_scanf) null range!
+[TAFFO][VRA]  store float* @result, float** @result_ptr, align 8 : (pointer store) 
+[TAFFO] Value Range Analysis: Warning: treating llvm::ConstantPointerNull as 0
+[TAFFO][VRA]  %0 = load float, float* %x, align 4, !taffo.initweight !11, !taffo.target !5, !taffo.info !6 : 	discovered a new reachable node %entry
 [1.000000, 25.000000]
-[TAFFO][VRA]  %1 = load float, float* %b, align 4, !taffo.initweight !13, !taffo.target !9, !taffo.info !10 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[1.000000, 2.000000]
-[TAFFO][VRA]  %mul = fmul float %0, %1, !taffo.initweight !14, !taffo.target !5, !taffo.info !6 : [1.000000, 50.000000]
-[TAFFO][VRA]  %2 = load float, float* %a, align 4, !taffo.initweight !13, !taffo.target !5, !taffo.info !6 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[1.000000, 25.000000]
-[TAFFO][VRA]  %div = fdiv float %mul, %2, !taffo.initweight !14, !taffo.target !5, !taffo.info !6 : [0.040000, 50.000000]
-[TAFFO][VRA]  %conv = fpext float %div to double, !taffo.initweight !15, !taffo.target !5, !taffo.info !6 : [0.040000, 50.000000]
-[TAFFO][VRA]  %call5 = call double @exp(double %conv) #1, !taffo.initweight !16, !taffo.target !5, !taffo.info !6 : (whitelisted) [1.040811, 5184705528587072045056.000000]
-[TAFFO][VRA]  %conv6 = fptrunc double %call5 to float, !taffo.initweight !17, !taffo.target !5, !taffo.info !6 : [1.040811, 5184706020615500333056.000000]
-[TAFFO][VRA]  store float %conv6, float* %c, align 4, !taffo.initweight !18, !taffo.target !5, !taffo.info !6 : [1.040811, 5184706020615500333056.000000]
-[TAFFO][VRA]  %3 = load float, float* %a, align 4, !taffo.initweight !13, !taffo.target !5, !taffo.info !6 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[1.000000, 25.000000]
-[TAFFO][VRA]  %4 = load float, float* %b, align 4, !taffo.initweight !13, !taffo.target !9, !taffo.info !10 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[1.000000, 2.000000]
-[TAFFO][VRA]  %cmp = fcmp oeq float %3, %4, !taffo.initweight !14, !taffo.target !5, !taffo.info !6 : [0.000000, 1.000000]
-[TAFFO][VRA]  %7 = load float, float* %a, align 4, !taffo.initweight !13, !taffo.target !5, !taffo.info !6 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[1.000000, 25.000000]
-[TAFFO][VRA]  %conv11 = fptosi float %7 to i32, !taffo.initweight !14, !taffo.target !5, !taffo.info !6 : [1.000000, 25.000000]
-[TAFFO][VRA]  %8 = load float, float* %c, align 4 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[1.040811, 5184706020615500333056.000000]
-[TAFFO][VRA]  %conv12 = fpext float %8 to double : [1.040811, 5184706020615500333056.000000]
-[TAFFO][VRA]  %call13 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.6, i32 0, i32 0), i32 3, double %conv12) : indices: 
-(call to unknown function printf) null range!
-[TAFFO][VRA]  %5 = load float, float* %c, align 4 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[1.040811, 5184706020615500333056.000000]
-[TAFFO][VRA]  %conv8 = fptosi float %5 to i32 : [1.000000, -9223372036854775808.000000]
-[TAFFO][VRA]  %6 = load float, float* %c, align 4 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[1.040811, 5184706020615500333056.000000]
-[TAFFO][VRA]  %conv9 = fpext float %6 to double : [1.040811, 5184706020615500333056.000000]
-[TAFFO][VRA]  %call10 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.5, i32 0, i32 0), double %conv9, i32 2) : indices: 
-(call to unknown function printf) null range!
-[TAFFO][VRA]  %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ] : [1.000000, 25.000000]
-[TAFFO][VRA]  %call14 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), i32 %d.0) : indices: 
-(call to unknown function printf) null range!
-[TAFFO][VRA]  %9 = load float, float* %b, align 4, !taffo.initweight !13, !taffo.target !9, !taffo.info !10 : 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-[1.000000, 2.000000]
-[TAFFO][VRA]  %conv15 = fpext float %9 to double, !taffo.initweight !14, !taffo.target !9, !taffo.info !10 : [1.000000, 2.000000]
-[TAFFO][VRA]  %conv16 = sitofp i32 %d.0 to double : [1.000000, 25.000000]
-[TAFFO][VRA]  %call17 = call double @calledSum.1(double %conv15, double %conv16), !taffo.initweight !15, !taffo.target !9, !taffo.info !10, !taffo.originalCall !19 : processing function...
-
-[TAFFO][VRA] Processing function calledSum.1...
-[TAFFO][VRA] Loading argument ranges: { double %a : [1.000000, 2.000000] }, { double %b : [1.000000, 25.000000] }, 
-[TAFFO][VRA]  %add = fadd double %a, %b : [2.000000, 27.000000]
-[TAFFO][VRA]  ret double %add : [2.000000, 27.000000]
-[TAFFO][VRA] Finished processing function calledSum.1.
-
-[TAFFO][VRA] Finished processing call   %call17 = call double @calledSum.1(double %conv15, double %conv16), !taffo.initweight !15, !taffo.target !9, !taffo.info !10, !taffo.originalCall !19 : [2.000000, 27.000000]
-[TAFFO][VRA]  %call18 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call17), !taffo.initweight !16, !taffo.target !9, !taffo.info !10 : (call to unknown function printf) null range!
+[TAFFO][VRA]  %1 = load float, float* %y, align 4, !taffo.initweight !11, !taffo.target !8, !taffo.info !9 : 	discovered a new reachable node %entry
+[7.000000, 14.000000]
+[TAFFO][VRA]  %add = fadd float %0, %1, !taffo.initweight !12, !taffo.target !5, !taffo.info !6 : [8.000000, 39.000000]
+[TAFFO][VRA]  %2 = load float*, float** @result_ptr, align 8 : (pointer load) 
+[0.000000, 0.000000]
+[TAFFO][VRA]  store float %add, float* %2, align 4, !taffo.initweight !13, !taffo.target !5, !taffo.info !6 : [8.000000, 39.000000]
+[TAFFO][VRA]  %3 = load float*, float** @result_ptr, align 8 : (pointer load) 
+[0.000000, 39.000000]
+[TAFFO][VRA]  %4 = load float, float* %3, align 4 : 	discovered a new reachable node %entry
+[0.000000, 39.000000]
+[TAFFO][VRA]  %conv = fpext float %4 to double : [0.000000, 39.000000]
+[TAFFO][VRA]  %call4 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i32 0, i32 0), double %conv) : (call to unknown function printf) null range!
 [TAFFO][VRA]  ret i32 0 : [0.000000, 0.000000]
 [TAFFO][VRA] Finished processing function main.
 
-	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-	discovered a new reachable node %entry
 	discovered a new reachable node %entry
