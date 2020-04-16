@@ -1,34 +1,28 @@
 Args: /opt/llvm/build/bin/opt -debug -load /home/nicola/dev/TAFFO/dist/usr/local/lib/TaffoVRA.so -mem2reg -taffoVRA -S -o a.3.magiclangtmp.ll a.2.magiclangtmp.ll 
 	discovered a new reachable node %entry
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
 	discovered a new reachable node %entry
 	discovered a new reachable node %entry
-[harvestMetadata] Considering input metadata of instruction   %x = alloca float, align 4, !taffo.initweight !4, !taffo.target !5, !taffo.info !6 (weight=0)
-[harvestMetadata] Considering input metadata of instruction   %y = alloca float, align 4, !taffo.initweight !4, !taffo.target !8, !taffo.info !9 (weight=0)
-
-[TAFFO][VRA] Processing function main...
-[TAFFO][VRA] Loading argument ranges: 
-[TAFFO][VRA]  %x1 = bitcast float* %x to i8*, !taffo.initweight !11, !taffo.target !5, !taffo.info !6 : [1.000000, 25.000000]
-[TAFFO][VRA]  %y2 = bitcast float* %y to i8*, !taffo.initweight !11, !taffo.target !8, !taffo.info !9 : [7.000000, 14.000000]
-[TAFFO][VRA]  %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i32 0, i32 0), float* %x), !taffo.initweight !11, !taffo.target !5, !taffo.info !6 : indices: 
-(call to unknown function __isoc99_scanf) null range!
-[TAFFO][VRA]  %call3 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i32 0, i32 0), float* %y), !taffo.initweight !11, !taffo.target !8, !taffo.info !9 : (call to unknown function __isoc99_scanf) null range!
-[TAFFO][VRA]  store float* @result, float** @result_ptr, align 8 : (pointer store) 
-[TAFFO] Value Range Analysis: Warning: treating llvm::ConstantPointerNull as 0
-[TAFFO][VRA]  %0 = load float, float* %x, align 4, !taffo.initweight !11, !taffo.target !5, !taffo.info !6 : 	discovered a new reachable node %entry
-[1.000000, 25.000000]
-[TAFFO][VRA]  %1 = load float, float* %y, align 4, !taffo.initweight !11, !taffo.target !8, !taffo.info !9 : 	discovered a new reachable node %entry
-[7.000000, 14.000000]
-[TAFFO][VRA]  %add = fadd float %0, %1, !taffo.initweight !12, !taffo.target !5, !taffo.info !6 : [8.000000, 39.000000]
-[TAFFO][VRA]  %2 = load float*, float** @result_ptr, align 8 : (pointer load) 
-[0.000000, 0.000000]
-[TAFFO][VRA]  store float %add, float* %2, align 4, !taffo.initweight !13, !taffo.target !5, !taffo.info !6 : [8.000000, 39.000000]
-[TAFFO][VRA]  %3 = load float*, float** @result_ptr, align 8 : (pointer load) 
-[0.000000, 39.000000]
-[TAFFO][VRA]  %4 = load float, float* %3, align 4 : 	discovered a new reachable node %entry
-[0.000000, 39.000000]
-[TAFFO][VRA]  %conv = fpext float %4 to double : [0.000000, 39.000000]
-[TAFFO][VRA]  %call4 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i32 0, i32 0), double %conv) : (call to unknown function printf) null range!
-[TAFFO][VRA]  ret i32 0 : [0.000000, 0.000000]
-[TAFFO][VRA] Finished processing function main.
-
+	discovered a new reachable node %entry
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
+	discovered a new reachable node %entry
+	discovered a new reachable node %entry
+	discovered a new reachable node %entry
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
+[harvestMetadata] Considering input metadata of instruction   %a = alloca float, align 4, !taffo.initweight !3, !taffo.info !4 (weight=0)
+[harvestMetadata] Considering input metadata of instruction   %b = alloca float, align 4, !taffo.initweight !3, !taffo.info !6 (weight=0)
+	discovered a new reachable node %entry
+	discovered a new reachable node %entry
+[TAFFO] Value Range Analysis: No visitable functions found
+	discovered a new reachable node %entry
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
+	discovered a new reachable node %entry
 	discovered a new reachable node %entry

@@ -37,13 +37,17 @@ FixedPointType::FixedPointType(Type *llvmtype, bool signd) {
     if (isFloatType(llvmtype)) {
         scalarData.fracBitsAmt = 0;
         scalarData.bitsAmt = 0;
+        //FIXME: this should be modified when talking about real converison!
+        scalarData.floatStandard = FloatStandard::Float_NotFloat;
     } else if (llvmtype->isIntegerTy()) {
         scalarData.fracBitsAmt = 0;
         scalarData.bitsAmt = llvmtype->getIntegerBitWidth();
+        scalarData.floatStandard = FloatStandard::Float_NotFloat;
     } else {
         scalarData.isSigned = false;
         scalarData.fracBitsAmt = 0;
         scalarData.bitsAmt = 0;
+        scalarData.floatStandard = FloatStandard::Float_NotFloat;
     }
 }
 
@@ -119,6 +123,7 @@ Type *FixedPointType::scalarToLLVMType(LLVMContext &ctxt) const {
                 return Type::getPPC_FP128Ty(ctxt);
             case Float_NotFloat:
             default:
+                dbgs() << "getting LLVMType of " << scalarData.floatStandard << "\n";
                 llvm_unreachable("This should've been handled before");
         }
     }
