@@ -31,6 +31,7 @@ void FloatToFixed::performConversion(
     for (auto i = q.begin(); i != q.end();) {
         Value *v = *i;
 
+        //Removes all taffo-related annotations from ll file
         if (CallInst *anno = dyn_cast<CallInst>(v)) {
             if (anno->getCalledFunction()) {
                 if (anno->getCalledFunction()->getName() == "llvm.var.annotation") {
@@ -41,7 +42,7 @@ void FloatToFixed::performConversion(
             }
         }
 
-        LLVM_DEBUG(dbgs() << "* performConversion *\n");
+        LLVM_DEBUG(dbgs() << "\n-------------------------------------* performConversion *-------------------------------------\n");
         LLVM_DEBUG(dbgs() << "  [no conv ] " << valueInfo(v)->noTypeConversion << "\n");
         LLVM_DEBUG(dbgs() << "  [value   ] " << *v << "\n");
         if (Instruction *i = dyn_cast<Instruction>(v))

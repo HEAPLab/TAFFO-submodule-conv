@@ -585,6 +585,8 @@ namespace flttofix {
         }
 
         int getLoopNestingLevelOfValue(llvm::Value *v);
+
+        template<class T> Constant *createConstantDataSequentialFP(ConstantDataSequential *cds, const FixedPointType &fixpt);
     };
 
 

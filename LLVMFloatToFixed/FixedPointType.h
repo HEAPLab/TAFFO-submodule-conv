@@ -20,7 +20,7 @@ namespace flttofix {
 
 
     class FixedPointType {
-
+    public:
         enum FloatStandard {
             Float_NotFloat=-1,
             Float_half=0, /*16-bit floating-point value*/
@@ -132,6 +132,19 @@ namespace flttofix {
             return !structData && (scalarData.bitsAmt == 0) && (scalarData.floatStandard == Float_NotFloat);
         }
 
+        inline bool isFixedPoint() const{
+            return !structData && scalarData.floatStandard == Float_NotFloat;
+        }
+
+        inline bool isFloatingPoint() const{
+            return !structData && scalarData.floatStandard != Float_NotFloat;
+        }
+
+        inline FloatStandard getFloatingPointStandard() const{
+            assert(scalarData.floatStandard!=Float_NotFloat);
+            return scalarData.floatStandard;
+        }
+
         inline bool isRecursivelyInvalid(void) const {
             if (!structData)
                 return isInvalid();
@@ -147,6 +160,8 @@ namespace flttofix {
         FixedPointType unwrapIndexList(llvm::Type *valType, llvm::ArrayRef<unsigned> indices);
 
         bool operator==(const FixedPointType &rhs) const;
+
+
     };
 
 

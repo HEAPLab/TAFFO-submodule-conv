@@ -48,8 +48,10 @@ Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType &fixpt, Ty
 Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType &fixpt, TypeMatchPolicy typepol) {
     if (cexp->isGEPWithNoNotionalOverIndexing()) {
         Value *newval = operandPool[cexp->getOperand(0)];
-        if (!newval)
+        if (!newval) {
+            LLVM_DEBUG(dbgs() << "[Warning] Operand of constant GEP not found in operandPool!\n");
             return nullptr;
+        }
         Constant *newconst = dyn_cast<Constant>(newval);
         if (!newconst)
             return nullptr;
@@ -152,19 +154,49 @@ Constant *FloatToFixed::createConstantDataSequential(ConstantDataSequential *cds
     return ConstantDataVector::get(cds->getContext(), newConsts);
 }
 
+template<class T>
+Constant *FloatToFixed::createConstantDataSequentialFP(ConstantDataSequential *cds, const FixedPointType &fixpt) {
+    std::vector<T> newConsts;
+
+    for (int i = 0; i < cds->getNumElements(); i++) {
+        APFloat thiselem = cds->getElementAsAPFloat(i);
+        newConsts.push_back(thiselem.convertToDouble());
+    }
+
+    if (isa<ConstantDataArray>(cds)) {
+        return ConstantDataArray::get(cds->getContext(), newConsts);
+    }
+    return ConstantDataVector::get(cds->getContext(), newConsts);
+}
+
 
 Constant *FloatToFixed::convertConstantDataSequential(ConstantDataSequential *cds, const FixedPointType &fixpt) {
     if (!isFloatType(cds->getElementType()))
         return cds;
 
-    if (fixpt.scalarBitsAmt() <= 8)
-        return createConstantDataSequential<uint8_t>(cds, fixpt);
-    else if (fixpt.scalarBitsAmt() <= 16)
-        return createConstantDataSequential<uint16_t>(cds, fixpt);
-    else if (fixpt.scalarBitsAmt() <= 32)
-        return createConstantDataSequential<uint32_t>(cds, fixpt);
-    else if (fixpt.scalarBitsAmt() <= 64)
-        return createConstantDataSequential<uint64_t>(cds, fixpt);
+    if(fixpt.isFixedPoint()) {
+        if (fixpt.scalarBitsAmt() <= 8)
+            return createConstantDataSequential<uint8_t>(cds, fixpt);
+        else if (fixpt.scalarBitsAmt() <= 16)
+            return createConstantDataSequential<uint16_t>(cds, fixpt);
+        else if (fixpt.scalarBitsAmt() <= 32)
+            return createConstantDataSequential<uint32_t>(cds, fixpt);
+        else if (fixpt.scalarBitsAmt() <= 64)
+            return createConstantDataSequential<uint64_t>(cds, fixpt);
+    }
+
+    if(fixpt.isFloatingPoint()) {
+        if(fixpt.getFloatingPointStandard() == FixedPointType::Float_float){
+            return createConstantDataSequentialFP<float>(cds, fixpt);
+        }
+
+        if(fixpt.getFloatingPointStandard() == FixedPointType::Float_double){
+            return createConstantDataSequentialFP<double>(cds, fixpt);
+        }
+        //As the sequential data does not accept anything different from float or double, we are doomed.
+        //It's better to crash, so we see this kind of error. Maybe we can modify something at program source code level?
+        llvm_unreachable("You cannot have anything different from float or double here, my friend!");
+    }
 
     LLVM_DEBUG(dbgs() << fixpt << " too big for ConstantDataArray/Vector; 64 bit max\n");
     return nullptr;
@@ -176,24 +208,39 @@ FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, FixedPointTy
     APFloat val = fpc->getValueAPF();
     APSInt fixval;
 
-    if (!isHintPreferredPolicy(typepol)) {
-        APFloat tmp(val);
-        bool precise = false;
-        tmp.convert(APFloatBase::IEEEdouble(), APFloat::rmTowardNegative, &precise);
-        double dblval = tmp.convertToDouble();
-        int nbits = fixpt.scalarBitsAmt();
-        mdutils::Range range(dblval, dblval);
-        int minflt = isMaxIntPolicy(typepol) ? -1 : 0;
-        mdutils::FPType t = taffo::fixedPointTypeFromRange(range, nullptr, nbits, minflt);
-        fixpt = FixedPointType(&t);
+
+    //Old workflow, convert the value to a fixed point value
+    if(fixpt.isFixedPoint()) {
+        if (!isHintPreferredPolicy(typepol)) {
+            APFloat tmp(val);
+            bool precise = false;
+            tmp.convert(APFloatBase::IEEEdouble(), APFloat::rmTowardNegative, &precise);
+            double dblval = tmp.convertToDouble();
+            int nbits = fixpt.scalarBitsAmt();
+            mdutils::Range range(dblval, dblval);
+            int minflt = isMaxIntPolicy(typepol) ? -1 : 0;
+            mdutils::FPType t = taffo::fixedPointTypeFromRange(range, nullptr, nbits, minflt);
+            fixpt = FixedPointType(&t);
+        }
+
+        if (convertAPFloat(val, fixval, context, fixpt)) {
+            Type *intty = fixpt.scalarToLLVMType(fpc->getContext());
+            return ConstantInt::get(intty, fixval);
+        }else{
+            return nullptr;
+        }
     }
 
-    if (convertAPFloat(val, fixval, context, fixpt)) {
+
+    //Just "convert", actually recast, the value to the correct data type if using floating point data
+    if(fixpt.isFloatingPoint()){
         Type *intty = fixpt.scalarToLLVMType(fpc->getContext());
-        return ConstantInt::get(intty, fixval);
+        return ConstantFP::get(intty, val);
     }
 
-    return nullptr;
+    llvm_unreachable("We should have already covered all values, are you introducing a new data type?");
+
+
 }
 
 

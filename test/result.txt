@@ -343,27 +343,27 @@ opt: /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:235: llvm
 Stack dump:
 0.	Program arguments: /opt/llvm/build/bin/opt -load /home/nicola/dev/TAFFO/dist/usr/local/lib/LLVMFloatToFixed.so -flttofix -globaldce -dce -debug -S -o a.5.magiclangtmp.ll a.4.magiclangtmp.ll 
 1.	Running pass 'Floating Point to Fixed Point conversion pass' on module 'a.4.magiclangtmp.ll'.
- #0 0x00007f49c21648db llvm::sys::PrintStackTrace(llvm::raw_ostream&) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:495:22
- #1 0x00007f49c216496e PrintStackTraceSignalHandler(void*) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:559:1
- #2 0x00007f49c2162558 llvm::sys::RunSignalHandlers() /opt/llvm/llvm-8.0.1.src/lib/Support/Signals.cpp:69:20
- #3 0x00007f49c2164301 SignalHandler(int) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:358:1
- #4 0x00007f49c75a3800 __restore_rt (/usr/lib/libpthread.so.0+0x14800)
- #5 0x00007f49c18bace5 __GI_raise (/usr/lib/libc.so.6+0x3bce5)
- #6 0x00007f49c18a4857 __GI_abort (/usr/lib/libc.so.6+0x25857)
- #7 0x00007f49c18a4727 _nl_load_domain.cold (/usr/lib/libc.so.6+0x25727)
- #8 0x00007f49c18b3426 (/usr/lib/libc.so.6+0x34426)
- #9 0x00007f49bfe7404c flttofix::FloatToFixed::genConvertFixedToFixed(llvm::Value*, flttofix::FixedPointType const&, flttofix::FixedPointType const&, llvm::Instruction*) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:235:5
-#10 0x00007f49bfe731c9 flttofix::FloatToFixed::translateOrMatchOperand(llvm::Value*, flttofix::FixedPointType&, llvm::Instruction*, flttofix::FloatToFixed::TypeMatchPolicy) (.localalias) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:117:38
-#11 0x00007f49bfe8a9cf flttofix::FloatToFixed::translateOrMatchOperandAndType(llvm::Value*, flttofix::FixedPointType const&, llvm::Instruction*) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/LLVMFloatToFixedPass.h:297:43
-#12 0x00007f49bfe86d8e flttofix::FloatToFixed::convertCast(llvm::CastInst*, flttofix::FixedPointType const&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/InstructionConversion.cpp:669:50
-#13 0x00007f49bfe82b92 flttofix::FloatToFixed::convertInstruction(llvm::Module&, llvm::Instruction*, flttofix::FixedPointType&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/InstructionConversion.cpp:55:30
-#14 0x00007f49bfe7307c flttofix::FloatToFixed::convertSingleValue(llvm::Module&, llvm::Value*, flttofix::FixedPointType&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:99:33
-#15 0x00007f49bfe72b17 flttofix::FloatToFixed::performConversion(llvm::Module&, std::vector<llvm::Value*, std::allocator<llvm::Value*> >&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:50:70
-#16 0x00007f49bfe53436 flttofix::FloatToFixed::runOnModule(llvm::Module&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/LLVMFloatToFixedPass.cpp:53:18
-#17 0x00007f49c2705fa3 (anonymous namespace)::MPPassManager::runOnModule(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1744:20
-#18 0x00007f49c270680f llvm::legacy::PassManagerImpl::run(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1857:13
-#19 0x00007f49c2706a4d llvm::legacy::PassManager::run(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1889:1
-#20 0x000055721a49615b main /opt/llvm/llvm-8.0.1.src/tools/opt/opt.cpp:835:15
-#21 0x00007f49c18a6023 __libc_start_main (/usr/lib/libc.so.6+0x27023)
-#22 0x000055721a45124e _start (/opt/llvm/build/bin/opt+0x7424e)
-./magiclang2_float.sh: riga 290: 751655 Annullato               (core dump creato) ${OPT} -load "$PASSLIB" -flttofix -globaldce -dce -debug ${conversion_flags} -S -o "${output_file}.5.magiclangtmp.ll" "${output_file}.4.magiclangtmp.ll"
+ #0 0x00007f647e7158db llvm::sys::PrintStackTrace(llvm::raw_ostream&) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:495:22
+ #1 0x00007f647e71596e PrintStackTraceSignalHandler(void*) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:559:1
+ #2 0x00007f647e713558 llvm::sys::RunSignalHandlers() /opt/llvm/llvm-8.0.1.src/lib/Support/Signals.cpp:69:20
+ #3 0x00007f647e715301 SignalHandler(int) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:358:1
+ #4 0x00007f6483b54800 __restore_rt (/usr/lib/libpthread.so.0+0x14800)
+ #5 0x00007f647de6bce5 __GI_raise (/usr/lib/libc.so.6+0x3bce5)
+ #6 0x00007f647de55857 __GI_abort (/usr/lib/libc.so.6+0x25857)
+ #7 0x00007f647de55727 _nl_load_domain.cold (/usr/lib/libc.so.6+0x25727)
+ #8 0x00007f647de64426 (/usr/lib/libc.so.6+0x34426)
+ #9 0x00007f647c42504c flttofix::FloatToFixed::genConvertFixedToFixed(llvm::Value*, flttofix::FixedPointType const&, flttofix::FixedPointType const&, llvm::Instruction*) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:235:5
+#10 0x00007f647c4241c9 flttofix::FloatToFixed::translateOrMatchOperand(llvm::Value*, flttofix::FixedPointType&, llvm::Instruction*, flttofix::FloatToFixed::TypeMatchPolicy) (.localalias) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:117:38
+#11 0x00007f647c43b9cf flttofix::FloatToFixed::translateOrMatchOperandAndType(llvm::Value*, flttofix::FixedPointType const&, llvm::Instruction*) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/LLVMFloatToFixedPass.h:297:43
+#12 0x00007f647c437d8e flttofix::FloatToFixed::convertCast(llvm::CastInst*, flttofix::FixedPointType const&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/InstructionConversion.cpp:669:50
+#13 0x00007f647c433b92 flttofix::FloatToFixed::convertInstruction(llvm::Module&, llvm::Instruction*, flttofix::FixedPointType&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/InstructionConversion.cpp:55:30
+#14 0x00007f647c42407c flttofix::FloatToFixed::convertSingleValue(llvm::Module&, llvm::Value*, flttofix::FixedPointType&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:99:33
+#15 0x00007f647c423b17 flttofix::FloatToFixed::performConversion(llvm::Module&, std::vector<llvm::Value*, std::allocator<llvm::Value*> >&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:50:70
+#16 0x00007f647c404436 flttofix::FloatToFixed::runOnModule(llvm::Module&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/LLVMFloatToFixedPass.cpp:53:18
+#17 0x00007f647ecb6fa3 (anonymous namespace)::MPPassManager::runOnModule(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1744:20
+#18 0x00007f647ecb780f llvm::legacy::PassManagerImpl::run(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1857:13
+#19 0x00007f647ecb7a4d llvm::legacy::PassManager::run(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1889:1
+#20 0x000055a2f45bc15b main /opt/llvm/llvm-8.0.1.src/tools/opt/opt.cpp:835:15
+#21 0x00007f647de57023 __libc_start_main (/usr/lib/libc.so.6+0x27023)
+#22 0x000055a2f457724e _start (/opt/llvm/build/bin/opt+0x7424e)
+./magiclang2_float.sh: riga 290: 974656 Annullato               (core dump creato) ${OPT} -load "$PASSLIB" -flttofix -globaldce -dce -debug ${conversion_flags} -S -o "${output_file}.5.magiclangtmp.ll" "${output_file}.4.magiclangtmp.ll"
