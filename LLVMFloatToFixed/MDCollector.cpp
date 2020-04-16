@@ -131,6 +131,8 @@ bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *ra
         variables->insert(instr);
     *newValueInfo(instr) = vi;
 
+    LLVM_DEBUG(dbgs() << "Type deducted: "<<vi.fixpType.toString()<<"\n");
+
     return true;
 }
 

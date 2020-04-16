@@ -62,7 +62,7 @@ FixedPointType::FixedPointType(TType *mdtype) {
         scalarData.fracBitsAmt = fpt->getPointPos();
         scalarData.isSigned = fpt->isSigned();
         scalarData.floatStandard = FloatStandard::Float_NotFloat;
-    } if (mdtype && (flt = dyn_cast<FloatType>(mdtype))) {
+    }else  if (mdtype && (flt = dyn_cast<FloatType>(mdtype))) {
         scalarData.bitsAmt = 0;
         scalarData.fracBitsAmt = 0;
         scalarData.isSigned = true;
