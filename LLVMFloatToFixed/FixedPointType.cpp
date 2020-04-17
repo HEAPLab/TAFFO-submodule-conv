@@ -37,8 +37,24 @@ FixedPointType::FixedPointType(Type *llvmtype, bool signd) {
     if (isFloatType(llvmtype)) {
         scalarData.fracBitsAmt = 0;
         scalarData.bitsAmt = 0;
-        //FIXME: this should be modified when talking about real converison!
-        scalarData.floatStandard = FloatStandard::Float_NotFloat;
+
+        if (llvmtype->getTypeID() == Type::TypeID::HalfTyID) {
+            scalarData.floatStandard = FloatStandard::Float_half;
+        } else if (llvmtype->getTypeID() == Type::TypeID::DoubleTyID) {
+            scalarData.floatStandard = FloatStandard::Float_double;
+        } else if (llvmtype->getTypeID() == Type::TypeID::FloatTyID) {
+            scalarData.floatStandard = FloatStandard::Float_float;
+        } else if (llvmtype->getTypeID() == Type::TypeID::FP128TyID) {
+            scalarData.floatStandard = FloatStandard::Float_fp128;
+        } else if (llvmtype->getTypeID() == Type::TypeID::PPC_FP128TyID) {
+            scalarData.floatStandard = FloatStandard::Float_ppc_fp128;
+        } else if (llvmtype->getTypeID() == Type::TypeID::X86_FP80TyID) {
+            scalarData.floatStandard = FloatStandard::Float_x86_fp80;
+        } else {
+            //Invalid...
+            scalarData.floatStandard = FloatStandard::Float_NotFloat;
+        }
+
     } else if (llvmtype->isIntegerTy()) {
         scalarData.fracBitsAmt = 0;
         scalarData.bitsAmt = llvmtype->getIntegerBitWidth();
@@ -66,13 +82,13 @@ FixedPointType::FixedPointType(TType *mdtype) {
         scalarData.fracBitsAmt = fpt->getPointPos();
         scalarData.isSigned = fpt->isSigned();
         scalarData.floatStandard = FloatStandard::Float_NotFloat;
-    }else  if (mdtype && (flt = dyn_cast<FloatType>(mdtype))) {
+    } else if (mdtype && (flt = dyn_cast<FloatType>(mdtype))) {
         scalarData.bitsAmt = 0;
         scalarData.fracBitsAmt = 0;
         scalarData.isSigned = true;
         scalarData.floatStandard = static_cast<FloatStandard>(flt->getStandard());
 
-    }else {
+    } else {
         scalarData = {false, 0, 0, FloatStandard::Float_NotFloat};
     }
 }
@@ -105,9 +121,9 @@ FixedPointType FixedPointType::get(MDInfo *mdnfo, int *enableConversion) {
 
 Type *FixedPointType::scalarToLLVMType(LLVMContext &ctxt) const {
     assert(!structData && "fixed point type not a scalar");
-    if (scalarData.floatStandard == Float_NotFloat){
+    if (scalarData.floatStandard == Float_NotFloat) {
         return Type::getIntNTy(ctxt, scalarData.bitsAmt);
-    }else{
+    } else {
         switch (scalarData.floatStandard) {
             case Float_half: /*16-bit floating-point value*/
                 return Type::getHalfTy(ctxt);

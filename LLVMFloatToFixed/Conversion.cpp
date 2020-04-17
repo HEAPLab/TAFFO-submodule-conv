@@ -42,7 +42,8 @@ void FloatToFixed::performConversion(
             }
         }
 
-        LLVM_DEBUG(dbgs() << "\n-------------------------------------* performConversion *-------------------------------------\n");
+        LLVM_DEBUG(dbgs()
+                           << "\n-------------------------------------* performConversion *-------------------------------------\n");
         LLVM_DEBUG(dbgs() << "  [no conv ] " << valueInfo(v)->noTypeConversion << "\n");
         LLVM_DEBUG(dbgs() << "  [value   ] " << *v << "\n");
         if (Instruction *i = dyn_cast<Instruction>(v))
@@ -149,25 +150,31 @@ FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instr
     if (Constant *c = dyn_cast<Constant>(val)) {
         Value *res = convertConstant(c, iofixpt, typepol);
         return res;
-    } else if (SIToFPInst *instr = dyn_cast<SIToFPInst>(val)) {
-        Value *intparam = instr->getOperand(0);
-        iofixpt = FixedPointType(intparam->getType(), true);
-        return intparam;
-    } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(val)) {
-        Value *intparam = instr->getOperand(0);
-        iofixpt = FixedPointType(intparam->getType(), true);
-        return intparam;
+    } else if (iofixpt.isFixedPoint()) {
+        //Only try to exclude conversion if we are trying to convert a float variable that has been converted
+        if (SIToFPInst *instr = dyn_cast<SIToFPInst>(val)) {
+            Value *intparam = instr->getOperand(0);
+            iofixpt = FixedPointType(intparam->getType(), true);
+            return intparam;
+        } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(val)) {
+            Value *intparam = instr->getOperand(0);
+            iofixpt = FixedPointType(intparam->getType(), true);
+            return intparam;
+        }
     }
 
     /* not an easy case; check if the value has a range metadata
      * from VRA before giving up and using the suggested type */
-    mdutils::MDInfo *mdi = mdutils::MetadataManager::getMetadataManager().retrieveMDInfo(val);
-    if (mdutils::InputInfo *ii = dyn_cast_or_null<mdutils::InputInfo>(mdi)) {
-        if (ii->IRange) {
-            FixedPointTypeGenError err;
-            mdutils::FPType fpt = taffo::fixedPointTypeFromRange(*(ii->IRange), &err, iofixpt.scalarBitsAmt());
-            if (err != FixedPointTypeGenError::InvalidRange)
-                iofixpt = FixedPointType(&fpt);
+    // Do this hack only if the final wanted type is a fixed point, otherwise we can go ahead
+    if( iofixpt.isFixedPoint()) {
+        mdutils::MDInfo *mdi = mdutils::MetadataManager::getMetadataManager().retrieveMDInfo(val);
+        if (mdutils::InputInfo *ii = dyn_cast_or_null<mdutils::InputInfo>(mdi)) {
+            if (ii->IRange) {
+                FixedPointTypeGenError err;
+                mdutils::FPType fpt = taffo::fixedPointTypeFromRange(*(ii->IRange), &err, iofixpt.scalarBitsAmt());
+                if (err != FixedPointTypeGenError::InvalidRange)
+                    iofixpt = FixedPointType(&fpt);
+            }
         }
     }
 
@@ -202,25 +209,43 @@ Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType &fixp
     Type *destt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
 
     /* insert new instructions before ip */
-    if (SIToFPInst *instr = dyn_cast<SIToFPInst>(flt)) {
-        Value *intparam = instr->getOperand(0);
-        return cpMetaData(builder.CreateShl(
-                cpMetaData(builder.CreateIntCast(intparam, destt, true), flt, ip),
-                fixpt.scalarFracBitsAmt()), flt, ip);
-    } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(flt)) {
-        Value *intparam = instr->getOperand(0);
-        return cpMetaData(builder.CreateShl(
-                cpMetaData(builder.CreateIntCast(intparam, destt, false), flt, ip),
-                fixpt.scalarFracBitsAmt()), flt, ip);
-    } else {
-        double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
-        Value *interm = cpMetaData(builder.CreateFMul(
-                cpMetaData(ConstantFP::get(flt->getType(), twoebits), flt, ip),
-                flt), flt, ip);
-        if (fixpt.scalarIsSigned()) {
-            return cpMetaData(builder.CreateFPToSI(interm, destt), flt, ip);
+    if (!destt->isFloatingPointTy()) {
+        if (SIToFPInst *instr = dyn_cast<SIToFPInst>(flt)) {
+            Value *intparam = instr->getOperand(0);
+            return cpMetaData(builder.CreateShl(
+                    cpMetaData(builder.CreateIntCast(intparam, destt, true), flt, ip),
+                    fixpt.scalarFracBitsAmt()), flt, ip);
+        } else if (UIToFPInst *instr = dyn_cast<UIToFPInst>(flt)) {
+            Value *intparam = instr->getOperand(0);
+            return cpMetaData(builder.CreateShl(
+                    cpMetaData(builder.CreateIntCast(intparam, destt, false), flt, ip),
+                    fixpt.scalarFracBitsAmt()), flt, ip);
         } else {
-            return cpMetaData(builder.CreateFPToUI(interm, destt), flt, ip);
+            double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
+            Value *interm = cpMetaData(builder.CreateFMul(
+                    cpMetaData(ConstantFP::get(flt->getType(), twoebits), flt, ip),
+                    flt), flt, ip);
+            if (fixpt.scalarIsSigned()) {
+                return cpMetaData(builder.CreateFPToSI(interm, destt), flt, ip);
+            } else {
+                return cpMetaData(builder.CreateFPToUI(interm, destt), flt, ip);
+            }
+        }
+    }else{
+        LLVM_DEBUG(dbgs() << "[genConvertFloatToFix] converting a floating point to a floating point\n");
+        int startingBit = flt->getType()->getPrimitiveSizeInBits();
+        int destinationBit = destt->getPrimitiveSizeInBits();
+        if (startingBit==destinationBit){
+            //No casting is actually needed
+            assert(flt->getType() == destt && "Floating types having same bits but differents types");
+            LLVM_DEBUG(dbgs() << "[genConvertFloatToFix] no casting needed.\n");
+            return flt;
+        }else if(startingBit<destinationBit){
+            //Extension needed
+            return cpMetaData(builder.CreateFPExt(flt, destt), flt, ip);
+        }else{
+            //Truncation needed
+            return cpMetaData(builder.CreateFPTrunc(flt, destt), flt, ip);
         }
     }
 }

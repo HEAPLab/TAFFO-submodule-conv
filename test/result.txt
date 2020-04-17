@@ -1,369 +1,168 @@
-clang-8: warning: -lm: 'linker' input unused [-Wunused-command-line-argument]
-simple.c:24:18: warning: format specifies type 'int' but the argument has type 'double' [-Wformat]
-    printf("%d", calledSum(b, d));
-            ~~   ^~~~~~~~~~~~~~~
-            %f
-1 warning generated.
 Args: /opt/llvm/build/bin/opt -load /home/nicola/dev/TAFFO/dist/usr/local/lib/LLVMFloatToFixed.so -flttofix -globaldce -dce -debug -S -o a.5.magiclangtmp.ll a.4.magiclangtmp.ll 
 	discovered a new reachable node %entry
-	discovered a new reachable node %if.then
-	discovered a new reachable node %if.end
-	discovered a new reachable node %if.else
-	discovered a new reachable node %entry
-	discovered a new reachable node %entry
-Collecting metadata for:  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14
-new valueinfo for   %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14
-Type deducted: 0flp
-Collecting metadata for:  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14
-new valueinfo for   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14
-Type deducted: 0flp
-Collecting metadata for:  %a1 = bitcast float* %a to i8*, !taffo.info !18, !taffo.initweight !19
-new valueinfo for   %a1 = bitcast float* %a to i8*, !taffo.info !18, !taffo.initweight !19
-Type deducted: 0flp
-Collecting metadata for:  %b2 = bitcast float* %b to i8*, !taffo.info !20, !taffo.initweight !19
-new valueinfo for   %b2 = bitcast float* %b to i8*, !taffo.info !20, !taffo.initweight !19
-Type deducted: 0flp
-Collecting metadata for:  %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %a), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-new valueinfo for   %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %a), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-Type deducted: 0flp
-Collecting metadata for:  %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %b), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-new valueinfo for   %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %b), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-Type deducted: 0flp
-Collecting metadata for:  %0 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-new valueinfo for   %0 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-Type deducted: 0flp
-Collecting metadata for:  %1 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-new valueinfo for   %1 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-Type deducted: 0flp
-Collecting metadata for:  %mul = fmul float %0, %1, !taffo.info !11, !taffo.initweight !23
-new valueinfo for   %mul = fmul float %0, %1, !taffo.info !11, !taffo.initweight !23
-Type deducted: 0flp
-Collecting metadata for:  %2 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-new valueinfo for   %2 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-Type deducted: 0flp
-Collecting metadata for:  %div = fdiv float %mul, %2, !taffo.info !11, !taffo.initweight !23
-new valueinfo for   %div = fdiv float %mul, %2, !taffo.info !11, !taffo.initweight !23
-Type deducted: 0flp
-Collecting metadata for:  %conv = fpext float %div to double, !taffo.info !11, !taffo.initweight !24
-new valueinfo for   %conv = fpext float %div to double, !taffo.info !11, !taffo.initweight !24
-Type deducted: 0flp
-Collecting metadata for:  %call5 = call double @exp(double %conv) #1, !taffo.info !11, !taffo.initweight !25, !taffo.constinfo !26
-new valueinfo for   %call5 = call double @exp(double %conv) #1, !taffo.info !11, !taffo.initweight !25, !taffo.constinfo !26
-Type deducted: 0flp
-Collecting metadata for:  %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-new valueinfo for   %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-Type deducted: 0flp
-Collecting metadata for:  store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-new valueinfo for   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
+	discovered a new reachable node %for.cond
+	discovered a new reachable node %for.body
+	discovered a new reachable node %for.inc
+	discovered a new reachable node %for.end
+Collecting metadata for:  %0 = load double, double* @sum, align 8, !taffo.info !0
+Collecting metadata for:  store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16, !taffo.info !13, !taffo.initweight !14, !taffo.constinfo !15
+new valueinfo for   store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16, !taffo.info !13, !taffo.initweight !14, !taffo.constinfo !15
 Type deducted: u0_0fixp
-Collecting metadata for:  %3 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-new valueinfo for   %3 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
+Collecting metadata for:  %arrayidx = getelementptr inbounds [10 x double], [10 x double]* @array, i64 0, i64 %idxprom, !taffo.info !2, !taffo.initweight !16
+new valueinfo for   %arrayidx = getelementptr inbounds [10 x double], [10 x double]* @array, i64 0, i64 %idxprom, !taffo.info !2, !taffo.initweight !16
 Type deducted: 0flp
-Collecting metadata for:  %4 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-new valueinfo for   %4 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
+Collecting metadata for:  %1 = load double, double* %arrayidx, align 8, !taffo.info !2, !taffo.initweight !14
+new valueinfo for   %1 = load double, double* %arrayidx, align 8, !taffo.info !2, !taffo.initweight !14
 Type deducted: 0flp
-Collecting metadata for:  %cmp = fcmp oeq float %3, %4, !taffo.info !18, !taffo.initweight !23
-new valueinfo for   %cmp = fcmp oeq float %3, %4, !taffo.info !18, !taffo.initweight !23
+Collecting metadata for:  %inc = fadd double %1, 1.000000e+00, !taffo.info !2, !taffo.initweight !17, !taffo.constinfo !18
+new valueinfo for   %inc = fadd double %1, 1.000000e+00, !taffo.info !2, !taffo.initweight !17, !taffo.constinfo !18
 Type deducted: 0flp
-Collecting metadata for:  br i1 %cmp, label %if.then, label %if.else, !taffo.info !28, !taffo.initweight !24
-new valueinfo for   br i1 %cmp, label %if.then, label %if.else, !taffo.info !28, !taffo.initweight !24
+Collecting metadata for:  store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
+new valueinfo for   store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
 Type deducted: u0_0fixp
-Collecting metadata for:  %7 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-new valueinfo for   %7 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
+Collecting metadata for:@sum = common dso_local global double 0.000000e+00, align 8, !taffo.info !0
+Collecting metadata for:@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5
+new valueinfo for @array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5
 Type deducted: 0flp
-Collecting metadata for:  %conv11 = fptosi float %7 to i32, !taffo.info !18, !taffo.initweight !23
-new valueinfo for   %conv11 = fptosi float %7 to i32, !taffo.info !18, !taffo.initweight !23
-Type deducted: 0flp
-Collecting metadata for:  %9 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-new valueinfo for   %9 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-Type deducted: 0flp
-Collecting metadata for:  %conv15 = fpext float %9 to double, !taffo.info !15, !taffo.initweight !23
-new valueinfo for   %conv15 = fpext float %9 to double, !taffo.info !15, !taffo.initweight !23
-Type deducted: 0flp
-Collecting metadata for:  %call17 = call double @calledSum.1(double %conv15, double %conv16), !taffo.info !15, !taffo.initweight !24, !taffo.constinfo !22, !taffo.originalCall !31
-new valueinfo for   %call17 = call double @calledSum.1(double %conv15, double %conv16), !taffo.info !15, !taffo.initweight !24, !taffo.constinfo !22, !taffo.originalCall !31
-Type deducted: 0flp
-Collecting metadata for:  %call18 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call17), !taffo.info !20, !taffo.initweight !25, !taffo.constinfo !22
-new valueinfo for   %call18 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call17), !taffo.info !20, !taffo.initweight !25, !taffo.constinfo !22
-Type deducted: 0flp
-readAllLocalMetadata skipping function body of calledSum.1 because it is cloned
-Collecting metadata for:double %a
-new valueinfo for double %a
-Type deducted: 0flp
-Collecting metadata for:@.str.1 = private unnamed_addr constant [9 x i8] c"simple.c\00", section "llvm.metadata", !taffo.info !0
-Collecting metadata for:@.str.3 = private unnamed_addr constant [1 x i8] zeroinitializer, section "llvm.metadata", !taffo.info !2
-Collecting metadata for:@.str.4 = private unnamed_addr constant [3 x i8] c"%f\00", align 1, !taffo.info !4
-Collecting metadata for:@.str.5 = private unnamed_addr constant [7 x i8] c"%f, %d\00", align 1, !taffo.info !4
-Collecting metadata for:@.str.6 = private unnamed_addr constant [7 x i8] c"%d, %f\00", align 1, !taffo.info !4
-Collecting metadata for:@.str.7 = private unnamed_addr constant [3 x i8] c"%d\00", align 1, !taffo.info !6
-[V]   %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14
-[U]   %7 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-[U]   %3 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-[U]   %2 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-[U]   %0 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-[U]   %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %a), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-[U]   %a1 = bitcast float* %a to i8*, !taffo.info !18, !taffo.initweight !19
-[V]   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14
-[U]   %9 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-[U]   %4 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-[U]   %1 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-[U]   %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %b), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-[U]   %b2 = bitcast float* %b to i8*, !taffo.info !20, !taffo.initweight !19
-[V]   %mul = fmul float %0, %1, !taffo.info !11, !taffo.initweight !23
-[U]   %div = fdiv float %mul, %2, !taffo.info !11, !taffo.initweight !23
-[V]   %conv = fpext float %div to double, !taffo.info !11, !taffo.initweight !24
-[U]   %call5 = call double @exp(double %conv) #1, !taffo.info !11, !taffo.initweight !25, !taffo.constinfo !26
-[V]   %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-[U]   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-[V]   %cmp = fcmp oeq float %3, %4, !taffo.info !18, !taffo.initweight !23
-[U]   br i1 %cmp, label %if.then, label %if.else, !taffo.info !28, !taffo.initweight !24
-[V]   %conv11 = fptosi float %7 to i32, !taffo.info !18, !taffo.initweight !23
-[WARNING] Value   %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ] will not be converted because it has no metadata
-new valueinfo for   %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ]
-[U]   %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ]
-new valueinfo for   %phi_noconv = load i32, i32* %9
-created placeholder (non-converted=[  %phi_noconv = load i32, i32* %9], converted=[  %phi_noconv = load i32, i32* %9]) for phi   %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ]
-[V]   %conv15 = fpext float %10 to double, !taffo.info !15, !taffo.initweight !23
-[U]   %call17 = call double @calledSum.1(double %conv15, double %conv16), !taffo.info !15, !taffo.initweight !24, !taffo.constinfo !22, !taffo.originalCall !31
-[V]   %call18 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call17), !taffo.info !20, !taffo.initweight !25, !taffo.constinfo !22
-[V]   %7 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-[U]   %conv11 = fptosi float %7 to i32, !taffo.info !18, !taffo.initweight !23
-[V]   %3 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-[U]   %cmp = fcmp oeq float %3, %4, !taffo.info !18, !taffo.initweight !23
-[V]   %2 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-[U]   %div = fdiv float %mul, %2, !taffo.info !11, !taffo.initweight !23
-[V]   %0 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-[U]   %mul = fmul float %0, %1, !taffo.info !11, !taffo.initweight !23
-[V]   %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %a), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-[V]   %a1 = bitcast float* %a to i8*, !taffo.info !18, !taffo.initweight !19
-[V]   %10 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-[U]   %conv15 = fpext float %10 to double, !taffo.info !15, !taffo.initweight !23
-[V]   %4 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-[U]   %cmp = fcmp oeq float %3, %4, !taffo.info !18, !taffo.initweight !23
-[V]   %1 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-[U]   %mul = fmul float %0, %1, !taffo.info !11, !taffo.initweight !23
-[V]   %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %b), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-[V]   %b2 = bitcast float* %b to i8*, !taffo.info !20, !taffo.initweight !19
-[V]   %call5 = call double @exp(double %conv) #1, !taffo.info !11, !taffo.initweight !25, !taffo.constinfo !26
-[U]   %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-[V]   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-[V]   br i1 %cmp, label %if.then, label %if.else, !taffo.info !28, !taffo.initweight !24
-[V]   %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ]
-phi  %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ] not currently used by anything; skipping placeholder creation
-[V]   %call17 = call double @calledSum.1(double %conv15, double %conv16), !taffo.info !15, !taffo.initweight !24, !taffo.constinfo !22, !taffo.originalCall !31
-[U]   %call18 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call17), !taffo.info !20, !taffo.initweight !25, !taffo.constinfo !22
-[V]   %conv11 = fptosi float %7 to i32, !taffo.info !18, !taffo.initweight !23
-[U]   %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ]
-phi  %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ] not currently used by anything; skipping placeholder creation
-[V]   %div = fdiv float %mul, %2, !taffo.info !11, !taffo.initweight !23
-[U]   %conv = fpext float %div to double, !taffo.info !11, !taffo.initweight !24
-[V]   %conv15 = fpext float %10 to double, !taffo.info !15, !taffo.initweight !23
-[U]   %call17 = call double @calledSum.1(double %conv15, double %conv16), !taffo.info !15, !taffo.initweight !24, !taffo.constinfo !22, !taffo.originalCall !31
-[V]   %cmp = fcmp oeq float %3, %4, !taffo.info !18, !taffo.initweight !23
-[U]   br i1 %cmp, label %if.then, label %if.else, !taffo.info !28, !taffo.initweight !24
-[V]   %mul = fmul float %0, %1, !taffo.info !11, !taffo.initweight !23
-[U]   %div = fdiv float %mul, %2, !taffo.info !11, !taffo.initweight !23
-[V]   %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-[U]   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-[V]   %call18 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call17), !taffo.info !20, !taffo.initweight !25, !taffo.constinfo !22
-[V]   %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ]
-phi  %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ] not currently used by anything; skipping placeholder creation
-[V]   %conv = fpext float %div to double, !taffo.info !11, !taffo.initweight !24
-[U]   %call5 = call double @exp(double %conv) #1, !taffo.info !11, !taffo.initweight !25, !taffo.constinfo !26
-[V]   %call17 = call double @calledSum.1(double %conv15, double %conv16), !taffo.info !15, !taffo.initweight !24, !taffo.constinfo !22, !taffo.originalCall !31
-[U]   %call18 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call17), !taffo.info !20, !taffo.initweight !25, !taffo.constinfo !22
-[V]   br i1 %cmp, label %if.then, label %if.else, !taffo.info !28, !taffo.initweight !24
-[V]   %div = fdiv float %mul, %2, !taffo.info !11, !taffo.initweight !23
-[U]   %conv = fpext float %div to double, !taffo.info !11, !taffo.initweight !24
-[V]   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-[V]   %call5 = call double @exp(double %conv) #1, !taffo.info !11, !taffo.initweight !25, !taffo.constinfo !26
-[U]   %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-[V]   %call18 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call17), !taffo.info !20, !taffo.initweight !25, !taffo.constinfo !22
-[V]   %conv = fpext float %div to double, !taffo.info !11, !taffo.initweight !24
-[U]   %call5 = call double @exp(double %conv) #1, !taffo.info !11, !taffo.initweight !25, !taffo.constinfo !26
-[V]   %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-[U]   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-[V]   %call5 = call double @exp(double %conv) #1, !taffo.info !11, !taffo.initweight !25, !taffo.constinfo !26
-[U]   %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-[V]   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-[V]   %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-[U]   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-[V]   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-[WARNING] Value   %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ] will not be converted because its metadata is incomplete
+Collecting metadata for:@.str = private unnamed_addr constant [23 x i8] c"scalar(range(7, 2000))\00", section "llvm.metadata", !taffo.info !6
+Collecting metadata for:@.str.1 = private unnamed_addr constant [8 x i8] c"array.c\00", section "llvm.metadata", !taffo.info !8
+[V] @array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5
+[U]   %arrayidx = getelementptr inbounds [10 x double], [10 x double]* @array, i64 0, i64 %idxprom, !taffo.info !2, !taffo.initweight !16
+[WARNING] Value double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0) will not be converted because it has no metadata
+new valueinfo for double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0)
+[U] double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0)
+[WARNING] Value i8* bitcast ([10 x double]* @array to i8*) will not be converted because it has no metadata
+new valueinfo for i8* bitcast ([10 x double]* @array to i8*)
+[U] i8* bitcast ([10 x double]* @array to i8*)
+[V]   store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16, !taffo.info !13, !taffo.initweight !14, !taffo.constinfo !15
+[V]   %1 = load double, double* %arrayidx, align 8, !taffo.info !2, !taffo.initweight !14
+[U]   %inc = fadd double %1, 1.000000e+00, !taffo.info !2, !taffo.initweight !17, !taffo.constinfo !18
+[V]   store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
+[V]   %arrayidx = getelementptr inbounds [10 x double], [10 x double]* @array, i64 0, i64 %idxprom, !taffo.info !2, !taffo.initweight !16
+[U]   store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
+[U]   %1 = load double, double* %arrayidx, align 8, !taffo.info !2, !taffo.initweight !14
+[V] double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0)
+[U]   store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16, !taffo.info !13, !taffo.initweight !14, !taffo.constinfo !15
+[V] i8* bitcast ([10 x double]* @array to i8*)
+[WARNING] Value { i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 } will not be converted because it has no metadata
+new valueinfo for { i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }
+[U] { i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }
+[V]   %inc = fadd double %1, 1.000000e+00, !taffo.info !2, !taffo.initweight !17, !taffo.constinfo !18
+[U]   store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
+[V]   %1 = load double, double* %arrayidx, align 8, !taffo.info !2, !taffo.initweight !14
+[U]   %inc = fadd double %1, 1.000000e+00, !taffo.info !2, !taffo.initweight !17, !taffo.constinfo !18
+[V]   store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16, !taffo.info !13, !taffo.initweight !14, !taffo.constinfo !15
+[V] { i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }
+[WARNING] Value [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }] will not be converted because it has no metadata
+new valueinfo for [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }]
+[U] [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }]
+[V]   store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
+[V]   %inc = fadd double %1, 1.000000e+00, !taffo.info !2, !taffo.initweight !17, !taffo.constinfo !18
+[U]   store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
+[V] [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }]
+[WARNING] Value @llvm.global.annotations = appending global [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }], section "llvm.metadata" will not be converted because it has no metadata
+new valueinfo for @llvm.global.annotations = appending global [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }], section "llvm.metadata"
+[U] @llvm.global.annotations = appending global [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }], section "llvm.metadata"
+[V]   store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
+[V] @llvm.global.annotations = appending global [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }], section "llvm.metadata"
+[WARNING] Value double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0) will not be converted because its metadata is incomplete
 u0_0fixp
-Attempted to clone function __isoc99_scanf but failed
-Attempted to clone function __isoc99_scanf but failed
-creating function calledSum.1_0flp with types (-1, 0flp) (0, 0flp) 
-Converting function calledSum.1 : double (double, double)* into calledSum.1_0flp : half (half, double)*
-new valueinfo for   %a.0flp.placeholder = load double, double* %0
-Collecting metadata for:half %a.0flp
-new valueinfo for half %a.0flp
-Type deducted: 0flp
-new valueinfo for   ret double %add
-Sorting queue of new function calledSum.1_0flp
-[V]   %a.0flp.placeholder = load double, double* %0
-[WARNING] Value   %add = fadd double %a.0flp.placeholder, %b will not be converted because it has no metadata
-new valueinfo for   %add = fadd double %a.0flp.placeholder, %b
-[U]   %add = fadd double %a.0flp.placeholder, %b
-[V]   ret double %add
-[V]   %add = fadd double %a.0flp.placeholder, %b
-[U]   ret double %add
-[V]   ret double %add
-[WARNING] Value   %add = fadd double %a.0flp.placeholder, %b will not be converted because its metadata is incomplete
+[WARNING] Value i8* bitcast ([10 x double]* @array to i8*) will not be converted because its metadata is incomplete
 u0_0fixp
-Attempted to clone function printf but failed
-Attempted to clone function exp but failed
+[WARNING] Value { i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 } will not be converted because its metadata is incomplete
+u0_0fixp
+[WARNING] Value [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }] will not be converted because its metadata is incomplete
+u0_0fixp
+[WARNING] Value @llvm.global.annotations = appending global [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }], section "llvm.metadata" will not be converted because its metadata is incomplete
+u0_0fixp
 conversion queue:
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14, ]   %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14, ]   %7 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14, ]   %3 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14, ]   %2 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14, ]   %0 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14, ]   %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %a), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14, ]   %a1 = bitcast float* %a to i8*, !taffo.info !18, !taffo.initweight !19
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %10 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %4 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %1 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %b), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %b2 = bitcast float* %b to i8*, !taffo.info !20, !taffo.initweight !19
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14, ]   %conv11 = fptosi float %7 to i32, !taffo.info !18, !taffo.initweight !23
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %conv15 = fpext float %10 to double, !taffo.info !15, !taffo.initweight !23
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14,   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %cmp = fcmp oeq float %3, %4, !taffo.info !18, !taffo.initweight !23
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14,   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %mul = fmul float %0, %1, !taffo.info !11, !taffo.initweight !23
-bt=0 noconv=1 type=u0_0fixp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14, ]   %d.0 = phi i32 [ %conv8, %if.then ], [ %conv11, %if.else ]
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %call17 = call double @calledSum.1(double %conv15, double %conv16), !taffo.info !15, !taffo.initweight !24, !taffo.constinfo !22, !taffo.originalCall !31
-bt=0 noconv=0 type=u0_0fixp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14,   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   br i1 %cmp, label %if.then, label %if.else, !taffo.info !28, !taffo.initweight !24
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14,   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %div = fdiv float %mul, %2, !taffo.info !11, !taffo.initweight !23
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %call18 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call17), !taffo.info !20, !taffo.initweight !25, !taffo.constinfo !22
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14,   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %conv = fpext float %div to double, !taffo.info !11, !taffo.initweight !24
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14,   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %call5 = call double @exp(double %conv) #1, !taffo.info !11, !taffo.initweight !25, !taffo.constinfo !26
-bt=0 noconv=0 type=0flp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14,   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   %conv6 = fptrunc double %call5 to float, !taffo.info !11, !taffo.initweight !27
-bt=0 noconv=0 type=u0_0fixp  fun='main' roots=[  %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14,   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14, ]   store float %conv6, float* %c, align 4, !taffo.info !28, !taffo.initweight !29
-bt=1 noconv=0 type=0flp  fun='calledSum.1_0flp' roots=[  %a.0flp.placeholder = load double, double* %0, ]   %a.0flp.placeholder = load double, double* %0
-bt=0 noconv=1 type=u0_0fixp  fun='calledSum.1_0flp' roots=[  %a.0flp.placeholder = load double, double* %0, ]   %add = fadd double %a.0flp.placeholder, %b
-bt=0 noconv=0 type=0flp  fun='calledSum.1_0flp' roots=[  %a.0flp.placeholder = load double, double* %0, ]   ret double %add
+bt=0 noconv=0 type=0flp roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ] @array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5
+bt=0 noconv=0 type=0flp  fun='main' roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ]   %arrayidx = getelementptr inbounds [10 x double], [10 x double]* @array, i64 0, i64 %idxprom, !taffo.info !2, !taffo.initweight !16
+bt=0 noconv=1 type=u0_0fixp roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ] double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0)
+bt=0 noconv=1 type=u0_0fixp roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ] i8* bitcast ([10 x double]* @array to i8*)
+bt=0 noconv=0 type=0flp  fun='main' roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ]   %1 = load double, double* %arrayidx, align 8, !taffo.info !2, !taffo.initweight !14
+bt=0 noconv=0 type=u0_0fixp  fun='main' roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ]   store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16, !taffo.info !13, !taffo.initweight !14, !taffo.constinfo !15
+bt=0 noconv=1 type=u0_0fixp roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ] { i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }
+bt=0 noconv=0 type=0flp  fun='main' roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ]   %inc = fadd double %1, 1.000000e+00, !taffo.info !2, !taffo.initweight !17, !taffo.constinfo !18
+bt=0 noconv=1 type=u0_0fixp roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ] [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }]
+bt=0 noconv=0 type=u0_0fixp  fun='main' roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ]   store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
+bt=0 noconv=1 type=u0_0fixp roots=[@array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5, ] @llvm.global.annotations = appending global [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }], section "llvm.metadata"
 
 
-* performConversion *
+
+-------------------------------------* performConversion *-------------------------------------
   [no conv ] 0
-  [value   ]   %a = alloca float, align 4, !taffo.info !11, !taffo.initweight !14
-  [function] main
-  [output  ]   %a.0flp = alloca half, align 4
-new valueinfo for   %a.0flp = alloca half, align 4, !taffo.info !11
-* performConversion *
+  [value   ] @array = common dso_local global [10 x double] zeroinitializer, align 16, !taffo.info !2, !taffo.initweight !5
+  [output  ] @array.fixp = common global [10 x half] zeroinitializer, align 16
+new valueinfo for @array.fixp = common global [10 x half] zeroinitializer, align 16, !taffo.info !2
+
+-------------------------------------* performConversion *-------------------------------------
   [no conv ] 0
-  [value   ]   %b = alloca float, align 4, !taffo.info !15, !taffo.initweight !14
+  [value   ]   %arrayidx = getelementptr inbounds [10 x double], [10 x double]* @array, i64 0, i64 %idxprom, !taffo.info !2, !taffo.initweight !16
   [function] main
-  [output  ]   %b.0flp = alloca half, align 4
-new valueinfo for   %b.0flp = alloca half, align 4, !taffo.info !15
-* performConversion *
+  [output  ]   %arrayidx.0flp = getelementptr inbounds [10 x half], [10 x half]* @array.fixp, i64 0, i64 %idxprom
+new valueinfo for   %arrayidx.0flp = getelementptr inbounds [10 x half], [10 x half]* @array.fixp, i64 0, i64 %idxprom, !taffo.info !2
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 1
+  [value   ] double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0)
+  [output  ] double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0)
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 1
+  [value   ] i8* bitcast ([10 x double]* @array to i8*)
+  [output  ] i8* bitcast ([10 x double]* @array to i8*)
+
+-------------------------------------* performConversion *-------------------------------------
   [no conv ] 0
-  [value   ]   %7 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
+  [value   ]   %1 = load double, double* %arrayidx, align 8, !taffo.info !2, !taffo.initweight !14
   [function] main
-  [output  ]   %"0flp" = load half, half* %a.0flp, align 4
-new valueinfo for   %"0flp" = load half, half* %a.0flp, align 4, !taffo.info !11
-* performConversion *
+  [output  ]   %"0flp" = load half, half* %arrayidx.0flp, align 8
+new valueinfo for   %"0flp" = load half, half* %arrayidx.0flp, align 8, !taffo.info !2
+
+-------------------------------------* performConversion *-------------------------------------
   [no conv ] 0
-  [value   ]   %3 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
+  [value   ]   store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16, !taffo.info !13, !taffo.initweight !14, !taffo.constinfo !15
   [function] main
-  [output  ]   %"0flp1" = load half, half* %a.0flp, align 4
-new valueinfo for   %"0flp1" = load half, half* %a.0flp, align 4, !taffo.info !11
-* performConversion *
+  [output  ]   store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16
+new valueinfo for   store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16, !taffo.info !13, !taffo.constinfo !15
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 1
+  [value   ] { i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }
+  [output  ] { i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }
+
+-------------------------------------* performConversion *-------------------------------------
   [no conv ] 0
-  [value   ]   %2 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
+  [value   ]   %inc = fadd double %1, 1.000000e+00, !taffo.info !2, !taffo.initweight !17, !taffo.constinfo !18
   [function] main
-  [output  ]   %"0flp2" = load half, half* %a.0flp, align 4
-new valueinfo for   %"0flp2" = load half, half* %a.0flp, align 4, !taffo.info !11
-* performConversion *
+  [output  ]   %inc.0flp = fadd half %"0flp", 0xH3C00
+new valueinfo for   %inc.0flp = fadd half %"0flp", 0xH3C00, !taffo.info !2, !taffo.constinfo !17
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 1
+  [value   ] [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }]
+  [output  ] [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }]
+
+-------------------------------------* performConversion *-------------------------------------
   [no conv ] 0
-  [value   ]   %0 = load float, float* %a, align 4, !taffo.info !11, !taffo.initweight !19
+  [value   ]   store double %inc, double* %arrayidx, align 8, !taffo.info !13, !taffo.initweight !14
   [function] main
-  [output  ]   %"0flp3" = load half, half* %a.0flp, align 4
-new valueinfo for   %"0flp3" = load half, half* %a.0flp, align 4, !taffo.info !11
-* performConversion *
-  [no conv ] 0
-  [value   ]   %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %a), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-  [function] main
-[Fallback] attempt to wrap not supported operation:
-  %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %a), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-  Substituted operand number : 2 of 3
-  mutated operands to:
-  %call.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %0), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-  [output  ]   %call.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %0), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-new valueinfo for   %call.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %0), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
-* performConversion *
-  [no conv ] 0
-  [value   ]   %a1 = bitcast float* %a to i8*, !taffo.info !18, !taffo.initweight !19
-  [function] main
-getLLVMFixedPointTypeForFloatType given unexpected non-float type i8
-  [output  ]   %0 = bitcast half* %a.0flp to i8*
-new valueinfo for   %0 = bitcast half* %a.0flp to i8*, !taffo.info !18
-* performConversion *
-  [no conv ] 0
-  [value   ]   %12 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-  [function] main
-  [output  ]   %"0flp4" = load half, half* %b.0flp, align 4
-new valueinfo for   %"0flp4" = load half, half* %b.0flp, align 4, !taffo.info !15
-* performConversion *
-  [no conv ] 0
-  [value   ]   %6 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-  [function] main
-  [output  ]   %"0flp5" = load half, half* %b.0flp, align 4
-new valueinfo for   %"0flp5" = load half, half* %b.0flp, align 4, !taffo.info !15
-* performConversion *
-  [no conv ] 0
-  [value   ]   %3 = load float, float* %b, align 4, !taffo.info !15, !taffo.initweight !19
-  [function] main
-  [output  ]   %"0flp6" = load half, half* %b.0flp, align 4
-new valueinfo for   %"0flp6" = load half, half* %b.0flp, align 4, !taffo.info !15
-* performConversion *
-  [no conv ] 0
-  [value   ]   %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %b), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-  [function] main
-[Fallback] attempt to wrap not supported operation:
-  %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %b), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-  Substituted operand number : 2 of 3
-  mutated operands to:
-  %call4.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %2), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-  [output  ]   %call4.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %2), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-new valueinfo for   %call4.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), float* %2), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
-* performConversion *
-  [no conv ] 0
-  [value   ]   %b2 = bitcast float* %b to i8*, !taffo.info !20, !taffo.initweight !19
-  [function] main
-getLLVMFixedPointTypeForFloatType given unexpected non-float type i8
-  [output  ]   %1 = bitcast half* %b.0flp to i8*
-new valueinfo for   %1 = bitcast half* %b.0flp to i8*, !taffo.info !20
-* performConversion *
-  [no conv ] 0
-  [value   ]   %conv11 = fptosi float %11 to i32, !taffo.info !18, !taffo.initweight !23
-  [function] main
-opt: /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:235: llvm::Value* flttofix::FloatToFixed::genConvertFixedToFixed(llvm::Value*, const flttofix::FixedPointType&, const flttofix::FixedPointType&, llvm::Instruction*): Assertion `llvmsrct->isIntegerTy() && "cannot change fixed point format of a float"' failed.
-Stack dump:
-0.	Program arguments: /opt/llvm/build/bin/opt -load /home/nicola/dev/TAFFO/dist/usr/local/lib/LLVMFloatToFixed.so -flttofix -globaldce -dce -debug -S -o a.5.magiclangtmp.ll a.4.magiclangtmp.ll 
-1.	Running pass 'Floating Point to Fixed Point conversion pass' on module 'a.4.magiclangtmp.ll'.
- #0 0x00007f647e7158db llvm::sys::PrintStackTrace(llvm::raw_ostream&) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:495:22
- #1 0x00007f647e71596e PrintStackTraceSignalHandler(void*) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:559:1
- #2 0x00007f647e713558 llvm::sys::RunSignalHandlers() /opt/llvm/llvm-8.0.1.src/lib/Support/Signals.cpp:69:20
- #3 0x00007f647e715301 SignalHandler(int) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:358:1
- #4 0x00007f6483b54800 __restore_rt (/usr/lib/libpthread.so.0+0x14800)
- #5 0x00007f647de6bce5 __GI_raise (/usr/lib/libc.so.6+0x3bce5)
- #6 0x00007f647de55857 __GI_abort (/usr/lib/libc.so.6+0x25857)
- #7 0x00007f647de55727 _nl_load_domain.cold (/usr/lib/libc.so.6+0x25727)
- #8 0x00007f647de64426 (/usr/lib/libc.so.6+0x34426)
- #9 0x00007f647c42504c flttofix::FloatToFixed::genConvertFixedToFixed(llvm::Value*, flttofix::FixedPointType const&, flttofix::FixedPointType const&, llvm::Instruction*) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:235:5
-#10 0x00007f647c4241c9 flttofix::FloatToFixed::translateOrMatchOperand(llvm::Value*, flttofix::FixedPointType&, llvm::Instruction*, flttofix::FloatToFixed::TypeMatchPolicy) (.localalias) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:117:38
-#11 0x00007f647c43b9cf flttofix::FloatToFixed::translateOrMatchOperandAndType(llvm::Value*, flttofix::FixedPointType const&, llvm::Instruction*) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/LLVMFloatToFixedPass.h:297:43
-#12 0x00007f647c437d8e flttofix::FloatToFixed::convertCast(llvm::CastInst*, flttofix::FixedPointType const&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/InstructionConversion.cpp:669:50
-#13 0x00007f647c433b92 flttofix::FloatToFixed::convertInstruction(llvm::Module&, llvm::Instruction*, flttofix::FixedPointType&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/InstructionConversion.cpp:55:30
-#14 0x00007f647c42407c flttofix::FloatToFixed::convertSingleValue(llvm::Module&, llvm::Value*, flttofix::FixedPointType&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:99:33
-#15 0x00007f647c423b17 flttofix::FloatToFixed::performConversion(llvm::Module&, std::vector<llvm::Value*, std::allocator<llvm::Value*> >&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:50:70
-#16 0x00007f647c404436 flttofix::FloatToFixed::runOnModule(llvm::Module&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/LLVMFloatToFixedPass.cpp:53:18
-#17 0x00007f647ecb6fa3 (anonymous namespace)::MPPassManager::runOnModule(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1744:20
-#18 0x00007f647ecb780f llvm::legacy::PassManagerImpl::run(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1857:13
-#19 0x00007f647ecb7a4d llvm::legacy::PassManager::run(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1889:1
-#20 0x000055a2f45bc15b main /opt/llvm/llvm-8.0.1.src/tools/opt/opt.cpp:835:15
-#21 0x00007f647de57023 __libc_start_main (/usr/lib/libc.so.6+0x27023)
-#22 0x000055a2f457724e _start (/opt/llvm/build/bin/opt+0x7424e)
-./magiclang2_float.sh: riga 290: 974656 Annullato               (core dump creato) ${OPT} -load "$PASSLIB" -flttofix -globaldce -dce -debug ${conversion_flags} -S -o "${output_file}.5.magiclangtmp.ll" "${output_file}.4.magiclangtmp.ll"
+  [output  ]   store half %inc.0flp, half* %arrayidx.0flp, align 8
+new valueinfo for   store half %inc.0flp, half* %arrayidx.0flp, align 8, !taffo.info !13
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 1
+  [value   ] @llvm.global.annotations = appending global [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }], section "llvm.metadata"
+  [output  ] @llvm.global.annotations = appending global [1 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast ([10 x double]* @array to i8*), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.1, i32 0, i32 0), i32 3 }], section "llvm.metadata"
+void flttofix::FloatToFixed::closePhiLoops() begin
+void flttofix::FloatToFixed::closePhiLoops() end
+	discovered a new reachable node %entry
+	discovered a new reachable node %for.cond
+	discovered a new reachable node %for.body
+	discovered a new reachable node %for.inc
+	discovered a new reachable node %for.end
+/usr/bin/ld: /tmp/a-8d2cce.o: in function `main':
+array.c:(.text+0x41): undefined reference to `__gnu_h2f_ieee'
+/usr/bin/ld: array.c:(.text+0x52): undefined reference to `__gnu_f2h_ieee'
+clang-8: error: linker command failed with exit code 1 (use -v to see invocation)

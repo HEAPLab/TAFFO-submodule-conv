@@ -174,7 +174,7 @@ Constant *FloatToFixed::convertConstantDataSequential(ConstantDataSequential *cd
     if (!isFloatType(cds->getElementType()))
         return cds;
 
-    if(fixpt.isFixedPoint()) {
+    if (fixpt.isFixedPoint()) {
         if (fixpt.scalarBitsAmt() <= 8)
             return createConstantDataSequential<uint8_t>(cds, fixpt);
         else if (fixpt.scalarBitsAmt() <= 16)
@@ -185,12 +185,12 @@ Constant *FloatToFixed::convertConstantDataSequential(ConstantDataSequential *cd
             return createConstantDataSequential<uint64_t>(cds, fixpt);
     }
 
-    if(fixpt.isFloatingPoint()) {
-        if(fixpt.getFloatingPointStandard() == FixedPointType::Float_float){
+    if (fixpt.isFloatingPoint()) {
+        if (fixpt.getFloatingPointStandard() == FixedPointType::Float_float) {
             return createConstantDataSequentialFP<float>(cds, fixpt);
         }
 
-        if(fixpt.getFloatingPointStandard() == FixedPointType::Float_double){
+        if (fixpt.getFloatingPointStandard() == FixedPointType::Float_double) {
             return createConstantDataSequentialFP<double>(cds, fixpt);
         }
         //As the sequential data does not accept anything different from float or double, we are doomed.
@@ -210,7 +210,7 @@ FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, FixedPointTy
 
 
     //Old workflow, convert the value to a fixed point value
-    if(fixpt.isFixedPoint()) {
+    if (fixpt.isFixedPoint()) {
         if (!isHintPreferredPolicy(typepol)) {
             APFloat tmp(val);
             bool precise = false;
@@ -226,15 +226,20 @@ FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, FixedPointTy
         if (convertAPFloat(val, fixval, context, fixpt)) {
             Type *intty = fixpt.scalarToLLVMType(fpc->getContext());
             return ConstantInt::get(intty, fixval);
-        }else{
+        } else {
             return nullptr;
         }
     }
 
 
     //Just "convert", actually recast, the value to the correct data type if using floating point data
-    if(fixpt.isFloatingPoint()){
+    if (fixpt.isFloatingPoint()) {
         Type *intty = fixpt.scalarToLLVMType(fpc->getContext());
+        bool loosesInfo;
+
+        val.convert(intty->getFltSemantics(), llvm::APFloatBase::rmTowardPositive, &loosesInfo);
+
+
         return ConstantFP::get(intty, val);
     }
 
