@@ -636,72 +636,114 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp) {
     FixedPointType cmptype;
     FixedPointType t1, t2;
     bool hasinfo1 = hasInfo(op1), hasinfo2 = hasInfo(op2);
+    bool isOneFloat=false;
     if (hasinfo1 && hasinfo2) {
         t1 = fixPType(op1);
         t2 = fixPType(op2);
+        isOneFloat = t1.isFloatingPoint() || t2.isFloatingPoint();
     } else if (hasinfo1) {
         t1 = fixPType(op1);
         t2 = t1;
         t2.scalarIsSigned() = true;
+        isOneFloat = t1.isFloatingPoint();
     } else if (hasinfo2) {
         t2 = fixPType(op2);
         t1 = t2;
         t1.scalarIsSigned() = true;
-    }
-    bool mixedsign = t1.scalarIsSigned() != t2.scalarIsSigned();
-    int intpart1 = t1.scalarBitsAmt() - t1.scalarFracBitsAmt() + (mixedsign ? t1.scalarIsSigned() : 0);
-    int intpart2 = t2.scalarBitsAmt() - t2.scalarFracBitsAmt() + (mixedsign ? t2.scalarIsSigned() : 0);
-    cmptype.scalarIsSigned() = t1.scalarIsSigned() || t2.scalarIsSigned();
-    cmptype.scalarFracBitsAmt() = std::max(t1.scalarFracBitsAmt(), t2.scalarFracBitsAmt());
-    cmptype.scalarBitsAmt() = std::max(intpart1, intpart2) + cmptype.scalarFracBitsAmt();
-
-    Value *val1 = translateOrMatchOperandAndType(op1, cmptype, fcmp);
-    Value *val2 = translateOrMatchOperandAndType(op2, cmptype, fcmp);
-
-    IRBuilder<> builder(fcmp->getNextNode());
-    CmpInst::Predicate ty;
-    int pr = fcmp->getPredicate();
-    bool swapped = false;
-
-    //se unordered swappo, converto con la int, e poi mi ricordo di riswappare
-    if (!CmpInst::isOrdered(fcmp->getPredicate())) {
-        pr = fcmp->getInversePredicate();
-        swapped = true;
+        isOneFloat = t2.isFloatingPoint();
     }
 
-    if (pr == CmpInst::FCMP_OEQ) {
-        ty = CmpInst::ICMP_EQ;
-    } else if (pr == CmpInst::FCMP_ONE) {
-        ty = CmpInst::ICMP_NE;
-    } else if (pr == CmpInst::FCMP_OGT) {
-        ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
-    } else if (pr == CmpInst::FCMP_OGE) {
-        ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
-    } else if (pr == CmpInst::FCMP_OLE) {
-        ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
-    } else if (pr == CmpInst::FCMP_OLT) {
-        ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
-    } else if (pr == CmpInst::FCMP_ORD) { ;
-        //TODO gestione NaN
-    } else if (pr == CmpInst::FCMP_TRUE) {
-        /* there is no integer-only always-true / always-false comparison
-         * operator... so we roll out our own by producing a tautology */
-        return builder.CreateICmpEQ(
-                ConstantInt::get(Type::getInt32Ty(fcmp->getContext()), 0),
-                ConstantInt::get(Type::getInt32Ty(fcmp->getContext()), 0));
-    } else if (pr == CmpInst::FCMP_FALSE) {
-        return builder.CreateICmpNE(
-                ConstantInt::get(Type::getInt32Ty(fcmp->getContext()), 0),
-                ConstantInt::get(Type::getInt32Ty(fcmp->getContext()), 0));
-    }
+    if(!isOneFloat) {
+        bool mixedsign = t1.scalarIsSigned() != t2.scalarIsSigned();
+        int intpart1 = t1.scalarBitsAmt() - t1.scalarFracBitsAmt() + (mixedsign ? t1.scalarIsSigned() : 0);
+        int intpart2 = t2.scalarBitsAmt() - t2.scalarFracBitsAmt() + (mixedsign ? t2.scalarIsSigned() : 0);
+        cmptype.scalarIsSigned() = t1.scalarIsSigned() || t2.scalarIsSigned();
+        cmptype.scalarFracBitsAmt() = std::max(t1.scalarFracBitsAmt(), t2.scalarFracBitsAmt());
+        cmptype.scalarBitsAmt() = std::max(intpart1, intpart2) + cmptype.scalarFracBitsAmt();
 
-    if (swapped) {
-        ty = CmpInst::getInversePredicate(ty);
-    }
+        Value *val1 = translateOrMatchOperandAndType(op1, cmptype, fcmp);
+        Value *val2 = translateOrMatchOperandAndType(op2, cmptype, fcmp);
 
-    return val1 && val2
-           ? builder.CreateICmp(ty, val1, val2)
-           : nullptr;
+        IRBuilder<> builder(fcmp->getNextNode());
+        CmpInst::Predicate ty;
+        int pr = fcmp->getPredicate();
+        bool swapped = false;
+
+        //se unordered swappo, converto con la int, e poi mi ricordo di riswappare
+        if (!CmpInst::isOrdered(fcmp->getPredicate())) {
+            pr = fcmp->getInversePredicate();
+            swapped = true;
+        }
+
+        if (pr == CmpInst::FCMP_OEQ) {
+            ty = CmpInst::ICMP_EQ;
+        } else if (pr == CmpInst::FCMP_ONE) {
+            ty = CmpInst::ICMP_NE;
+        } else if (pr == CmpInst::FCMP_OGT) {
+            ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
+        } else if (pr == CmpInst::FCMP_OGE) {
+            ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
+        } else if (pr == CmpInst::FCMP_OLE) {
+            ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
+        } else if (pr == CmpInst::FCMP_OLT) {
+            ty = cmptype.scalarIsSigned() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
+        } else if (pr == CmpInst::FCMP_ORD) { ;
+            //TODO gestione NaN
+        } else if (pr == CmpInst::FCMP_TRUE) {
+            /* there is no integer-only always-true / always-false comparison
+             * operator... so we roll out our own by producing a tautology */
+            return builder.CreateICmpEQ(
+                    ConstantInt::get(Type::getInt32Ty(fcmp->getContext()), 0),
+                    ConstantInt::get(Type::getInt32Ty(fcmp->getContext()), 0));
+        } else if (pr == CmpInst::FCMP_FALSE) {
+            return builder.CreateICmpNE(
+                    ConstantInt::get(Type::getInt32Ty(fcmp->getContext()), 0),
+                    ConstantInt::get(Type::getInt32Ty(fcmp->getContext()), 0));
+        }
+
+        if (swapped) {
+            ty = CmpInst::getInversePredicate(ty);
+        }
+
+        return val1 && val2
+               ? builder.CreateICmp(ty, val1, val2)
+               : nullptr;
+    }else{
+        //Handling the presence of at least one float:
+        //Converting all to the biggest float, then comparing as before
+
+        if(t1.isFloatingPoint() && t2.isFloatingPoint()){
+            //take the biggest floating point
+            if(t1.scalarToLLVMType(fcmp->getContext())->getPrimitiveSizeInBits() > t2.scalarToLLVMType(fcmp->getContext())->getPrimitiveSizeInBits()){
+                //t1 is "more precise"
+                cmptype=t1;
+            }else if(t1.scalarToLLVMType(fcmp->getContext())->getPrimitiveSizeInBits() < t2.scalarToLLVMType(fcmp->getContext())->getPrimitiveSizeInBits()){
+                //t2 is "more precise"
+                cmptype=t2;
+            }else{
+                //they are equal, yeah!
+                cmptype=t1; //or t2, they are equal
+                //FIXME: what if bfloat16 (for now unsupported) and half???
+            }
+        }else if(t1.isFloatingPoint()){
+            cmptype = t1;
+        }else if(t2.isFloatingPoint()){
+            cmptype = t2;
+        }else{
+            llvm_unreachable("There should be at least one floating point.");
+        }
+
+        Value *val1 = translateOrMatchOperandAndType(op1, cmptype, fcmp);
+        Value *val2 = translateOrMatchOperandAndType(op2, cmptype, fcmp);
+
+        IRBuilder<> builder(fcmp->getNextNode());
+        return builder.CreateFCmp(fcmp->getPredicate(), //original predicate
+                val1,
+                val2);
+
+
+
+    }
 }
 
 

@@ -1,27 +1,28 @@
 Args: /opt/llvm/build/bin/opt -debug -load /home/nicola/dev/TAFFO/dist/usr/local/lib/TaffoVRA.so -mem2reg -taffoVRA -S -o a.3.magiclangtmp.ll a.2.magiclangtmp.ll 
 	discovered a new reachable node %entry
-	discovered a new reachable node %for.cond
-	discovered a new reachable node %for.body
-	discovered a new reachable node %for.inc
-	discovered a new reachable node %for.end
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
 	discovered a new reachable node %entry
-	discovered a new reachable node %for.cond
-	discovered a new reachable node %for.body
-	discovered a new reachable node %for.inc
-	discovered a new reachable node %for.end
 	discovered a new reachable node %entry
-	discovered a new reachable node %for.cond
-	discovered a new reachable node %for.body
-	discovered a new reachable node %for.inc
-	discovered a new reachable node %for.end
-Starting Memory SSA clobber for   %1 = load double, double* %arrayidx, align 8, !taffo.initweight !6, !taffo.info !1 is MemoryUse(3) MayAlias
-Optimized Memory SSA clobber for   %1 = load double, double* %arrayidx, align 8, !taffo.initweight !6, !taffo.info !1 is 3 = MemoryPhi({entry,1},{for.inc,2})
-Result Memory SSA clobber [SkipSelf = 0] for   %1 = load double, double* %arrayidx, align 8, !taffo.initweight !6, !taffo.info !1 is 3 = MemoryPhi({entry,1},{for.inc,2})
-[harvestMetadata] Considering input metadata of instruction   store double %0, double* getelementptr inbounds ([10 x double], [10 x double]* @array, i64 0, i64 0), align 16, !taffo.initweight !6, !taffo.info !1 (weight=2)
+	discovered a new reachable node %entry
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
+	discovered a new reachable node %entry
+	discovered a new reachable node %entry
+	discovered a new reachable node %entry
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
+[harvestMetadata] Considering input metadata of instruction   %a = alloca double, align 8, !taffo.initweight !3, !taffo.info !4 (weight=0)
+[harvestMetadata] Considering input metadata of instruction   %b = alloca double, align 8, !taffo.initweight !3, !taffo.info !6 (weight=0)
+	discovered a new reachable node %entry
+	discovered a new reachable node %entry
 [TAFFO] Value Range Analysis: No visitable functions found
-[TAFFO] Value Range Analysis: Constant structs not supported yet
 	discovered a new reachable node %entry
-	discovered a new reachable node %for.cond
-	discovered a new reachable node %for.body
-	discovered a new reachable node %for.inc
-	discovered a new reachable node %for.end
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
+	discovered a new reachable node %entry
+	discovered a new reachable node %entry
