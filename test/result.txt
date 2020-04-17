@@ -1,3 +1,4 @@
+clang-8: warning: -lm: 'linker' input unused [-Wunused-command-line-argument]
 simple.c:9:17: warning: format specifies type 'float *' but the argument has type 'double *' [-Wformat]
     scanf("%f", &a);
            ~~   ^~
@@ -267,27 +268,199 @@ new valueinfo for   %"1flp3" = load float, float* %a.1flp, align 8, !taffo.info 
   [no conv ] 0
   [value   ]   %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %a), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
   [function] main
-opt: /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/InstructionConversion.cpp:51: llvm::Value* flttofix::FloatToFixed::convertInstruction(llvm::Module&, llvm::Instruction*, flttofix::FixedPointType&): Assertion `false && "Not verified node."' failed.
-Stack dump:
-0.	Program arguments: /opt/llvm/build/bin/opt -load /home/nicola/dev/TAFFO/dist/usr/local/lib/LLVMFloatToFixed.so -flttofix -globaldce -dce -debug -S -o a.5.magiclangtmp.ll a.4.magiclangtmp.ll 
-1.	Running pass 'Floating Point to Fixed Point conversion pass' on module 'a.4.magiclangtmp.ll'.
- #0 0x00007f3001ef48db llvm::sys::PrintStackTrace(llvm::raw_ostream&) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:495:22
- #1 0x00007f3001ef496e PrintStackTraceSignalHandler(void*) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:559:1
- #2 0x00007f3001ef2558 llvm::sys::RunSignalHandlers() /opt/llvm/llvm-8.0.1.src/lib/Support/Signals.cpp:69:20
- #3 0x00007f3001ef4301 SignalHandler(int) /opt/llvm/llvm-8.0.1.src/lib/Support/Unix/Signals.inc:358:1
- #4 0x00007f3007333800 __restore_rt (/usr/lib/libpthread.so.0+0x14800)
- #5 0x00007f300164ace5 __GI_raise (/usr/lib/libc.so.6+0x3bce5)
- #6 0x00007f3001634857 __GI_abort (/usr/lib/libc.so.6+0x25857)
- #7 0x00007f3001634727 _nl_load_domain.cold (/usr/lib/libc.so.6+0x25727)
- #8 0x00007f3001643426 (/usr/lib/libc.so.6+0x34426)
- #9 0x00007f2fffc104f0 flttofix::FloatToFixed::convertInstruction(llvm::Module&, llvm::Instruction*, flttofix::FixedPointType&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/InstructionConversion.cpp:54:54
-#10 0x00007f2fffbfdb30 flttofix::FloatToFixed::convertSingleValue(llvm::Module&, llvm::Value*, flttofix::FixedPointType&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:101:33
-#11 0x00007f2fffbfd5cb flttofix::FloatToFixed::performConversion(llvm::Module&, std::vector<llvm::Value*, std::allocator<llvm::Value*> >&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/Conversion.cpp:52:70
-#12 0x00007f2fffbddeea flttofix::FloatToFixed::runOnModule(llvm::Module&) /home/nicola/dev/TAFFO/Conversion/LLVMFloatToFixed/LLVMFloatToFixedPass.cpp:53:18
-#13 0x00007f3002495fa3 (anonymous namespace)::MPPassManager::runOnModule(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1744:20
-#14 0x00007f300249680f llvm::legacy::PassManagerImpl::run(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1857:13
-#15 0x00007f3002496a4d llvm::legacy::PassManager::run(llvm::Module&) /opt/llvm/llvm-8.0.1.src/lib/IR/LegacyPassManager.cpp:1889:1
-#16 0x000055d54f7e315b main /opt/llvm/llvm-8.0.1.src/tools/opt/opt.cpp:835:15
-#17 0x00007f3001636023 __libc_start_main (/usr/lib/libc.so.6+0x27023)
-#18 0x000055d54f79e24e _start (/opt/llvm/build/bin/opt+0x7424e)
-./magiclang2_float.sh: riga 290: 2022681 Annullato               (core dump creato) ${OPT} -load "$PASSLIB" -flttofix -globaldce -dce -debug ${conversion_flags} -S -o "${output_file}.5.magiclangtmp.ll" "${output_file}.4.magiclangtmp.ll"
+[Fallback] attempt to wrap not supported operation:
+  %call = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %a), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
+  Substituted operand number : 2 of 3
+  mutated operands to:
+  %call.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %0), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
+  [output  ]   %call.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %0), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
+new valueinfo for   %call.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %0), !taffo.info !18, !taffo.initweight !19, !taffo.constinfo !22
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %a1 = bitcast double* %a to i8*, !taffo.info !18, !taffo.initweight !19
+  [function] main
+getLLVMFixedPointTypeForFloatType given unexpected non-float type i8
+  [output  ]   %0 = bitcast float* %a.1flp to i8*
+new valueinfo for   %0 = bitcast float* %a.1flp to i8*, !taffo.info !18
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %12 = load double, double* %b, align 8, !taffo.info !15, !taffo.initweight !19
+  [function] main
+  [output  ]   %"1flp4" = load float, float* %b.1flp, align 8
+new valueinfo for   %"1flp4" = load float, float* %b.1flp, align 8, !taffo.info !15
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %6 = load double, double* %b, align 8, !taffo.info !15, !taffo.initweight !19
+  [function] main
+  [output  ]   %"1flp5" = load float, float* %b.1flp, align 8
+new valueinfo for   %"1flp5" = load float, float* %b.1flp, align 8, !taffo.info !15
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %3 = load double, double* %b, align 8, !taffo.info !15, !taffo.initweight !19
+  [function] main
+  [output  ]   %"1flp6" = load float, float* %b.1flp, align 8
+new valueinfo for   %"1flp6" = load float, float* %b.1flp, align 8, !taffo.info !15
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %b), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
+  [function] main
+[Fallback] attempt to wrap not supported operation:
+  %call4 = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %b), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
+  Substituted operand number : 2 of 3
+  mutated operands to:
+  %call4.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %2), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
+  [output  ]   %call4.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %2), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
+new valueinfo for   %call4.flt = call i32 (i8*, ...) @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.4, i32 0, i32 0), double* %2), !taffo.info !20, !taffo.initweight !19, !taffo.constinfo !22
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %b2 = bitcast double* %b to i8*, !taffo.info !20, !taffo.initweight !19
+  [function] main
+getLLVMFixedPointTypeForFloatType given unexpected non-float type i8
+  [output  ]   %1 = bitcast float* %b.1flp to i8*
+new valueinfo for   %1 = bitcast float* %b.1flp to i8*, !taffo.info !20
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %conv7 = fptosi double %11 to i32, !taffo.info !18, !taffo.initweight !23
+  [function] main
+	discovered a new reachable node %entry
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
+  [output  ]   %13 = fptosi float %12 to i32, !taffo.info !11
+new valueinfo for   %13 = fptosi float %12 to i32, !taffo.info !18
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %call11 = call double @calledSum.1(double %16, double %conv10), !taffo.info !15, !taffo.initweight !23, !taffo.constinfo !22, !taffo.originalCall !29
+  [function] main
+  %call11 = call double @calledSum.1(double %16, double %conv10), !taffo.info !15, !taffo.initweight !23, !taffo.constinfo !22, !taffo.originalCall !29 will use converted function calledSum.1_1flp float (float, double)*
+  [output  ]   %call11.1flp = call float @calledSum.1_1flp(float %"1flp4", double %conv10)
+new valueinfo for   %call11.1flp = call float @calledSum.1_1flp(float %"1flp4", double %conv10), !taffo.info !15, !taffo.constinfo !22
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %cmp = fcmp oeq double %7, %8, !taffo.info !18, !taffo.initweight !23
+  [function] main
+  [output  ]   %9 = fcmp oeq float %"1flp1", %"1flp5"
+new valueinfo for   %9 = fcmp oeq float %"1flp1", %"1flp5", !taffo.info !18
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %mul = fmul double %4, %5, !taffo.info !11, !taffo.initweight !23
+  [function] main
+  [output  ]   %mul.1flp = fmul float %"1flp3", %"1flp6"
+new valueinfo for   %mul.1flp = fmul float %"1flp3", %"1flp6", !taffo.info !11
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 1
+  [value   ]   %d.0 = phi i32 [ %conv, %if.then ], [ %conv7, %if.else ]
+  [function] main
+  [output  ]   %d.0 = phi i32 [ %conv, %if.then ], [ %14, %if.else ]
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %call12 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call11), !taffo.info !20, !taffo.initweight !24, !taffo.constinfo !22
+  [function] main
+[Fallback] attempt to wrap not supported operation:
+  %call12 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %call11), !taffo.info !20, !taffo.initweight !24, !taffo.constinfo !22
+******** trace: genConvertFixToFloat   %call11.1flp = call float @calledSum.1_1flp(float %"1flp4", double %conv10), !taffo.info !15, !taffo.constinfo !22 -> double
+[genConvertFixToFloat] converting a floating point to a floating point
+  Substituted operand number : 2 of 3
+  mutated operands to:
+  %call12.flt = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %18), !taffo.info !20, !taffo.initweight !24, !taffo.constinfo !22
+  [output  ]   %call12.flt = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %18), !taffo.info !20, !taffo.initweight !24, !taffo.constinfo !22
+new valueinfo for   %call12.flt = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.7, i32 0, i32 0), double %18), !taffo.info !20, !taffo.initweight !24, !taffo.constinfo !22
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   br i1 %cmp, label %if.then, label %if.else, !taffo.info !26, !taffo.initweight !24
+  [function] main
+[Fallback] attempt to wrap not supported operation:
+  br i1 %cmp, label %if.then, label %if.else, !taffo.info !26, !taffo.initweight !24
+  Substituted operand number : 1 of 3
+  mutated operands to:
+  br i1 %9, label %if.then, label %if.else, !taffo.info !26, !taffo.initweight !24
+  [output  ]   br i1 %9, label %if.then, label %if.else, !taffo.info !26, !taffo.initweight !24
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %div = fdiv double %mul, %6, !taffo.info !11, !taffo.initweight !23
+  [function] main
+  [output  ]   %div.1flp = fdiv float %mul.1flp, %"1flp2"
+new valueinfo for   %div.1flp = fdiv float %mul.1flp, %"1flp2", !taffo.info !11
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %call5 = call double @exp(double %div) #1, !taffo.info !11, !taffo.initweight !24, !taffo.constinfo !25
+  [function] main
+[Fallback] attempt to wrap not supported operation:
+  %call5 = call double @exp(double %div) #1, !taffo.info !11, !taffo.initweight !24, !taffo.constinfo !25
+******** trace: genConvertFixToFloat   %div.1flp = fdiv float %mul.1flp, %"1flp2", !taffo.info !11 -> double
+[genConvertFixToFloat] converting a floating point to a floating point
+  Substituted operand number : 1 of 2
+  mutated operands to:
+  %call5.flt = call double @exp(double %7) #1, !taffo.info !11, !taffo.initweight !24, !taffo.constinfo !25
+	discovered a new reachable node %entry
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
+[genConvertFloatToFix] converting a floating point to a floating point
+  [output  ]   %call5.flt.fallback.1flp = fptrunc double %call5.flt to float, !taffo.info !11
+new valueinfo for   %call5.flt.fallback.1flp = fptrunc double %call5.flt to float, !taffo.info !11
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   store double %call5, double* %c, align 8, !taffo.info !26, !taffo.initweight !27
+  [function] main
+******** trace: genConvertFixToFloat   %call5.flt.fallback.1flp = fptrunc double %call5.flt to float, !taffo.info !11 -> double
+[genConvertFixToFloat] converting a floating point to a floating point
+  [output  ]   store double %8, double* %c, align 8
+new valueinfo for   store double %8, double* %c, align 8, !taffo.info !26
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   %a.1flp.placeholder = load double, double* %0
+  [function] calledSum.1_1flp
+  [output  ] float %a.1flp
+warning: output has valueInfo already from a previous conversion
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 1
+  [value   ]   %add = fadd double %a.1flp.placeholder, %b
+  [function] calledSum.1_1flp
+[Fallback] attempt to wrap not supported operation:
+  %add = fadd double %a.1flp.placeholder, %b
+******** trace: genConvertFixToFloat float %a.1flp -> double
+[genConvertFixToFloat] converting a floating point to a floating point
+  Substituted operand number : 1 of 2
+  mutated operands to:
+  %add = fadd double %0, %b
+  [output  ]   %add = fadd double %0, %b
+
+-------------------------------------* performConversion *-------------------------------------
+  [no conv ] 0
+  [value   ]   ret double %add
+  [function] calledSum.1_1flp
+	discovered a new reachable node %entry
+[genConvertFloatToFix] converting a floating point to a floating point
+  [output  ]   ret float %2
+void flttofix::FloatToFixed::closePhiLoops() begin
+restoring data flow of phi   %d.0 = phi i32 [ %conv, %if.then ], [ %16, %if.else ]
+restored data flow of original phi   %d.0 = phi i32 [ %conv, %if.then ], [ %16, %if.else ] to new value   %d.0 = phi i32 [ %conv, %if.then ], [ %16, %if.else ]
+void flttofix::FloatToFixed::closePhiLoops() end
+  br i1 %11, label %if.then, label %if.else, !taffo.info !26, !taffo.initweight !24 not deleted, as it was converted by self-mutation
+  %d.0 = phi i32 [ %conv, %if.then ], [ %16, %if.else ] not deleted, as it was converted by self-mutation
+	discovered a new reachable node %entry
+	discovered a new reachable node %if.then
+	discovered a new reachable node %if.end
+	discovered a new reachable node %if.else
+	discovered a new reachable node %entry
+	discovered a new reachable node %entry
+clang-8: warning: -lm: 'linker' input unused [-Wunused-command-line-argument]

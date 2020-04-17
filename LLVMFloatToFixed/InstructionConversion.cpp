@@ -36,23 +36,17 @@ Value *FloatToFixed::convertInstruction(Module &m, Instruction *val, FixedPointT
     } else if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(val)) {
         res = convertGep(gep, fixpt);
     } else if (ExtractValueInst *ev = dyn_cast<ExtractValueInst>(val)) {
-        assert(false && "Not verified node.");
         res = convertExtractValue(ev, fixpt);
     } else if (InsertValueInst *iv = dyn_cast<InsertValueInst>(val)) {
-        assert(false && "Not verified node.");
         res = convertInsertValue(iv, fixpt);
     } else if (PHINode *phi = dyn_cast<PHINode>(val)) {
-        assert(false && "Not verified node.");
         res = convertPhi(phi, fixpt);
     } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
-        assert(false && "Not verified node.");
         res = convertSelect(select, fixpt);
     } else if (isa<CallInst>(val) || isa<InvokeInst>(val)) {
-        assert(false && "Not verified node.");
         CallSite *call = new CallSite(val);
         res = convertCall(call, fixpt);
     } else if (ReturnInst *ret = dyn_cast<ReturnInst>(val)) {
-        assert(false && "Not verified node.");
         res = convertRet(ret, fixpt);
     } else if (Instruction *instr = dyn_cast<Instruction>(val)) { //llvm/include/llvm/IR/Instruction.def for more info
         if (instr->isBinaryOp()) {
