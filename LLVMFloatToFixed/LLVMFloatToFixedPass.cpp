@@ -9,6 +9,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <llvm/Transforms/Utils/ValueMapper.h>
+#include "llvm/Support/CommandLine.h"
 #include <llvm/Transforms/Utils/Cloning.h>
 #include "LLVMFloatToFixedPass.h"
 #include "TAFFOMath.h"
@@ -21,6 +22,21 @@ using namespace taffo;
 
 
 char FloatToFixed::ID = 0;
+
+bool EnableMathFunctionsConversionsFlag;
+bool EnableMathFunctionSinFlag;
+bool EnableMathFunctionCosFlag;                 // the actual value
+
+
+llvm::cl::opt<bool> ManualFunctionCloning("manualclone",
+    llvm::cl::desc("Enables function cloning only for annotated functions"), llvm::cl::init(false));
+static cl::opt<bool, true>  EnableMathFunctionsConversions("enablemath-all",
+    llvm::cl::desc("Enables function Math Conversion"), cl::location(EnableMathFunctionsConversionsFlag), llvm::cl::init(false));
+static cl::opt<bool, true>  EnableMathFunctionSin("enablemath-sin",
+    llvm::cl::desc("Enables sin Conversion"),  cl::location(EnableMathFunctionSinFlag), llvm::cl::init(false));
+static cl::opt<bool, true>  EnableMathFunctionCos("enablemath-cos",
+    llvm::cl::desc("Enables cos Conversion"),  cl::location(EnableMathFunctionCosFlag), llvm::cl::init(false));
+
 
 static RegisterPass<FloatToFixed> X(
   "flttofix",
