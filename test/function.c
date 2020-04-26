@@ -2,16 +2,16 @@
 #include <stdio.h>
 #include <math.h>
 
-float  __attribute((annotate("range 7 20000"))) global = 33.333;
+double  __attribute((annotate("range 7 20000"))) global = 33.333;
 
-float fun(float x, float y){
+double fun(double x, double y){
     float local;
     local = x * y + global;
     //global++;
     return local;
 }
 
-int funInt(float x, float y){
+int funInt(double x, double y){
     int local;
     local = x * y + global;
     global*=1.098;
@@ -19,8 +19,8 @@ int funInt(float x, float y){
 }
 
 int main() {
-    float a=10.2049;
-    float __attribute((annotate("range -7 40000"))) b=10.1024;
+    double a=10.2049;
+    double __attribute((annotate("range -7 40000"))) b=10.1024;
     int c = 2;
     
     
