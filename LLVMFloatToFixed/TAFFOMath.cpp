@@ -554,7 +554,7 @@ bool FloatToFixed::createSinCos(
   {
     int diff =fxparg.scalarBitsAmt()- fxparg.scalarFracBitsAmt();
   if(diff < 4){
-    builder.CreateStore(builder.CreateLShr(builder.CreateLoad(arg_value), ConstantInt::get(int_type, 4-diff)),arg_value);
+    builder.CreateStore(builder.CreateAShr(builder.CreateLoad(arg_value), ConstantInt::get(int_type, 4-diff)),arg_value);
     fxparg.scalarFracBitsAmt() = fxparg.scalarFracBitsAmt() - (4-diff);
     fxparg.scalarIsSigned()=true;
   }
@@ -924,6 +924,7 @@ bool FloatToFixed::createSinCos(
     builder.CreateStore(generic, arg_value);
   }
   if(fxpret.scalarFracBitsAmt() != truefxpret.scalarFracBitsAmt()){
+  LLVM_DEBUG(dbgs() << "restore fxpret" << "\n");
   builder.CreateStore(builder.CreateShl(builder.CreateLoad(arg_value), truefxpret.scalarFracBitsAmt() - fxpret.scalarFracBitsAmt()), arg_value);
   }
   auto ret = builder.CreateLoad(arg_value);
