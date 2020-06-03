@@ -19,8 +19,8 @@ namespace TaffoMathConstant {
  * @param outI instruction returned
  * @param outF fixedpoint returned *
  */
-inline void createFixedPointFromConst(
-    llvm::LLVMContext &cont, FloatToFixed *ref, const float &current_float,
+inline bool createFixedPointFromConst(
+    llvm::LLVMContext &cont, FloatToFixed *ref, const double &current_float,
     const FixedPointType &match, llvm::Constant *&outI, FixedPointType &outF
 
 ) {
@@ -43,8 +43,12 @@ inline void createFixedPointFromConst(
       taffo::fixedPointTypeFromRange(range, nullptr, nbits, minflt);
   outF = FixedPointType(&t);
 
-  assert(match.scalarBitsAmt() == outF.scalarBitsAmt() &&
-         outF.scalarFracBitsAmt() <= match.scalarBitsAmt());
+  LLVM_DEBUG(dbgs() << "OutF: " << outF << " < Match:" << match <<"\n");
+  if(outF.scalarFracBitsAmt() < match.scalarFracBitsAmt() || ( outF.scalarFracBitsAmt() == match.scalarFracBitsAmt()  && (outF.scalarIsSigned() != match.scalarIsSigned()))){
+    LLVM_DEBUG(dbgs() << "cannot insert " << current_float << " in "  << match << "\n");
+    return false;
+  }
+
 
   outF = FixedPointType(match);
   LLVM_DEBUG(dbgs() << "create fixed point from " << current_float << " to "
@@ -75,7 +79,7 @@ inline void createFixedPointFromConst(
       LLVM_DEBUG(dbgs() << "ConstConversionFailed "
                         << " impossible to convert constant " << valstr2
                         << " to fixed point\n");
-      assert(false && "ConstConversionFailed forbidden...\n");
+      return false;
     }
   }
 
@@ -84,6 +88,7 @@ inline void createFixedPointFromConst(
   LLVM_DEBUG(dbgs() << "create int "
                     << (dyn_cast<llvm::Constant>(outI)->dump(), "") << "from "
                     << current_float << "\n");
+  return true;
 }
 } // namespace TaffoMathConstant
 
@@ -210,19 +215,33 @@ void fixrangeSinCos(FloatToFixed *ref, Function *oldf, FixedPointType &fxparg,
   int min = fxparg.scalarFracBitsAmt() < fxpret.scalarFracBitsAmt()
                 ? fxparg.scalarFracBitsAmt()
                 : fxpret.scalarFracBitsAmt();
+  
+  max = max >= fxpret.scalarBitsAmt() - 4 ? fxpret.scalarBitsAmt() - 4 : max;
+  bool can_continue = true;
+  if( min > fxpret.scalarBitsAmt() - 4 ){
+    min = fxpret.scalarBitsAmt() - 4;
+    can_continue = false;
+  }
+
+
   LLVM_DEBUG(dbgs() << "Max: " << max << " Min: " << min << "\n"); 
   // create pi_2 table
   TaffoMathConstant::pair_ftp_value<llvm::Constant *, 5> pi_2_vect;
-  for (int i = 0; i <= max - min; ++i) {
+  int created = 0;
+  for (int i = 0; i <= max - min && can_continue; ++i) {
     pi_2_vect.fpt.push_back(
         flttofix::FixedPointType(fxparg.scalarIsSigned(), min + i, int_lenght));
     Constant *tmp = nullptr;
     flttofix::FixedPointType match = flttofix::FixedPointType(fxparg.scalarIsSigned(), min + i, int_lenght);
     auto &current_fpt = pi_2_vect.fpt.front();
-    TaffoMathConstant::createFixedPointFromConst(
+    bool p2_creted =  TaffoMathConstant::createFixedPointFromConst(
         cont, ref, TaffoMathConstant::pi_2, match, tmp, current_fpt);
+    if(p2_creted){
     pi_2_vect.value.push_back(tmp);
+    created += 1;
+    }
   }
+  if (created != 0){
   auto pi_2_ArrayType =
       llvm::ArrayType::get(pi_2_vect.value.front()->getType(), max - min + 1);
   LLVM_DEBUG(dbgs() << "ArrayType  " << pi_2_ArrayType << "\n");
@@ -363,6 +382,19 @@ void fixrangeSinCos(FloatToFixed *ref, Function *oldf, FixedPointType &fxparg,
         builder.CreateAShr(builder.CreateLoad(arg_value), generic), arg_value);
     builder.CreateBr(end);
     builder.SetInsertPoint(end);
+  }}
+  else{
+    if(fxparg.scalarFracBitsAmt() > fxpret.scalarFracBitsAmt()){
+      builder.CreateStore(
+        builder.CreateAShr(builder.CreateLoad(arg_value), fxparg.scalarFracBitsAmt() - fxpret.scalarFracBitsAmt()), arg_value);
+    }
+    if(fxparg.scalarFracBitsAmt() < fxpret.scalarFracBitsAmt()){
+      builder.CreateStore(
+        builder.CreateAShr(builder.CreateLoad(arg_value), fxpret.scalarFracBitsAmt() - fxparg.scalarFracBitsAmt()), arg_value);
+    }
+
+
+
   }
     LLVM_DEBUG(dbgs() << "End fixrange\n");
 }
@@ -402,12 +434,12 @@ bool FloatToFixed::createSinCos(
   arg.value = oldf->arg_begin();
   auto truefxpret = fxpret;
   LLVM_DEBUG(dbgs() << "fxpret: " << fxpret.scalarBitsAmt() <<  " frac part: " << fxpret.scalarFracBitsAmt() << " difference: " << fxpret.scalarBitsAmt() - fxpret.scalarFracBitsAmt() <<"\n" );
-  if ((fxpret.scalarBitsAmt() - fxpret.scalarFracBitsAmt()) < 4) {    
-      fxpret = flttofix::FixedPointType(true,
-                                        fxpret.scalarBitsAmt() - 4,
-                                        fxpret.scalarBitsAmt());
-      LLVM_DEBUG(dbgs() << "New fxpret: " << fxpret << "\n");    
-  }
+  // if ((fxpret.scalarBitsAmt() - fxpret.scalarFracBitsAmt()) < 4) {    
+  //     fxpret = flttofix::FixedPointType(true,
+  //                                       fxpret.scalarBitsAmt() - 4,
+  //                                       fxpret.scalarBitsAmt());
+  //     LLVM_DEBUG(dbgs() << "New fxpret: " << fxpret << "\n");    
+  // }
 
 
   auto int_type = fxpret.scalarToLLVMType(cont);
@@ -439,18 +471,18 @@ bool FloatToFixed::createSinCos(
   TaffoMathConstant::pair_ftp_value<llvm::Constant *> one_internal(internal_fxpt);
   TaffoMathConstant::pair_ftp_value<llvm::Constant *> minus_one(fxpret);
   TaffoMathConstant::pair_ftp_value<llvm::Constant *> minus_one_internal(internal_fxpt);
-  TaffoMathConstant::createFixedPointFromConst(
+  bool pi_created =  TaffoMathConstant::createFixedPointFromConst(
       cont, this, TaffoMathConstant::pi, fxpret, pi.value, pi.fpt);
-  TaffoMathConstant::createFixedPointFromConst(
+  bool pi_2_created = TaffoMathConstant::createFixedPointFromConst(
       cont, this, TaffoMathConstant::pi_2, fxpret, pi_2.value, pi_2.fpt);
-  TaffoMathConstant::createFixedPointFromConst(
+  bool pi_32_created = TaffoMathConstant::createFixedPointFromConst(
       cont, this, TaffoMathConstant::pi_32, fxpret, pi_32.value, pi_32.fpt);
-  TaffoMathConstant::createFixedPointFromConst(
+   bool pi_half_created =TaffoMathConstant::createFixedPointFromConst(
       cont, this, TaffoMathConstant::pi_half, fxpret, pi_half.value,
       pi_half.fpt);
-  TaffoMathConstant::createFixedPointFromConst(
+  bool kopp_created = TaffoMathConstant::createFixedPointFromConst(
       cont, this, TaffoMathConstant::Kopp, internal_fxpt, kopp.value, kopp.fpt);
-  TaffoMathConstant::createFixedPointFromConst(
+ TaffoMathConstant::createFixedPointFromConst(
       cont, this, TaffoMathConstant::zero, fxpret, zero.value, zero.fpt);
   TaffoMathConstant::createFixedPointFromConst(
       cont, this, TaffoMathConstant::zero, fxparg, zeroarg.value, zeroarg.fpt);
@@ -469,20 +501,24 @@ bool FloatToFixed::createSinCos(
       std::string S_ret_point = "." + std::to_string(fxpret.scalarFracBitsAmt());
 
 
-
+  if(pi_created)
   pi.value = createGlobalConst(
       oldf->getParent(), "pi" + S_ret_point, pi.fpt.scalarToLLVMType(cont), pi.value,
       dataLayout.getPrefTypeAlignment(pi.fpt.scalarToLLVMType(cont)));
+  if(pi_2_created)    
   pi_2.value = createGlobalConst(
       oldf->getParent(), "pi_2" + S_ret_point, pi_2.fpt.scalarToLLVMType(cont), pi_2.value,
       dataLayout.getPrefTypeAlignment(pi_2.fpt.scalarToLLVMType(cont)));
+  if(pi_32_created)    
   pi_32.value = createGlobalConst(
       oldf->getParent(), "pi_32" + S_ret_point, pi_32.fpt.scalarToLLVMType(cont), pi_32.value,
       dataLayout.getPrefTypeAlignment(pi_32.fpt.scalarToLLVMType(cont)));
+  if(pi_half_created)    
   pi_half.value = createGlobalConst(
       oldf->getParent(), "pi_half"+ S_ret_point, pi_half.fpt.scalarToLLVMType(cont),
       pi_half.value,
       dataLayout.getPrefTypeAlignment(pi_half.fpt.scalarToLLVMType(cont)));
+  if(kopp_created)    
   kopp.value = createGlobalConst(
       oldf->getParent(), "kopp" + S_ret_point, kopp.fpt.scalarToLLVMType(cont), kopp.value,
       dataLayout.getPrefTypeAlignment(kopp.fpt.scalarToLLVMType(cont)));
@@ -573,15 +609,15 @@ bool FloatToFixed::createSinCos(
     fxparg.scalarIsSigned()=true;
   }
 
-  //handle too small arg
-  {
-    int diff =fxparg.scalarBitsAmt()- fxparg.scalarFracBitsAmt();
-  if(diff < 4){
-    builder.CreateStore(builder.CreateAShr(builder.CreateLoad(arg_value), ConstantInt::get(int_type, 4-diff)),arg_value);
-    fxparg.scalarFracBitsAmt() = fxparg.scalarFracBitsAmt() - (4-diff);
-    fxparg.scalarIsSigned()=true;
-  }
-  }
+  // //handle too small arg
+  // {
+  //   int diff =fxparg.scalarBitsAmt()- fxparg.scalarFracBitsAmt();
+  // if(diff < 4){
+  //   builder.CreateStore(builder.CreateAShr(builder.CreateLoad(arg_value), ConstantInt::get(int_type, 4-diff)),arg_value);
+  //   fxparg.scalarFracBitsAmt() = fxparg.scalarFracBitsAmt() - (4-diff);
+  //   fxparg.scalarIsSigned()=true;
+  // }
+  // }
   
   // handle negative
   if (isSin) {
@@ -632,6 +668,7 @@ bool FloatToFixed::createSinCos(
   {
     // x = pi/2
 
+    if(pi_half_created)
     {
       BasicBlock *BTrue = BasicBlock::Create(cont, "equal_pi_2", oldf);
       BasicBlock *BFalse = BasicBlock::Create(cont, "body", oldf);
@@ -646,7 +683,7 @@ bool FloatToFixed::createSinCos(
       builder.SetInsertPoint(BFalse);
     }
     // x= pi
-
+    if(pi_created)
     {
       BasicBlock *BTrue = BasicBlock::Create(cont, "equal_pi", oldf);
       BasicBlock *BFalse = BasicBlock::Create(cont, "body", oldf);
@@ -661,7 +698,7 @@ bool FloatToFixed::createSinCos(
       builder.SetInsertPoint(BFalse);
     }
     // x = pi_32
-
+    if(pi_32_created)
     {
       BasicBlock *BTrue = BasicBlock::Create(cont, "equal_pi_32", oldf);
       BasicBlock *BFalse = BasicBlock::Create(cont, "body", oldf);
@@ -705,6 +742,7 @@ bool FloatToFixed::createSinCos(
 
   if (isSin) {
     // angle > pi_half && angle < pi sin(x) = cos(x - pi_half)
+    if(pi_half_created && pi_created)
     {
       BasicBlock *in_II_quad = BasicBlock::Create(cont, "in_II_quad", oldf);
       BasicBlock *not_in_II_quad = BasicBlock::Create(cont, "body", oldf);
@@ -727,6 +765,7 @@ bool FloatToFixed::createSinCos(
       builder.SetInsertPoint(not_in_II_quad);
     }
     // angle > pi&& angle < pi_32(x) sin(x) = -sin(x - pi)
+    if(pi_32_created && pi_created)
     {
       BasicBlock *in_III_quad = BasicBlock::Create(cont, "in_III_quad", oldf);
       BasicBlock *not_in_III_quad = BasicBlock::Create(cont, "body", oldf);
@@ -749,6 +788,7 @@ bool FloatToFixed::createSinCos(
       builder.SetInsertPoint(not_in_III_quad);
     }
     // angle > pi_32&& angle < pi_2(x) sin(x) = -cos(x - pi_32);
+    if(pi_32_created && pi_2_created)
     {
       BasicBlock *in_IV_quad = BasicBlock::Create(cont, "in_IV_quad", oldf);
       BasicBlock *not_in_IV_quad = BasicBlock::Create(cont, "body", oldf);
@@ -776,6 +816,7 @@ bool FloatToFixed::createSinCos(
   } else {
 
     // angle > pi_half && angle < pi cos(x) = -sin(x - pi_half);
+    if(pi_half_created && pi_created)
     {
       BasicBlock *in_II_quad = BasicBlock::Create(cont, "in_II_quad", oldf);
       BasicBlock *not_in_II_quad = BasicBlock::Create(cont, "body", oldf);
@@ -801,6 +842,7 @@ bool FloatToFixed::createSinCos(
       builder.SetInsertPoint(not_in_II_quad);
     }
     // angle > pi&& angle < pi_32(x) cos(x) = -cos(x-pi)
+    if(pi_32_created && pi_created)
     {
       BasicBlock *in_III_quad = BasicBlock::Create(cont, "in_III_quad", oldf);
       BasicBlock *not_in_III_quad = BasicBlock::Create(cont, "body", oldf);
@@ -823,6 +865,7 @@ bool FloatToFixed::createSinCos(
       builder.SetInsertPoint(not_in_III_quad);
     }
     // angle > pi_32&& angle < pi_2(x) cos(x) = sin(angle - pi_32);
+    if(pi_32_created && pi_2_created)
     {
       BasicBlock *in_IV_quad = BasicBlock::Create(cont, "in_IV_quad", oldf);
       BasicBlock *not_in_IV_quad = BasicBlock::Create(cont, "body", oldf);
@@ -850,7 +893,6 @@ bool FloatToFixed::createSinCos(
   // calculate sin and cos
   {
     builder.CreateStore(builder.CreateShl(builder.CreateLoad(arg_value),internal_fxpt.scalarFracBitsAmt() - fxpret.scalarFracBitsAmt()), arg_value);
-LLVM_DEBUG(dbgs() << "tre\n");
     auto zero_arg = builder.CreateLoad(zero.value);
     // x=kopp
     builder.CreateStore(builder.CreateLoad(kopp.value), x_value.value);
@@ -875,7 +917,6 @@ LLVM_DEBUG(dbgs() << "tre\n");
     builder.CreateCondBr(builder.CreateAnd(generic, generic2), start_loop,
                          return_point);
     builder.SetInsertPoint(start_loop);
-    LLVM_DEBUG(dbgs() << "4\n");
     // dn = arg >= 0 ? 1 : -1;
     Value *dn = builder.CreateSelect(
         builder.CreateICmpSGE(builder.CreateLoad(arg_value), zero_arg),
