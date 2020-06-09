@@ -111,8 +111,10 @@ Value *FloatToFixed::convertSingleValue(Module &m, Value *val, FixedPointType &f
 
 
 /* do not use on pointer operands */
+/* In iofixpt there is also the source type*/
 Value *
 FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instruction *ip, TypeMatchPolicy typepol) {
+    //FIXME: handle all the cases, we need more info about destination!
     if (typepol == TypeMatchPolicy::ForceHint) {
         FixedPointType origfixpt = iofixpt;
         llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip, TypeMatchPolicy::RangeOverHintMaxFrac);
@@ -121,10 +123,20 @@ FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instr
 
     assert(val->getType()->getNumContainedTypes() == 0 && "translateOrMatchOperand val is not a scalar value");
     Value *res = operandPool[val];
-    if (res) {
+    if (res) { //this means it has been converted, but can also be a floating point!
         if (res == ConversionError)
             /* the value should have been converted but it hasn't; bail out */
             return nullptr;
+
+        //The value has to be converted into a floating point value, convert it, full stop.
+        if (iofixpt.isFloatingPoint()) {
+            return genConvertFixedToFixed(res, valueInfo(res)->fixpType, iofixpt, ip);
+        }
+
+        //Converting Floating point to whatever
+        if (valueInfo(res)->fixpType.isFloatingPoint()) {
+            return genConvertFixedToFixed(res, valueInfo(res)->fixpType, iofixpt, ip);
+        }
 
         if (!valueInfo(val)->noTypeConversion) {
             /* the value has been successfully converted to fixed point in a previous step */
