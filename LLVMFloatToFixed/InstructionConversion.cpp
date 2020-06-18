@@ -170,12 +170,14 @@ Value *FloatToFixed::convertStore(StoreInst *store) {
         }
 
     } else {
-        /* value is not converted */
+        /* pointer is converted, but value is not converted */
         if (isConvertedFixedPoint(newptr)) {
             FixedPointType valtype = fixPType(newptr);
 
             /* the value to store is not converted but the pointer is */
-            if (peltype->isIntegerTy()) {
+            /*Checking for the value to be a pointer in order to assert that is a converted type is not sufficient anymore
+             * because of destination datatype can be a float too. This raises a bug when storing constants (in other cases should be ok)*/
+            if (peltype->isIntegerTy() ||  !peltype->isPointerTy()) {
                 /* value is not a pointer; we can convert it to fixed point */
                 newval = genConvertFloatToFix(val, valtype);
             } else {
