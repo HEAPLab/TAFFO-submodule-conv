@@ -135,6 +135,20 @@ FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instr
 
         //Converting Floating point to whatever
         if (valueInfo(res)->fixpType.isFloatingPoint()) {
+            dbgs() << "Is floating, calling routine, " << valueInfo(res)->fixpType.toString() << " --> " << iofixpt.toString();
+            //Dato che la conversione non è forzata a un tipo specifico, cerco di convertire nel tipo migliore per contenere il dato
+            //Che non è per forza il tipo di destinazione
+            //Anzi, se si usa il tipo di destinazione si rischia di mandare tutto in vacca con overflow
+            if(iofixpt.isFixedPoint()){
+                //In questo caso cercare di mettere il fixpoint migliore!
+                auto info =getInputInfo(res);
+                if(!info || !info->IRange){
+                    llvm_unreachable("Cannot proceed in converting to a fix point a value without info!");
+                }
+                associateFixFormat(info, iofixpt);
+                dbgs() << "We have a new fixed point suggested type: " << iofixpt.toString();
+            }
+
             return genConvertFixedToFixed(res, valueInfo(res)->fixpType, iofixpt, ip);
         }
 
@@ -193,9 +207,30 @@ FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instr
     return genConvertFloatToFix(val, iofixpt, ip);
 }
 
+bool FloatToFixed::associateFixFormat(mdutils::InputInfo * II, FixedPointType &iofixpt) {
+    mdutils::Range *rng = II->IRange.get();
+    if (rng == nullptr) {
+        llvm_unreachable("No range info!");
+    }
+
+    FixedPointTypeGenError fpgerr;
+    //Using default parameters of DTA
+    mdutils::FPType res = fixedPointTypeFromRange(*rng, &fpgerr, 32, 3, 64, 32);
+    if (fpgerr == FixedPointTypeGenError::InvalidRange) {
+        llvm_unreachable("Cannot assign a fixed point!");
+    }
+
+    iofixpt=FixedPointType(res.isSigned(), res.getPointPos(), res.getWidth());
+
+    return true;
+
+
+}
+
 
 Value *FloatToFixed::genConvertFloatToFix(Value *flt, const FixedPointType &fixpt, Instruction *ip) {
     assert(flt->getType()->isFloatingPointTy() && "genConvertFloatToFixed called on a non-float scalar");
+    dbgs() << "Called floatToFixed\n";
 
     if (Constant *c = dyn_cast<Constant>(flt)) {
         FixedPointType fixptcopy = fixpt;
@@ -267,6 +302,8 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType &sr
                                             Instruction *ip) {
     if (srct == destt)
         return fix;
+
+    dbgs() << "Called fixedToFixed\n";
 
     Type *llvmsrct = fix->getType();
     Type *llvmdestt = destt.scalarToLLVMType(fix->getContext());

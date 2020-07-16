@@ -477,6 +477,11 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType &fixp
     int opc = instr->getOpcode();
 
     if (opc == Instruction::FAdd || opc == Instruction::FSub || opc == Instruction::FRem) {
+        instr->getOperand(0)->print(dbgs());
+        dbgs() << "\n";
+        instr->getOperand(0)->print(dbgs());
+        dbgs() << "\n";
+
         Value *val1 = translateOrMatchOperandAndType(instr->getOperand(0), fixpt, instr);
         Value *val2 = translateOrMatchOperandAndType(instr->getOperand(1), fixpt, instr);
         if (!val1 || !val2)
@@ -495,9 +500,15 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType &fixp
 
         } else if (opc == Instruction::FSub) {
             // TODO: improve overflow resistance by shifting late
-
+            dbgs() << fixpt.toString() << "\n";
             if (fixpt.isFixedPoint()) {
                 fixop = builder.CreateBinOp(Instruction::Sub, val1, val2);
+                val1->print(dbgs());
+                dbgs() << "\n";
+                val2->print(dbgs());
+                dbgs() << "\n";
+                fixop->print(dbgs());
+                dbgs() << "\n";
             }else if(fixpt.isFloatingPoint()) {
                 fixop = builder.CreateBinOp(Instruction::FSub, val1, val2);
             }else{

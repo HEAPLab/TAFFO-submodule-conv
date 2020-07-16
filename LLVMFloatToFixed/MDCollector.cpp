@@ -32,6 +32,19 @@ void FloatToFixed::readGlobalMetadata(Module &m, SmallPtrSetImpl<Value *> &varia
         removeNoFloatTy(variables);
 }
 
+//No, I was not mad at all
+InputInfo* FloatToFixed::getInputInfo(Value *v){
+    MetadataManager &MDManager = MetadataManager::getMetadataManager();
+    MDInfo *MDI = MDManager.retrieveMDInfo(v);
+
+    if (auto *fpInfo = dyn_cast<InputInfo>(MDI)) {
+        return fpInfo;
+
+    }
+
+    return nullptr;
+}
+
 
 void FloatToFixed::readLocalMetadata(Function &f, SmallPtrSetImpl<Value *> &variables, bool argumentsOnly) {
     MetadataManager &MDManager = MetadataManager::getMetadataManager();

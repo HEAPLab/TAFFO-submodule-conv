@@ -587,6 +587,11 @@ namespace flttofix {
         int getLoopNestingLevelOfValue(llvm::Value *v);
 
         template<class T> Constant *createConstantDataSequentialFP(ConstantDataSequential *cds, const FixedPointType &fixpt);
+
+        mdutils::InputInfo* getInputInfo(Value *v);
+
+
+        bool associateFixFormat(mdutils::InputInfo *II, FixedPointType &iofixpt);
     };
 
 
