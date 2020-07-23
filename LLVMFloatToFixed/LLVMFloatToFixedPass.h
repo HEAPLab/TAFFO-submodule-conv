@@ -241,7 +241,7 @@ namespace flttofix {
                 llvm::Value *val,
                 FixedPointType &iofixpt,
                 llvm::Instruction *ip = nullptr,
-                TypeMatchPolicy typepol = TypeMatchPolicy::RangeOverHintMaxFrac);
+                TypeMatchPolicy typepol = TypeMatchPolicy::RangeOverHintMaxFrac, bool wasHintForced=false);
 
         /** Returns a fixed point Value from any Value, whether it should be
          *  converted or not, if possible.

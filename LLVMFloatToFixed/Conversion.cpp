@@ -113,11 +113,12 @@ Value *FloatToFixed::convertSingleValue(Module &m, Value *val, FixedPointType &f
 /* do not use on pointer operands */
 /* In iofixpt there is also the source type*/
 Value *
-FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instruction *ip, TypeMatchPolicy typepol) {
+FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instruction *ip, TypeMatchPolicy typepol, bool wasHintForced) {
     //FIXME: handle all the cases, we need more info about destination!
     if (typepol == TypeMatchPolicy::ForceHint) {
+        dbgs() << "Forcing hint!\n";
         FixedPointType origfixpt = iofixpt;
-        llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip, TypeMatchPolicy::RangeOverHintMaxFrac);
+        llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip, TypeMatchPolicy::RangeOverHintMaxFrac, true);
         return genConvertFixedToFixed(tmp, iofixpt, origfixpt, ip);
     }
 
@@ -135,18 +136,26 @@ FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instr
 
         //Converting Floating point to whatever
         if (valueInfo(res)->fixpType.isFloatingPoint()) {
-            dbgs() << "Is floating, calling routine, " << valueInfo(res)->fixpType.toString() << " --> " << iofixpt.toString();
+            dbgs() << "Converting floating point to whatever.\n";
+            dbgs() << "Is floating, calling subroutine, " << valueInfo(res)->fixpType.toString() << " --> " << iofixpt.toString() << "\n";
+            dbgs() << "This value will be converted to fixpoint: ";
+            val->print(dbgs());
+            dbgs() << "\n";
             //Dato che la conversione non è forzata a un tipo specifico, cerco di convertire nel tipo migliore per contenere il dato
             //Che non è per forza il tipo di destinazione
             //Anzi, se si usa il tipo di destinazione si rischia di mandare tutto in vacca con overflow
             if(iofixpt.isFixedPoint()){
-                //In questo caso cercare di mettere il fixpoint migliore!
-                auto info =getInputInfo(res);
-                if(!info || !info->IRange){
-                    llvm_unreachable("Cannot proceed in converting to a fix point a value without info!");
+                if(!wasHintForced) {
+                    //In questo caso cercare di mettere il fixpoint migliore!
+                    auto info = getInputInfo(res);
+                    if (!info || !info->IRange) {
+                        llvm_unreachable("Cannot proceed in converting to a fix point a value without info!");
+                    }
+                    associateFixFormat(info, iofixpt);
+                    dbgs() << "We have a new fixed point suggested type: " << iofixpt.toString() << "\n";
+                }else{
+                    dbgs() << "Not associating better fixed point data type as the datatype was originally forced!\n";
                 }
-                associateFixFormat(info, iofixpt);
-                dbgs() << "We have a new fixed point suggested type: " << iofixpt.toString();
             }
 
             return genConvertFixedToFixed(res, valueInfo(res)->fixpType, iofixpt, ip);
