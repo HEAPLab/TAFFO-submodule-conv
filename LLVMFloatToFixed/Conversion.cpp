@@ -477,8 +477,15 @@ Value *FloatToFixed::genConvertFixToFloat(Value *fix, const FixedPointType &fixp
         Value *floattmp = fixpt.scalarIsSigned() ? builder.CreateSIToFP(fix, destt) : builder.CreateUIToFP(fix, destt);
         cpMetaData(floattmp, fix);
         double twoebits = pow(2.0, fixpt.scalarFracBitsAmt());
-        return cpMetaData(builder.CreateFDiv(floattmp,
-                                             cpMetaData(ConstantFP::get(destt, twoebits), fix)), fix);
+
+        if(twoebits != 1.0) {
+
+            return cpMetaData(builder.CreateFDiv(floattmp,
+                                                 cpMetaData(ConstantFP::get(destt, twoebits), fix)), fix);
+        }else{
+            dbgs() << "Optimizing conversion removing division by one!\n";
+            return floattmp;
+        }
 
     } else if (Constant *cst = dyn_cast<Constant>(fix)) {
         Constant *floattmp = fixpt.scalarIsSigned() ?
