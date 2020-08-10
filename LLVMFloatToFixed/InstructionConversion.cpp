@@ -445,10 +445,15 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType &fixpt) {
 
 
 Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType &fixpt) {
+    dbgs() << "[TRACE] convertRet called!\n";
     Value *oldv = ret->getReturnValue();
 
     if (!oldv) // AKA return void
         return ret;
+
+    dbgs() << "Return value is: ";
+    oldv->print(dbgs());
+    dbgs() << "\n";
 
     if (!isFloatingPointToConvert(ret) || valueInfo(ret)->noTypeConversion) {
         //if return an int we shouldn't return a fix point, go into fallback
@@ -456,7 +461,7 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType &fixpt) {
     }
 
     Function *f = dyn_cast<Function>(ret->getParent()->getParent());
-    Value *v = translateOrMatchAnyOperandAndType(oldv, fixpt);
+    Value *v = translateOrMatchAnyOperandAndType(oldv, fixpt, ret);
 
     // check return type
     if (f->getReturnType() != v->getType())

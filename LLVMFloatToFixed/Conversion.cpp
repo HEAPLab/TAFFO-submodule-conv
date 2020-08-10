@@ -115,22 +115,28 @@ Value *FloatToFixed::convertSingleValue(Module &m, Value *val, FixedPointType &f
 Value *
 FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instruction *ip, TypeMatchPolicy typepol, bool wasHintForced) {
     //FIXME: handle all the cases, we need more info about destination!
+    assert(val && "THE VALUE TO CONVERT IS NULL!");
     if (typepol == TypeMatchPolicy::ForceHint) {
         dbgs() << "Forcing hint!\n";
         FixedPointType origfixpt = iofixpt;
         llvm::Value *tmp = translateOrMatchOperand(val, iofixpt, ip, TypeMatchPolicy::RangeOverHintMaxFrac, true);
+        assert(tmp && "translateOrMatchOperand could not convert the value for us!!!");
         return genConvertFixedToFixed(tmp, iofixpt, origfixpt, ip);
     }
 
+    dbgs() << "This time not forcing.\n";
     assert(val->getType()->getNumContainedTypes() == 0 && "translateOrMatchOperand val is not a scalar value");
     Value *res = operandPool[val];
     if (res) { //this means it has been converted, but can also be a floating point!
-        if (res == ConversionError)
+        if (res == ConversionError) {
             /* the value should have been converted but it hasn't; bail out */
+            dbgs() << "There was a conversion error.\n";
             return nullptr;
+        }
 
         //The value has to be converted into a floating point value, convert it, full stop.
         if (iofixpt.isFloatingPoint()) {
+            dbgs() << "Converting to floating.\n";
             return genConvertFixedToFixed(res, valueInfo(res)->fixpType, iofixpt, ip);
         }
 
@@ -157,23 +163,27 @@ FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instr
                     dbgs() << "Not associating better fixed point data type as the datatype was originally forced!\n";
                 }
             }
-
+            dbgs() << "Converting floating to something else.\n";
             return genConvertFixedToFixed(res, valueInfo(res)->fixpType, iofixpt, ip);
         }
 
         if (!valueInfo(val)->noTypeConversion) {
             /* the value has been successfully converted to fixed point in a previous step */
+            dbgs() << "Alredy been converted.\n";
             iofixpt = fixPType(res);
             return res;
         }
 
         /* The value has changed but may not a fixed point */
         if (!res->getType()->isFloatingPointTy())
+            dbgs() << "Converting to not fixed point.\n";
             /* Don't attempt to convert ints/pointers to fixed point */
             return res;
         /* Otherwise convert to fixed point the value */
         val = res;
     }
+
+    dbgs() << "This was not converted in principle.\n";
 
     assert(val->getType()->isFloatingPointTy());
 
@@ -312,7 +322,13 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType &sr
     if (srct == destt)
         return fix;
 
-    dbgs() << "Called fixedToFixed\n";
+    if(!ip){
+        dbgs() << "IP IS FUCKING NULL!";
+    }
+
+    dbgs() << "Called fixedToFixed on instruction";
+    ip->print(dbgs());
+    dbgs() << "\n";
 
     Type *llvmsrct = fix->getType();
     Type *llvmdestt = destt.scalarToLLVMType(fix->getContext());

@@ -261,8 +261,11 @@ namespace flttofix {
         translateOrMatchAnyOperand(llvm::Value *val, FixedPointType &iofixpt, llvm::Instruction *ip = nullptr,
                                    TypeMatchPolicy typepol = TypeMatchPolicy::RangeOverHintMaxFrac) {
             llvm::Value *res;
+            dbgs() << "[TRACE] translateOrMatchAnyOperand called!\n";
+
             if (val->getType()->getNumContainedTypes() > 0) {
                 if (llvm::Constant *cst = llvm::dyn_cast<llvm::Constant>(val)) {
+                    dbgs() << "Converting constant.\n";
                     res = convertConstant(cst, iofixpt, typepol);
                 } else {
                     res = matchOp(val);
@@ -274,6 +277,7 @@ namespace flttofix {
                     }
                 }
             } else {
+                dbgs() << "No contained type.\n";
                 res = translateOrMatchOperand(val, iofixpt, ip, typepol);
             }
             return res;
@@ -311,6 +315,7 @@ namespace flttofix {
          *    the specified type (for example if it is a pointer)  */
         llvm::Value *translateOrMatchAnyOperandAndType(llvm::Value *val, const FixedPointType &fixpt,
                                                        llvm::Instruction *ip = nullptr) {
+            dbgs() << "[TRACE] translateOrMatchAnyOperandAndType called\n";
             FixedPointType iofixpt = fixpt;
             return translateOrMatchAnyOperand(val, iofixpt, ip, TypeMatchPolicy::ForceHint);
         };
