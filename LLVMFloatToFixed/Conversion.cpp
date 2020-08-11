@@ -128,17 +128,22 @@ FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instr
     assert(val->getType()->getNumContainedTypes() == 0 && "translateOrMatchOperand val is not a scalar value");
     Value *res = operandPool[val];
     if (res) { //this means it has been converted, but can also be a floating point!
+        dbgs() << "Has already been converted.\n";
         if (res == ConversionError) {
             /* the value should have been converted but it hasn't; bail out */
             dbgs() << "There was a conversion error.\n";
             return nullptr;
         }
 
+        dbgs() << "A\n";
+
         //The value has to be converted into a floating point value, convert it, full stop.
         if (iofixpt.isFloatingPoint()) {
             dbgs() << "Converting to floating.\n";
             return genConvertFixedToFixed(res, valueInfo(res)->fixpType, iofixpt, ip);
         }
+
+        dbgs() << "B\n";
 
         //Converting Floating point to whatever
         if (valueInfo(res)->fixpType.isFloatingPoint()) {
@@ -167,19 +172,24 @@ FloatToFixed::translateOrMatchOperand(Value *val, FixedPointType &iofixpt, Instr
             return genConvertFixedToFixed(res, valueInfo(res)->fixpType, iofixpt, ip);
         }
 
+        dbgs() << "C\n";
+
         if (!valueInfo(val)->noTypeConversion) {
             /* the value has been successfully converted to fixed point in a previous step */
             dbgs() << "Alredy been converted.\n";
             iofixpt = fixPType(res);
             return res;
         }
+        dbgs() << "D\n";
 
         /* The value has changed but may not a fixed point */
-        if (!res->getType()->isFloatingPointTy())
+        if (!res->getType()->isFloatingPointTy()) {
             dbgs() << "Converting to not fixed point.\n";
             /* Don't attempt to convert ints/pointers to fixed point */
             return res;
+        }
         /* Otherwise convert to fixed point the value */
+        dbgs() << "E\n";
         val = res;
     }
 
@@ -322,9 +332,6 @@ Value *FloatToFixed::genConvertFixedToFixed(Value *fix, const FixedPointType &sr
     if (srct == destt)
         return fix;
 
-    if(!ip){
-        dbgs() << "IP IS FUCKING NULL!";
-    }
 
     dbgs() << "Called fixedToFixed on instruction";
     ip->print(dbgs());

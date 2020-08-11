@@ -545,8 +545,10 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType &fixp
         FixedPointType intype1 = fixpt, intype2 = fixpt;
 
         if(fixpt.isFixedPoint()) {
+            dbgs() << "Matching op 1\n";
             Value *val1 = translateOrMatchOperand(instr->getOperand(0), intype1, instr,
                                                   TypeMatchPolicy::RangeOverHintMaxInt);
+            dbgs() << "Matching op 2\n";
             Value *val2 = translateOrMatchOperand(instr->getOperand(1), intype2, instr,
                                                   TypeMatchPolicy::RangeOverHintMaxInt);
             if (!val1 || !val2)
@@ -556,6 +558,14 @@ Value *FloatToFixed::convertBinOp(Instruction *instr, const FixedPointType &fixp
                     intype1.scalarFracBitsAmt() + intype2.scalarFracBitsAmt(),
                     intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
             Type *dbfxt = intermtype.scalarToLLVMType(instr->getContext());
+
+            dbgs() << "Val1 after conversion: ";
+            val1->print(dbgs());
+            dbgs() << "\n";
+            dbgs() << "Val2 after conversion: ";
+            val2->print(dbgs());
+            dbgs() << "\n";
+
 
             IRBuilder<> builder(instr);
             Value *ext1 = intype1.scalarIsSigned() ? builder.CreateSExt(val1, dbfxt) : builder.CreateZExt(val1, dbfxt);
