@@ -100,7 +100,8 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca, const FixedPointType& fix
     return alloca;
 
   Value *as = alloca->getArraySize();
-  AllocaInst *newinst = new AllocaInst(newt, alloca->getType()->getPointerAddressSpace(), as, alloca->getAlignment());
+  MaybeAlign alignment(alloca->getAlignment());
+  AllocaInst *newinst = new AllocaInst(newt, alloca->getType()->getPointerAddressSpace(), as, alignment);
   
   newinst->setUsedWithInAlloca(alloca->isUsedWithInAlloca());
   newinst->setSwiftError(alloca->isSwiftError());
@@ -121,8 +122,9 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType& fixpt)
   if (isConvertedFixedPoint(newptr)) {
     fixpt = fixPType(newptr);
 
+    MaybeAlign alignment(load->getAlignment());
     LoadInst *newinst = new LoadInst(newptr, Twine(), load->isVolatile(),
-      load->getAlignment(), load->getOrdering(), load->getSyncScopeID());
+      alignment, load->getOrdering(), load->getSyncScopeID());
     newinst->insertAfter(load);
     if (valueInfo(load)->noTypeConversion) {
       assert(newinst->getType()->isIntegerTy() && "DTA bug; improperly tagged struct/pointer!");
@@ -199,8 +201,9 @@ Value *FloatToFixed::convertStore(StoreInst *store)
   
   if (!newval)
     return nullptr;
+  MaybeAlign alignment(store->getAlignment());
   StoreInst *newinst = new StoreInst(newval, newptr, store->isVolatile(),
-    store->getAlignment(), store->getOrdering(), store->getSyncScopeID());
+    alignment, store->getOrdering(), store->getSyncScopeID());
   newinst->insertAfter(store);
   return newinst;
 }
