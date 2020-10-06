@@ -434,10 +434,13 @@ struct FloatToFixed : public llvm::ModulePass {
     MDNode *md = nullptr;
     MDNode *targetMD = nullptr;
     MDNode *constInfoMD = nullptr;
+    MDNode *openMPIndirectMD = nullptr;
+
     if (Instruction *from = dyn_cast<Instruction>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
       constInfoMD = from->getMetadata(CONST_INFO_METADATA);
+      openMPIndirectMD = from->getMetadata(OPENMP_INDIRECT_METADATA);
     } else if (GlobalObject *from = dyn_cast<GlobalObject>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
@@ -474,6 +477,12 @@ struct FloatToFixed : public llvm::ModulePass {
 	Instruction *from = cast<Instruction>(src);
 	if (to->getNumOperands() == from->getNumOperands())
 	  to->setMetadata(CONST_INFO_METADATA, constInfoMD);
+      }
+    }
+
+    if (openMPIndirectMD) {
+      if (auto *to = dyn_cast<Instruction>(dst)) {
+        to->setMetadata(OPENMP_INDIRECT_METADATA, openMPIndirectMD);
       }
     }
 
