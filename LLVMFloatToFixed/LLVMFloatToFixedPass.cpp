@@ -55,6 +55,8 @@ bool FloatToFixed::runOnModule(Module &m)
   closePhiLoops();
   cleanup(vals);
 
+  insertOpenMPIndirection(m);
+
   return true;
 }
 
@@ -541,4 +543,44 @@ void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
     dbgs() << *val << "\n";
   }
   dbgs() << "\n\n";
+}
+
+void FloatToFixed::insertOpenMPIndirection(llvm::Module& m) {
+  std::vector<Instruction *> outlinedToFork;
+
+  for (llvm::Function &curFunction : m) {
+    for (auto instructionIt = inst_begin(curFunction); instructionIt != inst_end(curFunction); instructionIt++) {
+      if (auto curCallInstruction = dyn_cast<CallInst>(&(*instructionIt))) {
+        if (curCallInstruction->getMetadata(OPENMP_INDIRECT_METADATA)) {
+          outlinedToFork.push_back(curCallInstruction);
+        }
+      }
+    }
+  }
+
+  for (auto I: outlinedToFork) {
+    auto j = I->getNextNode();
+
+    while (j != nullptr && (dyn_cast<llvm::CallBase>(j) == nullptr ||
+      cast<CallBase>(j)->getCalledFunction()->getName() != "__kmpc_fork_call")) {
+      j = j->getNextNode();
+    }
+
+    assert(j != nullptr && "Could not find a __kmpc_fork_call");
+
+    auto forkCallbase = cast<llvm::CallBase>(j);
+    auto oldForkCalledOperand = forkCallbase->getOperand(2);
+    auto bitcastDestType = oldForkCalledOperand->getType();
+    auto outlinedCall = cast<llvm::CallBase>(I);
+    auto outlinedFixpFunction = outlinedCall->getCalledFunction();
+
+    auto newForkCalledOperand = new llvm::BitCastInst(outlinedFixpFunction, bitcastDestType, "", I);
+    forkCallbase->setOperand(2, newForkCalledOperand);
+
+    for (int k = 2; k < outlinedFixpFunction->arg_size(); k++) {
+      forkCallbase->setArgOperand(k+1, outlinedCall->getOperand(k));
+    }
+
+    I->eraseFromParent();
+  }
 }
