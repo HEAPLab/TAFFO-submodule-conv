@@ -90,9 +90,9 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca,
   if (newt == prevt)
     return alloca;
   Value *as = alloca->getArraySize();
-  AllocaInst *newinst =
-      new AllocaInst(newt, alloca->getType()->getPointerAddressSpace(), as,
-                     alloca->getAlignment());
+  MaybeAlign alignment(alloca->getAlignment());
+  AllocaInst *newinst = new AllocaInst(
+      newt, alloca->getType()->getPointerAddressSpace(), as, alignment);
   newinst->setUsedWithInAlloca(alloca->isUsedWithInAlloca());
   newinst->setSwiftError(alloca->isSwiftError());
   newinst->insertAfter(alloca);
@@ -107,8 +107,9 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType &fixpt) {
     return Unsupported;
   if (isConvertedFixedPoint(newptr)) {
     fixpt = fixPType(newptr);
+    MaybeAlign alignment(load->getAlignment());
     LoadInst *newinst =
-        new LoadInst(newptr, Twine(), load->isVolatile(), load->getAlignment(),
+        new LoadInst(newptr, Twine(), load->isVolatile(), alignment,
                      load->getOrdering(), load->getSyncScopeID());
     newinst->insertAfter(load);
     if (valueInfo(load)->noTypeConversion) {
@@ -183,8 +184,9 @@ Value *FloatToFixed::convertStore(StoreInst *store) {
   }
   if (!newval)
     return nullptr;
+  MaybeAlign alignment(store->getAlignment());
   StoreInst *newinst =
-      new StoreInst(newval, newptr, store->isVolatile(), store->getAlignment(),
+      new StoreInst(newval, newptr, store->isVolatile(), alignment,
                     store->getOrdering(), store->getSyncScopeID());
   newinst->insertAfter(store);
   return newinst;

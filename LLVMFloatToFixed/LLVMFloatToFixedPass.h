@@ -515,7 +515,11 @@ struct FloatToFixed : public llvm::ModulePass {
                                const FixedPointType &t) {
     using namespace llvm;
     using namespace mdutils;
-    Instruction *i = cast<Instruction>(v);
+    Instruction *i = dyn_cast<Instruction>(v);
+    // TODO: handle case when IRBuilder does constant folding, and v is a
+    // constant.
+    if (!i)
+      return;
     const Value *op = i->getOperand(opIdx);
     if (!isa<Constant>(op))
       return;
@@ -536,9 +540,9 @@ struct FloatToFixed : public llvm::ModulePass {
   }
   int getLoopNestingLevelOfValue(llvm::Value *v);
   template <class T>
-  Constant *createConstantDataSequentialFP(ConstantDataSequential *cds,
+  llvm::Constant *createConstantDataSequentialFP(llvm::ConstantDataSequential *cds,
                                            const FixedPointType &fixpt);
-  mdutils::InputInfo *getInputInfo(Value *v);
+  mdutils::InputInfo *getInputInfo(llvm::Value *v);
   bool associateFixFormat(mdutils::InputInfo *II, FixedPointType &iofixpt);
 };
 } // namespace flttofix
