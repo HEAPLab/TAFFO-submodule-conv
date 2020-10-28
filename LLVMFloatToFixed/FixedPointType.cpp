@@ -50,6 +50,8 @@ FixedPointType::FixedPointType(Type *llvmtype, bool signd) {
             scalarData.floatStandard = FloatStandard::Float_ppc_fp128;
         } else if (llvmtype->getTypeID() == Type::TypeID::X86_FP80TyID) {
             scalarData.floatStandard = FloatStandard::Float_x86_fp80;
+        } else if (llvmtype->getTypeID() == Type::TypeID::BFloatTyID) {
+            scalarData.floatStandard = FloatStandard::Float_bfloat;        
         } else {
             //Invalid...
             scalarData.floatStandard = FloatStandard::Float_NotFloat;
@@ -137,6 +139,8 @@ Type *FixedPointType::scalarToLLVMType(LLVMContext &ctxt) const {
                 return Type::getX86_FP80Ty(ctxt);
             case Float_ppc_fp128:    /*128-bit floating-point value (two 64-bits)*/
                 return Type::getPPC_FP128Ty(ctxt);
+            case Float_bfloat:    /*128-bit floating-point value (two 64-bits)*/
+                return Type::getBFloatTy(ctxt);
             case Float_NotFloat:
             default:
                 dbgs() << "getting LLVMType of " << scalarData.floatStandard << "\n";
@@ -191,7 +195,7 @@ FixedPointType FixedPointType::unwrapIndexList(Type *valType, const iterator_ran
         } else if (resolvedType->isArrayTy()) {
             resolvedType = resolvedType->getArrayElementType();
         } else if (resolvedType->isVectorTy()) {
-            resolvedType = resolvedType->getVectorElementType();
+            resolvedType = resolvedType->getContainedType(0);
         } else if (resolvedType->isStructTy()) {
             ConstantInt *val = dyn_cast<ConstantInt>(a);
             assert(val && "non-constant index for struct in GEP");
@@ -215,7 +219,7 @@ FixedPointType FixedPointType::unwrapIndexList(Type *valType, ArrayRef<unsigned>
         } else if (resolvedType->isArrayTy()) {
             resolvedType = resolvedType->getArrayElementType();
         } else if (resolvedType->isVectorTy()) {
-            resolvedType = resolvedType->getVectorElementType();
+            resolvedType = resolvedType->getContainedType(0);
         } else if (resolvedType->isStructTy()) {
             resolvedType = resolvedType->getStructElementType(n);
             tempFixpt = tempFixpt.structItem(n);

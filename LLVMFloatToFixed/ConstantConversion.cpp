@@ -92,7 +92,7 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointTy
 
     GlobalVariable *newglob = new GlobalVariable(*(glob->getParent()), newt, glob->isConstant(), glob->getLinkage(),
                                                  newinit);
-    newglob->setAlignment(glob->getAlignment());
+    newglob->setAlignment(llvm::MaybeAlign(glob->getAlignment()));
     newglob->setName(glob->getName() + ".fixp");
     return newglob;
 }

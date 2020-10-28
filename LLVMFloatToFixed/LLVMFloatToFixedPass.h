@@ -277,16 +277,33 @@ struct FloatToFixed : public llvm::ModulePass {
   };
   llvm::Value *fallbackMatchValue(llvm::Value *fallval, llvm::Type *origType,
                                   llvm::Instruction *ip = nullptr) {
-    llvm::Value *cvtfallval = operandPool[fallval];
+    
+      LLVM_DEBUG(llvm::dbgs() << "Alredy inserted " << !(operandPool.find(fallval) == operandPool.end())<< "\n");
+      llvm::Value *cvtfallval = operandPool[fallval];
+
+      LLVM_DEBUG({
+        llvm::dbgs() << "check\n" << *fallval << "\nwas converted\n";
+        if (cvtfallval == nullptr){
+        llvm::dbgs() <<  "nullptr" << "\n";
+        } else
+        {
+          llvm::dbgs() <<  *cvtfallval << "\n";
+        }
+      });
+
     if (cvtfallval == ConversionError) {
       LLVM_DEBUG(llvm::dbgs()
                  << "error: bail out reverse match of " << *fallval << "\n");
       return nullptr;
     }
+
+    LLVM_DEBUG(llvm::dbgs() << "hasInfo " << hasInfo(cvtfallval) << "\n";);
     if (!hasInfo(cvtfallval))
       return cvtfallval;
+    LLVM_DEBUG(llvm::dbgs() << "Info noTypeConversion " << valueInfo(cvtfallval)->noTypeConversion << "\n";);
     if (valueInfo(cvtfallval)->noTypeConversion)
       return cvtfallval;
+
     if (!ip) {
       ip = llvm::dyn_cast<llvm::Instruction>(cvtfallval);
       if (ip)

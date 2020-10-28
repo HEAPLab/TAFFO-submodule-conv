@@ -92,7 +92,7 @@ Value *FloatToFixed::convertAlloca(AllocaInst *alloca,
   Value *as = alloca->getArraySize();
   MaybeAlign alignment(alloca->getAlignment());
   AllocaInst *newinst = new AllocaInst(
-      newt, alloca->getType()->getPointerAddressSpace(), as, alignment);
+      newt, alloca->getType()->getPointerAddressSpace(), as, alignment.valueOrOne());
   newinst->setUsedWithInAlloca(alloca->isUsedWithInAlloca());
   newinst->setSwiftError(alloca->isSwiftError());
   newinst->insertAfter(alloca);
@@ -109,7 +109,7 @@ Value *FloatToFixed::convertLoad(LoadInst *load, FixedPointType &fixpt) {
     fixpt = fixPType(newptr);
     MaybeAlign alignment(load->getAlignment());
     LoadInst *newinst =
-        new LoadInst(newptr, Twine(), load->isVolatile(), alignment,
+        new LoadInst(newptr->getType()->getPointerElementType(), newptr, Twine(), load->isVolatile(), alignment.valueOrOne(),
                      load->getOrdering(), load->getSyncScopeID());
     newinst->insertAfter(load);
     if (valueInfo(load)->noTypeConversion) {
@@ -186,14 +186,17 @@ Value *FloatToFixed::convertStore(StoreInst *store) {
     return nullptr;
   MaybeAlign alignment(store->getAlignment());
   StoreInst *newinst =
-      new StoreInst(newval, newptr, store->isVolatile(), alignment,
+      new StoreInst(newval, newptr, store->isVolatile(), alignment.valueOrOne(),
                     store->getOrdering(), store->getSyncScopeID());
   newinst->insertAfter(store);
   return newinst;
 }
 Value *FloatToFixed::convertGep(GetElementPtrInst *gep, FixedPointType &fixpt) {
+  LLVM_DEBUG(llvm::dbgs() << "### Convert GEP ###\n");
   IRBuilder<> builder(gep);
   Value *newval = matchOp(gep->getPointerOperand());
+
+  LLVM_DEBUG(llvm::dbgs() << *gep << "\nhas operand \n"  << *(gep->getPointerOperand()) << "\nmatchOp return \n" <<  *newval << "\n" );
   if (!newval)
     return valueInfo(gep)->noTypeConversion ? Unsupported : nullptr;
   if (!isConvertedFixedPoint(newval)) {

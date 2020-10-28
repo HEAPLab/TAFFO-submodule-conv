@@ -28,7 +28,8 @@ namespace flttofix {
             Float_double,    /*64-bit floating-point value*/
             Float_fp128,    /*128-bit floating-point value (112-bit mantissa)*/
             Float_x86_fp80,    /*80-bit floating-point value (X87)*/
-            Float_ppc_fp128    /*128-bit floating-point value (two 64-bits)*/};
+            Float_ppc_fp128,    /*128-bit floating-point value (two 64-bits)*/
+            Float_bfloat};
     private:
         struct Primitive {
             bool isSigned;
