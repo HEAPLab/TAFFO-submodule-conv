@@ -55,7 +55,7 @@ bool FloatToFixed::runOnModule(Module &m)
   closePhiLoops();
   cleanup(vals);
 
-  insertOpenMPIndirection(m);
+  convertIndirectCalls(m);
 
   return true;
 }
@@ -543,46 +543,4 @@ void FloatToFixed::printConversionQueue(std::vector<Value*> vals)
     dbgs() << *val << "\n";
   }
   dbgs() << "\n\n";
-}
-
-void FloatToFixed::insertOpenMPIndirection(llvm::Module& m)
-{
-  std::vector<CallInst *> trampolineCalls;
-
-  for (llvm::Function &curFunction : m) {
-    for (auto instructionIt = inst_begin(curFunction); instructionIt != inst_end(curFunction); instructionIt++) {
-      if (auto curCallInstruction = dyn_cast<CallInst>(&(*instructionIt))) {
-        if (curCallInstruction->getMetadata(OPENMP_INDIRECT_METADATA)) {
-          trampolineCalls.push_back(curCallInstruction);
-        }
-      }
-    }
-  }
-
-  for (auto I: trampolineCalls) {
-    auto calledFunction = cast<CallInst>(I)->getCalledFunction();
-    auto entryBlock = &calledFunction->getEntryBlock();
-
-    auto fixpCallInstr = entryBlock->getTerminator()->getPrevNode();
-    assert(isa<CallInst>(fixpCallInstr) && "expected a CallInst to the outlined function");
-    auto fixpCall = cast<CallInst>(fixpCallInstr);
-
-    auto magicBitCast = fixpCall->getPrevNode();
-    assert(isa<BitCastInst>(magicBitCast) && "expected a BitCastInst with the kmpc_fork_call function");
-
-    auto indirectFunction = cast<Function>(magicBitCast->getOperand(0));
-    auto microTaskType = indirectFunction->getArg(2)->getType();
-
-    auto bitcastedMicroTask = ConstantExpr::getBitCast(fixpCall->getCalledFunction(), microTaskType);
-
-    std::vector<Value *> indirectCallArgs = std::vector<Value *>(I->arg_begin(), I->arg_end());
-    indirectCallArgs.insert(indirectCallArgs.begin() + 2, bitcastedMicroTask);
-
-    auto indirectCall = CallInst::Create(indirectFunction, indirectCallArgs);
-    indirectCall->insertAfter(I);
-
-    cpMetaData(indirectCall, I);
-
-    I->eraseFromParent();
-  }
 }
