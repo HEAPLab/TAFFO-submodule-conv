@@ -441,7 +441,7 @@ struct FloatToFixed : public llvm::ModulePass {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
       constInfoMD = from->getMetadata(CONST_INFO_METADATA);
-      openMPIndirectMD = from->getMetadata(OPENMP_INDIRECT_METADATA);
+      openMPIndirectMD = from->getMetadata(INDIRECT_METADATA);
     } else if (GlobalObject *from = dyn_cast<GlobalObject>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
@@ -483,7 +483,7 @@ struct FloatToFixed : public llvm::ModulePass {
 
     if (openMPIndirectMD) {
       if (auto *to = dyn_cast<Instruction>(dst)) {
-        to->setMetadata(OPENMP_INDIRECT_METADATA, openMPIndirectMD);
+        to->setMetadata(INDIRECT_METADATA, openMPIndirectMD);
       }
     }
 
@@ -531,6 +531,10 @@ struct FloatToFixed : public llvm::ModulePass {
   }
 
   int getLoopNestingLevelOfValue(llvm::Value *v);
+
+  void convertIndirectCalls(llvm::Module &m);
+
+  void handleKmpcFork(llvm::CallInst *I, llvm::Function *indirectFunction);
 };
 
 
