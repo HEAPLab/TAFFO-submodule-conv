@@ -521,7 +521,11 @@ struct FloatToFixed : public llvm::ModulePass {
   void updateConstTypeMetadata(llvm::Value *v, unsigned opIdx, const FixedPointType &t) {
     using namespace llvm;
     using namespace mdutils;
-    Instruction *i = cast<Instruction>(v);
+    Instruction *i = dyn_cast<Instruction>(v);
+    // TODO: handle case when IRBuilder does constant folding, and v is a constant.
+    if (!i)
+      return;
+
     const Value *op = i->getOperand(opIdx);
     if (!isa<Constant>(op))
       return;
