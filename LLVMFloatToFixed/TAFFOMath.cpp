@@ -1,4 +1,10 @@
 #include "TAFFOMath.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/IR/Type.h"
+#include <llvm/Support/ErrorHandling.h>
 
 
 using namespace flttofix;
@@ -182,7 +188,7 @@ void FloatToFixed::populateFunction(
                     << "\n");
   
   CloneFunctionInto(NewFunc, OldFunc, VMap, true, Returns);
-  LLVM_DEBUG(NewFunc->getParent()->dump(););
+  //LLVM_DEBUG(NewFunc->getParent()->dump(););
   LLVM_DEBUG(dbgs() << "end clone"
                     << "\n");
   LLVM_DEBUG(dbgs() << "\nstart fixFun"
@@ -204,21 +210,86 @@ void FloatToFixed::populateFunction(
 void generateFirst(Module *m, llvm::StringRef &fName) {
   Function *tmp = nullptr;
   // get function
-  for (auto &i : taffo::HandledFunction::handledFunctions()) {
-    if (taffo::start_with(fName, i)) {
-      tmp = m->getFunction(i);
-    }
+
+    tmp = m->getFunction(fName);    
     if (tmp == nullptr)
-      continue;
+      return;
     // check if alredy populated
     if (tmp->isDeclaration()) {
       BasicBlock::Create(m->getContext(), fName + ".entry", tmp);
       BasicBlock *where = &(tmp->getEntryBlock());
       IRBuilder<> builder(where, where->getFirstInsertionPt());
-      builder.CreateRet(ConstantFP::get(tmp->getReturnType(), 0.0f));
-    }
+      if(tmp->getReturnType()->isFloatingPointTy()){
+      builder.CreateRet(ConstantFP::get(tmp->getReturnType(), 0.0f));}
+      else{
+      builder.CreateRet(ConstantInt::get(tmp->getReturnType(),0));
+      }
+    
   }
 }
+/*
+  bool FloatToFixed::createAbs(
+    llvm::Function *newfs, llvm::Function *oldf,
+    SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
+        &to_change){
+        llvm::LLVMContext &cont(oldf->getContext());
+        DataLayout dataLayout(oldf->getParent());
+        LLVM_DEBUG(dbgs() << "\nGet Context " << &cont << "\n");
+        // get first basick block of function
+        BasicBlock::Create(cont, "Entry", oldf);
+        BasicBlock *where = &(oldf->getEntryBlock());
+        LLVM_DEBUG(dbgs() << "\nGet entry point " << where);
+        IRBuilder<> builder(where, where->getFirstInsertionPt());
+        // get return type fixed point
+        flttofix::FixedPointType fxpret;
+        flttofix::FixedPointType fxparg;
+        bool foundRet = false;
+        bool foundArg = false;
+        TaffoMath::getFixedFromRet(this, oldf, fxpret, foundRet);
+        // get argument fixed point
+        TaffoMath::getFixedFromArg(this, newfs, fxparg, 0, foundArg);
+
+        if(foundRet && foundArg){
+          llvm::Instruction *inst = nullptr;
+          llvm::Type *arg_type = fxparg.scalarToLLVMType(cont);
+          inst = builder.CreateAlloca(arg_type);
+          to_change.push_back({inst->getParent(), {inst}});
+          inst = builder.CreateStore(builder.CreateAnd(builder.CreateLoad(inst), builder.CreateNot(builder.CreateShl(llvm::ConstantInt::get(arg_type,1),arg_type->getScalarSizeInBits()-1))),inst);
+          to_change.push_back({inst->getParent(), {inst}});
+          if (oldf->getReturnType()->isFloatingPointTy()) {
+            builder.CreateRet(ConstantFP::get(oldf->getReturnType(), 0.0f));
+          } else {
+            builder.CreateRet(ConstantInt::get(oldf->getReturnType(), 0));
+          }
+        } else {
+          if (oldf->getReturnType()->isFloatingPointTy()) {
+            builder.CreateRet(ConstantFP::get(oldf->getReturnType(), 0.0f));
+          } else {
+            builder.CreateRet(ConstantInt::get(oldf->getReturnType(), 0));
+          }
+          // llvm_unreachable("Abs not transformed");
+        }
+        }
+*/
+
+
+bool FloatToFixed::createAbs(llvm::Function *oldf){
+  llvm::LLVMContext &cont(oldf->getContext());
+  DataLayout dataLayout(oldf->getParent());
+  LLVM_DEBUG(dbgs() << "\nGet Context " << &cont << "\n");
+  // get first basick block of function
+  BasicBlock::Create(cont, "Entry", oldf);
+  BasicBlock *where = &(oldf->getEntryBlock());
+  LLVM_DEBUG(dbgs() << "\nGet entry point " << where);
+  IRBuilder<> builder(where, where->getFirstInsertionPt());
+  // get return type fixed point
+  if (oldf->getReturnType()->isFloatingPointTy()) {
+    builder.CreateRet(ConstantFP::get(oldf->getReturnType(), 0.0f));
+  } else {
+    builder.CreateRet(ConstantInt::get(oldf->getReturnType(), 0));
+  }
+}
+
 
 bool FloatToFixed::getFunctionInto(
     Function *NewFunc, Function *OldFunc,
@@ -227,13 +298,17 @@ bool FloatToFixed::getFunctionInto(
 
   llvm::StringRef fName = OldFunc->getName();
 
-  if (taffo::start_with(fName, "sin") || taffo::start_with(fName, "cos") ||
-      taffo::start_with(fName, "_ZSt3cos") ||
-      taffo::start_with(fName, "_ZSt3sin")) {
-    generateFirst(OldFunc->getParent(), fName);
+  if (taffo::start_with(HandledFunction::demangle(fName), "sin") || taffo::start_with(HandledFunction::demangle(fName), "cos") ||
+      taffo::start_with(HandledFunction::demangle(fName), "_ZSt3cos") ||
+      taffo::start_with(HandledFunction::demangle(fName), "_ZSt3sin")) {
+    //generateFirst(OldFunc->getParent(), fName);
     return createSinCos(NewFunc, OldFunc, to_change);
   }
-  return false;
+  if(taffo::start_with(HandledFunction::demangle(fName), "abs")){
+    //generateFirst(OldFunc->getParent(), fName);
+    return createAbs(OldFunc);
+  }
+  llvm_unreachable("Function not recognized");
 }
 
 void FloatToFixed::FixFunction(
@@ -244,9 +319,9 @@ void FloatToFixed::FixFunction(
 
   llvm::StringRef fName = OldFunc->getName();
 
-  if (taffo::start_with(fName, "sin") || taffo::start_with(fName, "cos") ||
-      taffo::start_with(fName, "_ZSt3cos") ||
-      taffo::start_with(fName, "_ZSt3sin")) {
+  if (taffo::start_with(HandledFunction::demangle(fName), "sin") || taffo::start_with(HandledFunction::demangle(fName), "cos") ||
+      taffo::start_with(HandledFunction::demangle(fName), "_ZSt3cos") ||
+      taffo::start_with(HandledFunction::demangle(fName), "_ZSt3sin")) {
     for (auto i : to_change) {
       // to_change.push_back({to_remove, {arg.value, arg_value, body}});
       if (i.first->getName().equals("to_remove")) {
@@ -281,6 +356,75 @@ void FloatToFixed::FixFunction(
       }
     }
   }
-}
+
+  if (taffo::start_with(HandledFunction::demangle(fName), "abs") ){
+
+    llvm::LLVMContext &cont(OldFunc->getContext());
+    DataLayout dataLayout(OldFunc->getParent());
+    LLVM_DEBUG(dbgs() << "\nGet Context " << &cont << "\n");
+    // get first basick block of function
+    auto arg_type = NewFunc->getArg(0)->getType();
+    auto ret_type = NewFunc->getReturnType();
+    NewFunc->begin()->begin()->eraseFromParent();
+    BasicBlock *where = &(NewFunc->getEntryBlock());
+    LLVM_DEBUG(dbgs() << "\nGet entry point " << where);
+    IRBuilder<> builder(where, where->getFirstInsertionPt());
+    LLVM_DEBUG(dbgs() << "\nGet insertion\n");
+    auto* inst = builder.CreateBitCast(NewFunc->getArg(0), llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()));
+    LLVM_DEBUG(dbgs() << "\nGet bitcast\n");
+    inst = builder.CreateBitCast(
+        builder.CreateAnd(
+            inst,
+            builder.CreateNot(builder.CreateShl(
+                llvm::ConstantInt::get(llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()), 1),
+                NewFunc->getArg(0)->getType()->getScalarSizeInBits() - 1))), arg_type );
+
+
+    LLVM_DEBUG(dbgs() << "\nType ret"<< (ret_type->dump()," ") << "\n");
+    LLVM_DEBUG(dbgs() << "\nType arg" << (arg_type->dump(), " ") <<"\n");
+
+    if (arg_type->isFloatingPointTy() && ret_type->isFloatingPointTy()) {
+      inst = builder.CreateFPCast(inst, ret_type);
+    } else if (arg_type->isFloatingPointTy() && ret_type->isIntegerTy()) {
+      inst = builder.CreateFPToSI(inst, ret_type);
+    } else if (arg_type->isIntegerTy() && ret_type->isFloatingPointTy()) {
+      inst = builder.CreateSIToFP(inst, ret_type);
+    } else if (arg_type->isIntegerTy() && ret_type->isIntegerTy()) {
+      inst = builder.CreateIntCast(inst, ret_type, true);
+    }
+    builder.CreateRet(inst);
+    // get return type fixed point
+
+
+    /*
+    if (to_change.size() > 0) {
+      auto new_inst = VMap[*(to_change[0].second.begin())];
+      IRBuilder<> builder(
+          dyn_cast<llvm::Instruction>(new_inst)
+              ->getNextNonDebugInstruction());
+      builder.CreateStore(NewFunc->getArg(0),
+                          new_inst);
+
+      new_inst = VMap[*(to_change[1].second.begin())];                    
+      builder.SetInsertPoint(
+          dyn_cast<llvm::Instruction>(new_inst)
+              ->getNextNonDebugInstruction());
+      auto inst =
+          builder.CreateRet(builder.CreateLoad(VMap[*(to_change[0].second.begin())]));
+      inst->getNextNonDebugInstruction()->eraseFromParent();
+    } else {
+
+      IRBuilder<> builder(&NewFunc->getEntryBlock());
+      if (NewFunc->getReturnType()->isFloatingPointTy()) {
+        builder.CreateRet(ConstantFP::get(NewFunc->getReturnType(), 0.0f));
+      } else {
+        builder.CreateRet(ConstantInt::get(NewFunc->getReturnType(), 0));
+      }   
+      NewFunc->getEntryBlock().begin()->eraseFromParent();
+    }*/
+  }
+
+  }
+
 
 } // namespace flttofix

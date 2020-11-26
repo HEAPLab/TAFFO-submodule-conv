@@ -128,6 +128,7 @@ struct FloatToFixed : public llvm::ModulePass {
   createSinCos(llvm::Function *newf, llvm::Function *oldf,
                SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
                    &to_change);
+  bool createAbs(llvm::Function *oldf );
 
   void printConversionQueue(std::vector<llvm::Value*> vals);
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
@@ -185,8 +186,10 @@ struct FloatToFixed : public llvm::ModulePass {
    *  @param f The function to check */
   bool isSpecialFunction(const llvm::Function *f) {
     llvm::StringRef fName = f->getName();
-    return (fName.startswith("llvm.") || f->getBasicBlockList().size() == 0) &&
-           !taffo::HandledFunction::isHandled(f);
+    if(!taffo::HandledFunction::isHandled(f))
+    return (fName.startswith("llvm.") || f->getBasicBlockList().size() == 0);
+    return false;
+           
   };
 
   /** Returns the converted Value matching a non-converted Value.

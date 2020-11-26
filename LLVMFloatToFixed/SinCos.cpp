@@ -92,7 +92,7 @@ void fixrangeSinCos(FloatToFixed *ref, Function *oldf, FixedPointType &fxparg,
       TaffoMath::createGlobalConst(oldf->getParent(), "pi_2_global." + std::to_string(min) + "_" + std::to_string(max), pi_2_ArrayType,
                         pi_2_ConstArray, alignement_pi_2);
   auto pointer_to_array = TaffoMath::addAllocaToStart(ref, oldf, builder, pi_2_ArrayType,nullptr, "pi_2_array");
- dyn_cast<llvm::AllocaInst>(pointer_to_array)->setAlignment(alignement_pi_2);
+ dyn_cast<llvm::AllocaInst>(pointer_to_array)->setAlignment(llvm::MaybeAlign(alignement_pi_2));
   builder.CreateMemCpy(
       pointer_to_array, alignement_pi_2, pi_2_arry_g, alignement_pi_2,
       (max-min+1) * (int_type->getScalarSizeInBits() >> 3));
@@ -411,7 +411,7 @@ bool FloatToFixed::createSinCos(
                         arctanConstArray, alignement_arctan);
 
   auto pointer_to_array = builder.CreateAlloca(arctanArrayType);
-  pointer_to_array->setAlignment(alignement_arctan);
+  pointer_to_array->setAlignment(llvm::MaybeAlign(alignement_arctan));
 
   builder.CreateMemCpy(
       pointer_to_array, alignement_arctan, arctan_g, alignement_arctan,
@@ -765,7 +765,6 @@ bool FloatToFixed::createSinCos(
     // yt = x >> i
     Value *yt = builder.CreateAShr(builder.CreateLoad(y_value.value),
                                    builder.CreateLoad(i_iterator));
-LLVM_DEBUG(dbgs() << "5\n");
     // arctan_2power[i]
     generic = builder.CreateGEP(pointer_to_array,
                                 {zero_arg, builder.CreateLoad(i_iterator)});
@@ -793,7 +792,6 @@ LLVM_DEBUG(dbgs() << "5\n");
     // y = y + (dn > 0 ? xt : -xt);
     generic = builder.CreateSelect(dn_greate_zero, xt,
                                    builder.CreateSub(zero_arg, xt));
-LLVM_DEBUG(dbgs() << "6\n");
     builder.CreateStore(
         builder.CreateAdd(generic, builder.CreateLoad(y_value.value)),
         y_value.value);
@@ -804,7 +802,6 @@ LLVM_DEBUG(dbgs() << "6\n");
                         i_iterator);
     builder.CreateBr(epilog_loop);
     builder.SetInsertPoint(return_point);
-    LLVM_DEBUG(dbgs() << "7\n");
   }
   {
     auto zero_arg = builder.CreateLoad(zero.value);
@@ -827,7 +824,6 @@ LLVM_DEBUG(dbgs() << "6\n");
         builder.CreateSub(zero_arg, builder.CreateLoad(arg_value)));
     builder.CreateStore(generic, arg_value);
   }
-  LLVM_DEBUG(dbgs() << "quattro\n");
   if(internal_fxpt.scalarFracBitsAmt() > truefxpret.scalarFracBitsAmt()){
     builder.CreateStore(builder.CreateAShr(builder.CreateLoad(arg_value), internal_fxpt.scalarFracBitsAmt() - truefxpret.scalarFracBitsAmt()), arg_value);
   }

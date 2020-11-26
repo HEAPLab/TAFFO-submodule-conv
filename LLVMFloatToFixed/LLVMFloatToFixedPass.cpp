@@ -7,6 +7,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <llvm/Transforms/Utils/ValueMapper.h>
 #include "llvm/Support/CommandLine.h"
@@ -31,7 +32,7 @@ bool EnableMathFunctionCosFlag;                 // the actual value
 llvm::cl::opt<bool> ManualFunctionCloning("manualclone",
     llvm::cl::desc("Enables function cloning only for annotated functions"), llvm::cl::init(false));
 static cl::opt<bool, true>  EnableMathFunctionsConversions("enablemath-all",
-    llvm::cl::desc("Enables function Math Conversion"), cl::location(EnableMathFunctionsConversionsFlag), llvm::cl::init(false));
+    llvm::cl::desc("Enables function Math Conversion"), cl::location(EnableMathFunctionsConversionsFlag), llvm::cl::init(true));
 static cl::opt<bool, true>  EnableMathFunctionSin("enablemath-sin",
     llvm::cl::desc("Enables sin Conversion"),  cl::location(EnableMathFunctionSinFlag), llvm::cl::init(false));
 static cl::opt<bool, true>  EnableMathFunctionCos("enablemath-cos",
@@ -71,6 +72,7 @@ bool FloatToFixed::runOnModule(Module &m)
   performConversion(m, vals);
   closePhiLoops();
   cleanup(vals);
+  m.dump();
 
   return true;
 }
@@ -340,7 +342,7 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
     bool specialFunction = false;
     Function *oldF = call.getCalledFunction();
     Function *newF = createFixFun(&call, &alreadyHandledNewF, &specialFunction);
-    if (!newF) {
+    if (!newF && !specialFunction) {
       LLVM_DEBUG(dbgs() << "Attempted to clone function " << oldF->getName() << " but failed\n");
       continue;
     }
