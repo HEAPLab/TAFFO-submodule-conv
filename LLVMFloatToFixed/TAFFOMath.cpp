@@ -359,6 +359,8 @@ void FloatToFixed::FixFunction(
 
   if (taffo::start_with(HandledFunction::demangle(fName), "abs") ){
 
+
+
     llvm::LLVMContext &cont(OldFunc->getContext());
     DataLayout dataLayout(OldFunc->getParent());
     LLVM_DEBUG(dbgs() << "\nGet Context " << &cont << "\n");
@@ -369,6 +371,10 @@ void FloatToFixed::FixFunction(
     BasicBlock *where = &(NewFunc->getEntryBlock());
     LLVM_DEBUG(dbgs() << "\nGet entry point " << where);
     IRBuilder<> builder(where, where->getFirstInsertionPt());
+    if (this->hasInfo(OldFunc->getArg(0)) && !(this->valueInfo(OldFunc->getArg(0))->fixpType.scalarIsSigned())) {      
+      builder.CreateRet(NewFunc->getArg(0));
+      return;
+    }
     LLVM_DEBUG(dbgs() << "\nGet insertion\n");
     auto* inst = builder.CreateBitCast(NewFunc->getArg(0), llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()));
     LLVM_DEBUG(dbgs() << "\nGet bitcast\n");
@@ -393,35 +399,7 @@ void FloatToFixed::FixFunction(
       inst = builder.CreateIntCast(inst, ret_type, true);
     }
     builder.CreateRet(inst);
-    // get return type fixed point
-
-
-    /*
-    if (to_change.size() > 0) {
-      auto new_inst = VMap[*(to_change[0].second.begin())];
-      IRBuilder<> builder(
-          dyn_cast<llvm::Instruction>(new_inst)
-              ->getNextNonDebugInstruction());
-      builder.CreateStore(NewFunc->getArg(0),
-                          new_inst);
-
-      new_inst = VMap[*(to_change[1].second.begin())];                    
-      builder.SetInsertPoint(
-          dyn_cast<llvm::Instruction>(new_inst)
-              ->getNextNonDebugInstruction());
-      auto inst =
-          builder.CreateRet(builder.CreateLoad(VMap[*(to_change[0].second.begin())]));
-      inst->getNextNonDebugInstruction()->eraseFromParent();
-    } else {
-
-      IRBuilder<> builder(&NewFunc->getEntryBlock());
-      if (NewFunc->getReturnType()->isFloatingPointTy()) {
-        builder.CreateRet(ConstantFP::get(NewFunc->getReturnType(), 0.0f));
-      } else {
-        builder.CreateRet(ConstantInt::get(NewFunc->getReturnType(), 0));
-      }   
-      NewFunc->getEntryBlock().begin()->eraseFromParent();
-    }*/
+   
   }
 
   }
