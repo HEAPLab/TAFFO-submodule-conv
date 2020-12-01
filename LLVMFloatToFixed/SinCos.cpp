@@ -300,7 +300,8 @@ return sin_arry_g;
 Value* generateCosLUT(FloatToFixed *ref, Function *oldf, FixedPointType &fxparg,                    
                     llvm::IRBuilder<> &builder){
 
- 
+  
+
   TaffoMath::pair_ftp_value<llvm::Constant *, 5> cos_vect;
   for (int i = 0; i < MathZ; ++i) {
     cos_vect.fpt.push_back(
@@ -337,6 +338,7 @@ bool FloatToFixed::createSinCos(
     llvm::Function *newfs, llvm::Function *oldf,
     SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
         &to_change) {
+
 
   //
   Value *generic;
@@ -930,7 +932,7 @@ bool FloatToFixed::createSinCos(
                                               fxpret.scalarFracBitsAmt()),
                         arg_value);
     Value *sin_g = generateSinLUT(this, oldf, internal_fxpt, builder);
-    Value *cos_g = generateCosLUT(this, oldf, internal_fxpt, builder);
+    //Value *cos_g = generateCosLUT(this, oldf, internal_fxpt, builder);
     auto zero_arg = builder.CreateLoad(zero.value);
 
     Value *tmp_angle = builder.CreateLoad(arg_value);
@@ -970,7 +972,8 @@ bool FloatToFixed::createSinCos(
 
     builder.CreateStore(builder.CreateLoad(builder.CreateGEP(sin_g, {zero_arg,generic})),
                         y_value.value);
-    builder.CreateStore(builder.CreateLoad(builder.CreateGEP(cos_g, {zero_arg,generic})),
+    generic = builder.CreateSub(llvm::ConstantInt::get(internal_fxpt.scalarToLLVMType(cont),MathZ), generic);
+    builder.CreateStore(builder.CreateLoad(builder.CreateGEP(sin_g, {zero_arg,generic})),
                         x_value.value);
     builder.CreateBr(return_point);
     builder.SetInsertPoint(return_point);
