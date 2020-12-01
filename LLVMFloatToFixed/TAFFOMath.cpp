@@ -46,8 +46,10 @@ namespace TaffoMath {
       taffo::fixedPointTypeFromRange(range, nullptr, nbits, minflt);
   outF = FixedPointType(&t);
 
+
+
   LLVM_DEBUG(dbgs() << "OutF: " << outF << " < Match:" << match <<"\n");
-  if(outF.scalarFracBitsAmt() < match.scalarFracBitsAmt() || ( outF.scalarFracBitsAmt() == match.scalarFracBitsAmt()  && (outF.scalarIsSigned() != match.scalarIsSigned()))){
+  if(outF.scalarFracBitsAmt() < match.scalarFracBitsAmt()){
     LLVM_DEBUG(dbgs() << "cannot insert " << current_float << " in "  << match << "\n");
     return false;
   }

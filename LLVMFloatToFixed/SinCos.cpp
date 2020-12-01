@@ -1,6 +1,34 @@
 #include "TAFFOMath.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <string>
+#include <vector>
+
+
+
+
+
+
+
+
+
+
+cl::opt<int>  MathZ("LuTsize",
+    llvm::cl::desc("Enable Lut table"), llvm::cl::init(2048));
+
+extern float  MathZFlag;
+
 
 namespace flttofix {
+
+namespace intrinsic{
+  enum intrinsicNames {
+#define GET_INTRINSIC_NAME_TABLE
+#include "llvm/IR/IntrinsicEnums.inc"
+#undef GET_INTRINSIC_NAME_TABLE
+};
+}
 
 bool partialSpecialCallSinCos(
     llvm::Function *oldf, bool &foundRet, flttofix::FixedPointType &fxpret,
@@ -236,6 +264,75 @@ void fixrangeSinCos(FloatToFixed *ref, Function *oldf, FixedPointType &fxparg,
 }
 
 
+Value* generateSinLUT(FloatToFixed *ref, Function *oldf, FixedPointType &fxparg,
+                    llvm::IRBuilder<> &builder){
+
+  TaffoMath::pair_ftp_value<llvm::Constant *, 5> sin_vect;
+  for (int i = 0; i < MathZ; ++i) {
+    sin_vect.fpt.push_back(
+        flttofix::FixedPointType(false, fxparg.scalarFracBitsAmt() , fxparg.scalarBitsAmt()));
+    Constant *tmp = nullptr;
+    flttofix::FixedPointType match = flttofix::FixedPointType(false, fxparg.scalarFracBitsAmt() , fxparg.scalarBitsAmt());
+    auto &current_fpt = sin_vect.fpt.front();
+    bool sin_creted =  TaffoMath::createFixedPointFromConst(
+        oldf->getContext(), ref, sin(i*TaffoMath::pi_half/MathZ), match, tmp, current_fpt);
+
+
+    if(tmp == nullptr || !sin_creted){
+      llvm_unreachable("Ma nooooo\n");
+    }
+    sin_vect.value.push_back(tmp);
+    
+  }
+  auto sin_ArrayType =
+      llvm::ArrayType::get(fxparg.scalarToLLVMType(oldf->getContext()), MathZ);
+  auto sin_ConstArray = llvm::ConstantArray::get(
+      sin_ArrayType, llvm::ArrayRef<llvm::Constant *>(sin_vect.value));
+  auto alignement_sin =
+      oldf->getParent()->getDataLayout().getPrefTypeAlignment(sin_vect.value.front()->getType());
+   auto sin_arry_g =
+      TaffoMath::createGlobalConst(oldf->getParent(), "sin_global." + std::to_string(fxparg.scalarFracBitsAmt()) + "_" + std::to_string(fxparg.scalarBitsAmt()), sin_ArrayType,
+                        sin_ConstArray, alignement_sin);
+return sin_arry_g;
+}
+
+
+Value* generateCosLUT(FloatToFixed *ref, Function *oldf, FixedPointType &fxparg,                    
+                    llvm::IRBuilder<> &builder){
+
+ 
+  TaffoMath::pair_ftp_value<llvm::Constant *, 5> cos_vect;
+  for (int i = 0; i < MathZ; ++i) {
+    cos_vect.fpt.push_back(
+        flttofix::FixedPointType(false, fxparg.scalarFracBitsAmt() , fxparg.scalarBitsAmt()));
+    Constant *tmp = nullptr;
+    flttofix::FixedPointType match = flttofix::FixedPointType(false, fxparg.scalarFracBitsAmt() , fxparg.scalarBitsAmt());
+    auto &current_fpt = cos_vect.fpt.front();
+
+    bool cos_creted =  TaffoMath::createFixedPointFromConst(
+        oldf->getContext(), ref, cos(i*TaffoMath::pi_half/MathZ), match, tmp, current_fpt);
+
+
+    if(tmp == nullptr || !cos_creted){
+      llvm_unreachable("Ma nooooo\n");
+    }
+    cos_vect.value.push_back(tmp);
+    
+  }
+  auto cos_ArrayType =
+      llvm::ArrayType::get(fxparg.scalarToLLVMType(oldf->getContext()), MathZ);
+  auto cos_ConstArray = llvm::ConstantArray::get(
+      cos_ArrayType, llvm::ArrayRef<llvm::Constant *>(cos_vect.value));
+  auto alignement_cos =
+      oldf->getParent()->getDataLayout().getPrefTypeAlignment(cos_vect.value.front()->getType());
+   auto cos_arry_g =
+      TaffoMath::createGlobalConst(oldf->getParent(), "cos_global." + std::to_string(fxparg.scalarFracBitsAmt()) + "_" + std::to_string(fxparg.scalarBitsAmt()), cos_ArrayType,
+                        cos_ConstArray, alignement_cos);
+return cos_arry_g;
+}
+
+
+
 bool FloatToFixed::createSinCos(
     llvm::Function *newfs, llvm::Function *oldf,
     SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
@@ -269,6 +366,9 @@ bool FloatToFixed::createSinCos(
   TaffoMath::pair_ftp_value<llvm::Value *> arg(fxparg);
   arg.value = oldf->arg_begin();
   auto truefxpret = fxpret;
+
+
+
   LLVM_DEBUG(dbgs() << "fxpret: " << fxpret.scalarBitsAmt() <<  " frac part: " << fxpret.scalarFracBitsAmt() << " difference: " << fxpret.scalarBitsAmt() - fxpret.scalarFracBitsAmt() <<"\n" );
   // if ((fxpret.scalarBitsAmt() - fxpret.scalarFracBitsAmt()) < 4) {    
   //     fxpret = flttofix::FixedPointType(true,
@@ -299,6 +399,7 @@ bool FloatToFixed::createSinCos(
   TaffoMath::pair_ftp_value<llvm::Constant *> pi_2(fxpret);
   TaffoMath::pair_ftp_value<llvm::Constant *> pi_32(fxpret);
   TaffoMath::pair_ftp_value<llvm::Constant *> pi_half(fxpret);
+  TaffoMath::pair_ftp_value<llvm::Constant *> pi_half_internal(internal_fxpt);
   TaffoMath::pair_ftp_value<llvm::Constant *> kopp(internal_fxpt);
   TaffoMath::pair_ftp_value<llvm::Constant *> zero(fxpret);
   TaffoMath::pair_ftp_value<llvm::Constant *> zeroarg(fxparg);
@@ -316,6 +417,14 @@ bool FloatToFixed::createSinCos(
    bool pi_half_created =TaffoMath::createFixedPointFromConst(
       cont, this, TaffoMath::pi_half, fxpret, pi_half.value,
       pi_half.fpt);
+    dbgs() << "UIIIII";
+  bool done = TaffoMath::createFixedPointFromConst(
+  cont, this, TaffoMath::pi_half, internal_fxpt, pi_half_internal.value,
+  pi_half_internal.fpt);
+  dbgs() << "\n\n\n";
+  dbgs() << done;
+  dbgs() << "\n\n\n";
+
   bool kopp_created = TaffoMath::createFixedPointFromConst(
       cont, this, TaffoMath::Kopp, internal_fxpt, kopp.value, kopp.fpt);
  TaffoMath::createFixedPointFromConst(
@@ -345,15 +454,22 @@ bool FloatToFixed::createSinCos(
   pi_2.value = TaffoMath::createGlobalConst(
       oldf->getParent(), "pi_2" + S_ret_point, pi_2.fpt.scalarToLLVMType(cont), pi_2.value,
       dataLayout.getPrefTypeAlignment(pi_2.fpt.scalarToLLVMType(cont)));
-  if(pi_32_created)    
-  pi_32.value = TaffoMath::createGlobalConst(
-      oldf->getParent(), "pi_32" + S_ret_point, pi_32.fpt.scalarToLLVMType(cont), pi_32.value,
-      dataLayout.getPrefTypeAlignment(pi_32.fpt.scalarToLLVMType(cont)));
-  if(pi_half_created)    
-  pi_half.value = TaffoMath::createGlobalConst(
-      oldf->getParent(), "pi_half"+ S_ret_point, pi_half.fpt.scalarToLLVMType(cont),
-      pi_half.value,
-      dataLayout.getPrefTypeAlignment(pi_half.fpt.scalarToLLVMType(cont)));
+  if(pi_32_created)
+    pi_32.value = TaffoMath::createGlobalConst(
+        oldf->getParent(), "pi_32" + S_ret_point,
+        pi_32.fpt.scalarToLLVMType(cont), pi_32.value,
+        dataLayout.getPrefTypeAlignment(pi_32.fpt.scalarToLLVMType(cont)));
+  if (pi_half_created)
+    pi_half.value = TaffoMath::createGlobalConst(
+        oldf->getParent(), "pi_half" + S_ret_point,
+        pi_half.fpt.scalarToLLVMType(cont), pi_half.value,
+        dataLayout.getPrefTypeAlignment(pi_half.fpt.scalarToLLVMType(cont)));
+  pi_half_internal.value = TaffoMath::createGlobalConst(
+      oldf->getParent(),
+      "pi_half_internal_" + std::to_string(internal_fxpt.scalarFracBitsAmt()),
+      pi_half_internal.fpt.scalarToLLVMType(cont), pi_half_internal.value,
+      dataLayout.getPrefTypeAlignment(
+          pi_half_internal.fpt.scalarToLLVMType(cont)));
   if(kopp_created)    
   kopp.value = TaffoMath::createGlobalConst(
       oldf->getParent(), "kopp" + S_ret_point, kopp.fpt.scalarToLLVMType(cont), kopp.value,
@@ -388,6 +504,8 @@ bool FloatToFixed::createSinCos(
   TaffoMath::pair_ftp_value<llvm::Constant *,
                                     TaffoMath::TABLELENGHT>
       arctan_2power;
+  llvm::AllocaInst * pointer_to_array =nullptr;
+  if(MathZFlag == 0){    
   for (int i = 0; i < TaffoMath::TABLELENGHT; i++) {
         arctan_2power.fpt.push_back(flttofix::FixedPointType(fxpret));
     Constant *tmp = nullptr;
@@ -398,8 +516,10 @@ bool FloatToFixed::createSinCos(
     LLVM_DEBUG(dbgs() << i << ")");
   }
 
+
   auto arctanArrayType = llvm::ArrayType::get(arctan_2power.value[0]->getType(),
                                               TaffoMath::TABLELENGHT);
+
   LLVM_DEBUG(dbgs() << "ArrayType  " << arctanArrayType << "\n");
   auto arctanConstArray = llvm::ConstantArray::get(
       arctanArrayType, llvm::ArrayRef<llvm::Constant *>(arctan_2power.value));
@@ -410,7 +530,7 @@ bool FloatToFixed::createSinCos(
       TaffoMath::createGlobalConst(oldf->getParent(), "arctan_g." + std::to_string(internal_fxpt.scalarFracBitsAmt()), arctanArrayType,
                         arctanConstArray, alignement_arctan);
 
-  auto pointer_to_array = builder.CreateAlloca(arctanArrayType);
+  pointer_to_array = builder.CreateAlloca(arctanArrayType);
   pointer_to_array->setAlignment(llvm::MaybeAlign(alignement_arctan));
 
   builder.CreateMemCpy(
@@ -418,6 +538,7 @@ bool FloatToFixed::createSinCos(
       TaffoMath::TABLELENGHT * (int_type->getScalarSizeInBits() >> 3));
   LLVM_DEBUG(dbgs() << "\nAdd to newf arctan table"
                     << "\n");
+  }
 
   // code gen
   auto int_8_zero = ConstantInt::get(Type::getInt8Ty(cont), 0);
@@ -727,6 +848,7 @@ bool FloatToFixed::createSinCos(
 
 
   // calculate sin and cos
+  if(MathZFlag == 0)
   {
     builder.CreateStore(builder.CreateShl(builder.CreateLoad(arg_value),internal_fxpt.scalarFracBitsAmt() - fxpret.scalarFracBitsAmt()), arg_value);
     auto zero_arg = builder.CreateLoad(zero.value);
@@ -802,7 +924,84 @@ bool FloatToFixed::createSinCos(
                         i_iterator);
     builder.CreateBr(epilog_loop);
     builder.SetInsertPoint(return_point);
+  }else{
+    builder.CreateStore(builder.CreateShl(builder.CreateLoad(arg_value),
+                                          internal_fxpt.scalarFracBitsAmt() -
+                                              fxpret.scalarFracBitsAmt()),
+                        arg_value);
+    Value *sin_g = generateSinLUT(this, oldf, internal_fxpt, builder);
+    Value *cos_g = generateCosLUT(this, oldf, internal_fxpt, builder);
+    auto zero_arg = builder.CreateLoad(zero.value);
+
+    Value *tmp_angle = builder.CreateLoad(arg_value);
+
+
+    std::string function_name("llvm.udiv.fix.i");
+    function_name.append(std::to_string(internal_fxpt.scalarToLLVMType(cont)->getScalarSizeInBits()));
+
+    
+
+    Function *udiv = 0;
+    if ((udiv = oldf->getParent()->getFunction(function_name)) == 0) {
+      std::vector<llvm::Type *> fun_arguments;
+      fun_arguments.push_back(
+          internal_fxpt.scalarToLLVMType(cont)); // depends on your type
+      fun_arguments.push_back(
+          internal_fxpt.scalarToLLVMType(cont)); // depends on your type
+      fun_arguments.push_back(Type::getInt32Ty(cont));
+      FunctionType *fun_type = FunctionType::get(
+          internal_fxpt.scalarToLLVMType(cont), fun_arguments, false);
+      udiv = llvm::Function::Create(fun_type, GlobalValue::ExternalLinkage,
+                                    function_name, oldf->getParent());
+    }
+
+    
+
+    generic = builder.CreateCall(
+        udiv, {tmp_angle, builder.CreateLShr(builder.CreateLoad(pi_half_internal.value), int(log2(MathZ)) ),
+               llvm::ConstantInt::get(internal_fxpt.scalarToLLVMType(cont),
+                                      internal_fxpt.scalarFracBitsAmt() -
+                                          int(log2(MathZ)))});
+    generic = builder.CreateLShr(
+        generic, llvm::ConstantInt::get(internal_fxpt.scalarToLLVMType(cont),
+                                        internal_fxpt.scalarFracBitsAmt() -
+                                            int(log2(MathZ))));
+
+
+    builder.CreateStore(builder.CreateLoad(builder.CreateGEP(sin_g, {zero_arg,generic})),
+                        y_value.value);
+    builder.CreateStore(builder.CreateLoad(builder.CreateGEP(cos_g, {zero_arg,generic})),
+                        x_value.value);
+    builder.CreateBr(return_point);
+    builder.SetInsertPoint(return_point);
+    // FixedPointType intermtype(
+    //   false,
+    //   fxpret.scalarBitsAmt() + fxpret.scalarFracBitsAmt(),
+    //   fxpret.scalarBitsAmt()-1 + fxpret.scalarBitsAmt()-1);
+    // Type *dbfxt = intermtype.scalarToLLVMType(cont);
+
+    // builder.CreateZExt(tmp_angle, dbfxt);
+
+    // Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+    // Value *fixop = fixpt.scalarIsSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);    
+    
+    // FixedPointType fixoptype(
+    //   fixpt.scalarIsSigned(),
+    //   intype1.scalarFracBitsAmt(),
+    //   intype1.scalarBitsAmt() + intype2.scalarBitsAmt());
+    // Value *ext1 = genConvertFixedToFixed(val1, intype1, intermtype, instr);
+    // IRBuilder<> builder(instr);
+    // Value *ext2 = intype2.scalarIsSigned() ? builder.CreateSExt(val2, dbfxt) : builder.CreateZExt(val2, dbfxt);
+    // Value *fixop = fixpt.scalarIsSigned() ? builder.CreateSDiv(ext1, ext2) : builder.CreateUDiv(ext1, ext2);
+    // cpMetaData(ext1,val1);
+    // cpMetaData(ext2,val2);
+    // cpMetaData(fixop,instr);
+    // updateFPTypeMetadata(fixop, fixoptype.scalarIsSigned(), fixoptype.scalarFracBitsAmt(), fixoptype.scalarBitsAmt());
+    // updateConstTypeMetadata(fixop, 0U, intermtype);
+    // updateConstTypeMetadata(fixop, 1U, intype2);
+
   }
+
   {
     auto zero_arg = builder.CreateLoad(zero.value);
     auto zero_bool = int_8_zero;
