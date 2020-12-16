@@ -380,12 +380,8 @@ void FloatToFixed::FixFunction(
     LLVM_DEBUG(dbgs() << "\nGet insertion\n");
     auto* inst = builder.CreateBitCast(NewFunc->getArg(0), llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()));
     LLVM_DEBUG(dbgs() << "\nGet bitcast\n");
-    inst = builder.CreateBitCast(
-        builder.CreateAnd(
-            inst,
-            builder.CreateNot(builder.CreateShl(
-                llvm::ConstantInt::get(llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()), 1),
-                NewFunc->getArg(0)->getType()->getScalarSizeInBits() - 1))), arg_type );
+    inst = builder.CreateSelect( builder.CreateICmpEQ(builder.CreateLShr(inst,arg_type->getScalarSizeInBits()-1), llvm::ConstantInt::get(llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()), 1)), builder.CreateBitCast(
+        builder.CreateSub( llvm::ConstantInt::get(llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()), 0), inst), arg_type ) , inst);
 
 
     LLVM_DEBUG(dbgs() << "\nType ret"<< (ret_type->dump()," ") << "\n");
