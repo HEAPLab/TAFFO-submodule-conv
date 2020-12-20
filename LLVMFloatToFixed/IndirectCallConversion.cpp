@@ -36,6 +36,10 @@ void FloatToFixed::convertIndirectCalls(llvm::Module& m) {
     if (indirectFunction->getName() == "__kmpc_fork_call") {
       handleKmpcFork(trampolineCall, indirectFunction);
     }
+    else if (indirectFunction->getName() == "__kmpc_reduce_nowait") {
+      handleReduce(trampolineCall, indirectFunction);
+    }
+
   }
 }
 
@@ -52,6 +56,25 @@ void FloatToFixed::handleKmpcFork(CallInst *I, Function *indirectFunction) {
 
   std::vector<Value *> indirectCallArgs = std::vector<Value *>(I->arg_begin(), I->arg_end());
   indirectCallArgs.insert(indirectCallArgs.begin() + 2, bitcastedMicroTask);
+
+  auto indirectCall = CallInst::Create(indirectFunction, indirectCallArgs);
+  indirectCall->insertAfter(I);
+
+  cpMetaData(indirectCall, I);
+
+  I->eraseFromParent();
+}
+
+void FloatToFixed::handleReduce(CallInst *I, Function *indirectFunction) {
+  auto calledFunction = cast<CallInst>(I)->getCalledFunction();
+  auto entryBlock = &calledFunction->getEntryBlock();
+
+  auto fixpCallInstr = entryBlock->getTerminator()->getPrevNode();
+  assert(llvm::isa<llvm::CallInst>(fixpCallInstr) && "expected a CallInst to the outlined function");
+  auto fixpCall = cast<CallInst>(fixpCallInstr);
+  
+  std::vector<Value *> indirectCallArgs = std::vector<Value *>(I->arg_begin(), I->arg_end());
+  indirectCallArgs[5] = fixpCall->getCalledFunction();
 
   auto indirectCall = CallInst::Create(indirectFunction, indirectCallArgs);
   indirectCall->insertAfter(I);
