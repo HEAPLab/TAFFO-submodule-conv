@@ -81,5 +81,7 @@ void FloatToFixed::handleReduce(CallInst *I, Function *indirectFunction) {
 
   cpMetaData(indirectCall, I);
 
+  I->replaceAllUsesWith(indirectCall);
+
   I->eraseFromParent();
 }
