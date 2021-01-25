@@ -649,10 +649,10 @@ Value *FloatToFixed::convertCmp(FCmpInst *fcmp)
 
 Value *FloatToFixed::convertCast(CastInst *cast, const FixedPointType& fixpt)
 {
-  /* le istruzioni Instruction::
-   * - [FPToSI,FPToUI,SIToFP,UIToFP] vengono gestite qui
-   * - [Trunc,ZExt,SExt] vengono gestite dalla fallback e non qui
-   * - [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] potrebbero portare errori */
+  /* Instruction opcodes:
+   * - [FPToSI,FPToUI,SIToFP,UIToFP] are handled here
+   * - [Trunc,ZExt,SExt] are handled as a fallback case, not here
+   * - [PtrToInt,IntToPtr,BitCast,AddrSpaceCast] might cause errors */
 
   IRBuilder<> builder(cast->getNextNode());
   Value *operand = cast->getOperand(0);
