@@ -535,7 +535,6 @@ struct FloatToFixed : public llvm::ModulePass {
   void convertIndirectCalls(llvm::Module &m);
 
   void handleKmpcFork(llvm::CallInst *patchedDirectCall, llvm::Function *indirectFunction);
-  void handleReduce(llvm::CallInst *I, llvm::Function *indirectFunction);
 };
 
 
