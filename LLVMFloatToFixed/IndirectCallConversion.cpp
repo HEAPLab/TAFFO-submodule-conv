@@ -45,14 +45,14 @@ void FloatToFixed::convertIndirectCalls(llvm::Module &m) {
   }
 }
 
-/// Convert a trampoline call to the kmpc_fork back into the library function
+/// Convert a trampoline call to an outlined function back into the original library function
 void FloatToFixed::handleKmpcFork(CallInst *patchedDirectCall,
                                   Function *indirectFunction) {
   auto calledFunction = cast<CallInst>(patchedDirectCall)->getCalledFunction();
   auto entryBlock = &calledFunction->getEntryBlock();
 
-  // Get the fixp call instruction to use it as an argument for the library
-  // indirect function
+  // Get the fixp call instruction to use it as an argument for the restored
+  // library function
   auto fixpCallInstr = entryBlock->getTerminator()->getPrevNode();
   assert(llvm::isa<llvm::CallInst>(fixpCallInstr) &&
          "expected a CallInst to the outlined function");
