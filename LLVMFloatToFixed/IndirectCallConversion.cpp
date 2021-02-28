@@ -15,6 +15,14 @@ using namespace llvm;
 using namespace taffo;
 using namespace flttofix;
 
+using handler_function = void (FloatToFixed::*)(llvm::CallInst *patchedDirectCall,
+  llvm::Function *indirectFunction);
+
+/// Map to keep track of the handled indirect functions for the conversion.
+const std::map <const std::string, handler_function> indirectCallFunctions = {
+  {"__kmpc_fork_call", &FloatToFixed::handleKmpcFork}
+};
+
 /// Retrieve the indirect calls converted into trampolines and re-use the
 /// original indirect functions.
 void FloatToFixed::convertIndirectCalls(llvm::Module &m) {
@@ -37,10 +45,20 @@ void FloatToFixed::convertIndirectCalls(llvm::Module &m) {
   for (auto trampolineCall : trampolineCalls) {
     auto *metadata = dyn_cast<ValueAsMetadata>(
         *trampolineCall->getMetadata(INDIRECT_METADATA)->op_begin());
-    auto *indirectFunction = dyn_cast<Function>(metadata->getValue());
+    auto *indirectFunction = dyn_cast_or_null<Function>(metadata->getValue());
 
-    if (indirectFunction->getName() == "__kmpc_fork_call") {
-      handleKmpcFork(trampolineCall, indirectFunction);
+    if (indirectFunction == nullptr) {
+      LLVM_DEBUG(
+        dbgs() << "Blocking the following conversion for failed dyn_cast on the indirect function: "
+               << *trampolineCall << "\n");
+      continue;
+    }
+
+    auto indirectCallHandler = indirectCallFunctions.find(indirectFunction->getName());
+
+    if (indirectCallHandler != indirectCallFunctions.end()) {
+      handler_function indirectFunctionHandler = indirectCallHandler->second;
+      (this->*indirectFunctionHandler)(trampolineCall, indirectFunction);
     }
   }
 }
