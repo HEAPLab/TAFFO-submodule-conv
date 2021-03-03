@@ -23,7 +23,8 @@ const std::map<const std::string, handler_function> indirectCallFunctions = {
 
 /// Retrieve the indirect calls converted into trampolines and re-use the
 /// original indirect functions.
-void FloatToFixed::convertIndirectCalls(llvm::Module &m) {
+void FloatToFixed::convertIndirectCalls(llvm::Module &m)
+{
   std::vector<llvm::CallInst *> trampolineCalls;
 
   // Retrieve the trampoline calls using the INDIRECT_METADATA
@@ -65,7 +66,8 @@ void FloatToFixed::convertIndirectCalls(llvm::Module &m) {
 /// Convert a trampoline call to an outlined function back into the original
 /// library function
 void FloatToFixed::handleKmpcFork(CallInst *patchedDirectCall,
-                                  Function *indirectFunction) {
+                                  Function *indirectFunction)
+{
   auto calledFunction = cast<CallInst>(patchedDirectCall)->getCalledFunction();
   auto entryBlock = &calledFunction->getEntryBlock();
 
