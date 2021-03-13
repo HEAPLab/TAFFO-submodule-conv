@@ -1,5 +1,3 @@
-#include "LLVMFloatToFixedPass.h"
-#include "TypeUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -9,6 +7,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include "LLVMFloatToFixedPass.h"
+#include "TypeUtils.h"
 
 using namespace llvm;
 using namespace taffo;
