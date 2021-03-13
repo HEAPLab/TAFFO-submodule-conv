@@ -14,17 +14,15 @@ using namespace llvm;
 using namespace taffo;
 using namespace flttofix;
 
-using handler_function = void (FloatToFixed::*)(
-    llvm::CallInst *patchedDirectCall, llvm::Function *indirectFunction);
-
-/// Map to keep track of the handled indirect functions for the conversion.
-const std::map<const std::string, handler_function> indirectCallFunctions = {
-    {"__kmpc_fork_call", &FloatToFixed::handleKmpcFork}};
-
 /// Retrieve the indirect calls converted into trampolines and re-use the
 /// original indirect functions.
 void FloatToFixed::convertIndirectCalls(llvm::Module &m)
 {
+  using handler_function = void (FloatToFixed::*)(
+          llvm::CallInst *patchedDirectCall, llvm::Function *indirectFunction);
+  const std::map<const std::string, handler_function> indirectCallFunctions = {
+          {"__kmpc_fork_call", &FloatToFixed::handleKmpcFork}};
+
   std::vector<llvm::CallInst *> trampolineCalls;
 
   // Retrieve the trampoline calls using the INDIRECT_METADATA
