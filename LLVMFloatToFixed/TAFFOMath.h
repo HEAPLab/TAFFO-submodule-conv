@@ -104,4 +104,12 @@ Value *addAllocaToStart(FloatToFixed *ref, Function *oldf,
                         llvm::Value *ArraySize = (llvm::Value *)nullptr,
                         const llvm::Twine &Name = "");
 
+
+
+
+}
+
+
+namespace flttofix{
+bool partialSpecialCall(llvm::Function *newf, bool &foundRet, flttofix::FixedPointType &fxpret);
 }

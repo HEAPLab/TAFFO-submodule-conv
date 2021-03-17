@@ -8,6 +8,7 @@ add_llvm_library(LLVMFloatToFixed OBJECT BUILDTREE_ONLY
   TAFFOMath.h
   TAFFOMath.cpp
   SinCos.cpp
+  ArcSinCos.cpp
 
   ADDITIONAL_HEADERS
   TAFFOMath.h

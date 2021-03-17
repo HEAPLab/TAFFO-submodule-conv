@@ -124,11 +124,10 @@ struct FloatToFixed : public llvm::ModulePass {
                         ValueMapTypeRemapper *TypeMapper = nullptr,
                         ValueMaterializer *Materializer = nullptr);
   /* create sin and cos*/
-  bool
-  createSinCos(llvm::Function *newf, llvm::Function *oldf,
-               SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
-                   &to_change);
-  bool createAbs(llvm::Function *oldf );
+  bool createSinCos(llvm::Function *newf, llvm::Function *oldf);
+  bool createAbs(llvm::Function *newf,    llvm::Function *oldf);
+  bool createASin(llvm::Function *newf,   llvm::Function *oldf);
+  bool createACos(llvm::Function *newf,   llvm::Function *oldf);
 
   void printConversionQueue(std::vector<llvm::Value*> vals);
   void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);

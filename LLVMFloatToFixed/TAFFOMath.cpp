@@ -96,14 +96,14 @@ namespace TaffoMath {
   return true;
 }
 
-Value *addAllocaToStart(FloatToFixed *ref, Function *oldf,
+Value *addAllocaToStart(FloatToFixed *ref, Function *newfs,
                         llvm::IRBuilder<> &builder, Type *to_alloca,
                         llvm::Value *ArraySize,
                         const llvm::Twine &Name) {
   auto OldBB = builder.GetInsertBlock();
   LLVM_DEBUG(dbgs() << "Insert alloca inst\nOld basic block: " << OldBB << "\n" );
-  builder.SetInsertPoint(&(oldf->getEntryBlock()),
-                         (oldf->getEntryBlock()).getFirstInsertionPt());
+  builder.SetInsertPoint(&(newfs->getEntryBlock()),
+                         (newfs->getEntryBlock()).getFirstInsertionPt());
   Value *pointer_to_alloca = builder.CreateAlloca(to_alloca, ArraySize, Name);
   LLVM_DEBUG(dbgs() << "New Alloca: " << pointer_to_alloca << "\n" );
   builder.SetInsertPoint(OldBB);
@@ -156,10 +156,12 @@ createGlobalConst(llvm::Module *module, llvm::StringRef Name, llvm::Type *Ty,
 
   module->getOrInsertGlobal(Name, Ty);
   auto global = module->getGlobalVariable(Name);
+  if(!global->hasInitializer()){
   global->setInitializer(initializer);
   global->setConstant(true);
   if (alignment > 1)
     global->setAlignment(alignment);
+  }
   return global;
 }
 
@@ -167,6 +169,24 @@ createGlobalConst(llvm::Module *module, llvm::StringRef Name, llvm::Type *Ty,
 
 
 namespace flttofix {
+
+void createStub(Function *OldFunc){
+      auto BB = BasicBlock::Create(OldFunc->getContext(), OldFunc->getName() + ".entry", OldFunc);
+      IRBuilder<> builder(BB, BB->getFirstInsertionPt());
+      Value *V;
+      if (OldFunc->getReturnType()->isFloatingPointTy()) {
+        V = ConstantFP::get(OldFunc->getReturnType(), 0);
+        builder.CreateRet(V);
+        return;
+
+      } else if (OldFunc->getReturnType()->isIntegerTy()) {
+        V = ConstantInt::get(OldFunc->getReturnType(), 0);
+        builder.CreateRet(V);
+        return;
+      }
+      llvm_unreachable("return not handle");
+}
+
 
 void FloatToFixed::populateFunction(
     Function *NewFunc, Function *OldFunc, ValueToValueMapTy &VMap,
@@ -185,50 +205,22 @@ void FloatToFixed::populateFunction(
   }
 
   SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3> to_change;
-  getFunctionInto(NewFunc, OldFunc, to_change);
-  LLVM_DEBUG(dbgs() << "start clone"
+  createStub(OldFunc);
+    LLVM_DEBUG(dbgs() << "start clone"
                     << "\n");
-  
   CloneFunctionInto(NewFunc, OldFunc, VMap, true, Returns);
-  //LLVM_DEBUG(NewFunc->getParent()->dump(););
-  LLVM_DEBUG(dbgs() << "end clone"
+    LLVM_DEBUG(dbgs() << "end clone"
                     << "\n");
-  LLVM_DEBUG(dbgs() << "\nstart fixFun"
-                    << "\n");
-  FixFunction(NewFunc, OldFunc, VMap, Returns, to_change);
-  
-  LLVM_DEBUG(dbgs() << "end fixFun"
-                    << "\n");
+  getFunctionInto(NewFunc, OldFunc, to_change);
   for (auto &MD : savedMetadata) {
     OldFunc->setMetadata(MD.first, MD.second);
     NewFunc->setMetadata(MD.first, MD.second);
   }
-  // LLVM_DEBUG(NewFunc->getParent()->dump());
+  
+  LLVM_DEBUG(NewFunc->getParent()->dump());
   LLVM_DEBUG(llvm::verifyFunction(*NewFunc, &dbgs()));
 }
 
-// generate first function if never done
-// is used to mantain coherent call
-void generateFirst(Module *m, llvm::StringRef &fName) {
-  Function *tmp = nullptr;
-  // get function
-
-    tmp = m->getFunction(fName);    
-    if (tmp == nullptr)
-      return;
-    // check if alredy populated
-    if (tmp->isDeclaration()) {
-      BasicBlock::Create(m->getContext(), fName + ".entry", tmp);
-      BasicBlock *where = &(tmp->getEntryBlock());
-      IRBuilder<> builder(where, where->getFirstInsertionPt());
-      if(tmp->getReturnType()->isFloatingPointTy()){
-      builder.CreateRet(ConstantFP::get(tmp->getReturnType(), 0.0f));}
-      else{
-      builder.CreateRet(ConstantInt::get(tmp->getReturnType(),0));
-      }
-    
-  }
-}
 /*
   bool FloatToFixed::createAbs(
     llvm::Function *newfs, llvm::Function *oldf,
@@ -274,111 +266,46 @@ void generateFirst(Module *m, llvm::StringRef &fName) {
         }
 */
 
+bool partialSpecialCall(
+    llvm::Function *newf, bool &foundRet, flttofix::FixedPointType &fxpret) {
+  Module *m = newf->getParent();
+  StringRef fName = newf->getName();
+  BasicBlock *where = &(newf->getEntryBlock());
+  IRBuilder<> builder(where, where->getFirstInsertionPt());
+  Value *generic;
+  Value *ret;
+  auto end = BasicBlock::Create(m->getContext(), "end", newf);
+  auto trap = Intrinsic::getDeclaration(m, Intrinsic::trap);
+  builder.CreateCall(trap);
+  builder.CreateBr(end);
+  builder.SetInsertPoint(end);
+  if(newf->getReturnType()->isFloatingPointTy()){
+  builder.CreateRet(ConstantFP::get(newf->getReturnType(), 1212.0f));
+  }else{
+    builder.CreateRet(ConstantInt::get(newf->getReturnType(), 1212));
+  }
+  LLVM_DEBUG(dbgs() << "Not handled\n");
+  return false;
+}
 
-bool FloatToFixed::createAbs(llvm::Function *oldf){
+
+
+bool FloatToFixed::createAbs(llvm::Function *newfs, llvm::Function *oldf){
   llvm::LLVMContext &cont(oldf->getContext());
   DataLayout dataLayout(oldf->getParent());
   LLVM_DEBUG(dbgs() << "\nGet Context " << &cont << "\n");
   // get first basick block of function
-  BasicBlock::Create(cont, "Entry", oldf);
-  BasicBlock *where = &(oldf->getEntryBlock());
-  LLVM_DEBUG(dbgs() << "\nGet entry point " << where);
-  IRBuilder<> builder(where, where->getFirstInsertionPt());
-  // get return type fixed point
-  if (oldf->getReturnType()->isFloatingPointTy()) {
-    builder.CreateRet(ConstantFP::get(oldf->getReturnType(), 0.0f));
-  } else {
-    builder.CreateRet(ConstantInt::get(oldf->getReturnType(), 0));
-  }
-}
-
-
-bool FloatToFixed::getFunctionInto(
-    Function *NewFunc, Function *OldFunc,
-    SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
-        &to_change) {
-
-  llvm::StringRef fName = OldFunc->getName();
-
-  if (taffo::start_with(HandledFunction::demangle(fName), "sin") || taffo::start_with(HandledFunction::demangle(fName), "cos") ||
-      taffo::start_with(HandledFunction::demangle(fName), "_ZSt3cos") ||
-      taffo::start_with(HandledFunction::demangle(fName), "_ZSt3sin")) {
-    //generateFirst(OldFunc->getParent(), fName);
-    return createSinCos(NewFunc, OldFunc, to_change);
-  }
-  if(taffo::start_with(HandledFunction::demangle(fName), "abs")){
-    //generateFirst(OldFunc->getParent(), fName);
-    return createAbs(OldFunc);
-  }
-  llvm_unreachable("Function not recognized");
-}
-
-void FloatToFixed::FixFunction(
-    Function *NewFunc, Function *OldFunc, ValueToValueMapTy &VMap,
-    SmallVectorImpl<ReturnInst *> &Returns,
-    SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
-        &to_change) {
-
-  llvm::StringRef fName = OldFunc->getName();
-
-  if (taffo::start_with(HandledFunction::demangle(fName), "sin") || taffo::start_with(HandledFunction::demangle(fName), "cos") ||
-      taffo::start_with(HandledFunction::demangle(fName), "_ZSt3cos") ||
-      taffo::start_with(HandledFunction::demangle(fName), "_ZSt3sin")) {
-    for (auto i : to_change) {
-      // to_change.push_back({to_remove, {arg.value, arg_value, body}});
-      if (i.first->getName().equals("to_remove")) {
-        auto argvalue = VMap[i.second[0]];
-        auto arg_value = VMap[i.second[1]];
-        auto body = dyn_cast<BasicBlock>((Value *)VMap[i.second[2]]);
-        auto old = dyn_cast<BasicBlock>((Value *)VMap[i.first]);
-
-        auto new_arg_store =
-            BasicBlock::Create(NewFunc->getContext(), "New_arg_store", NewFunc);
-        IRBuilder<> builder(new_arg_store,
-                            new_arg_store->getFirstInsertionPt());
-        LLVM_DEBUG(argvalue->dump());
-        LLVM_DEBUG(arg_value->dump());
-        builder.CreateStore(argvalue, arg_value);
-        builder.CreateBr(body);
-        old->replaceAllUsesWith(new_arg_store);
-        old->eraseFromParent();
-      }
-      // to_change.push_back({end, {ret}});
-      if (i.first->getName().equals("end")) {
-        auto ret = VMap[i.second[0]];
-        auto old = dyn_cast<BasicBlock>((Value *)VMap[i.first]);
-        auto true_ret =
-            BasicBlock::Create(NewFunc->getContext(), "true_ret", NewFunc);
-        IRBuilder<> builder(true_ret, true_ret->getFirstInsertionPt());
-        auto generic = builder.CreateRet(ret);
-        Returns.clear();
-        Returns.push_back(generic);
-        old->replaceAllUsesWith(true_ret);
-        old->eraseFromParent();
-      }
-    }
-  }
-
-  if (taffo::start_with(HandledFunction::demangle(fName), "abs") ){
-
-
-
-    llvm::LLVMContext &cont(OldFunc->getContext());
-    DataLayout dataLayout(OldFunc->getParent());
-    LLVM_DEBUG(dbgs() << "\nGet Context " << &cont << "\n");
-    // get first basick block of function
-    auto arg_type = NewFunc->getArg(0)->getType();
-    auto ret_type = NewFunc->getReturnType();
-    NewFunc->begin()->begin()->eraseFromParent();
-    BasicBlock *where = &(NewFunc->getEntryBlock());
+  auto arg_type = newfs->getArg(0)->getType();
+  auto ret_type = newfs->getReturnType();
+  BasicBlock *where = &(newfs->getEntryBlock());
     LLVM_DEBUG(dbgs() << "\nGet entry point " << where);
     IRBuilder<> builder(where, where->getFirstInsertionPt());
-    if (this->hasInfo(OldFunc->getArg(0)) && !(this->valueInfo(OldFunc->getArg(0))->fixpType.scalarIsSigned())) {      
-      builder.CreateRet(NewFunc->getArg(0));
-      return;
+    if (this->hasInfo(oldf->getArg(0)) && !(this->valueInfo(oldf->getArg(0))->fixpType.scalarIsSigned())) {      
+      builder.CreateRet(newfs->getArg(0));
+      return true;
     }
     LLVM_DEBUG(dbgs() << "\nGet insertion\n");
-    auto* inst = builder.CreateBitCast(NewFunc->getArg(0), llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()));
+    auto* inst = builder.CreateBitCast(newfs->getArg(0), llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()));
     LLVM_DEBUG(dbgs() << "\nGet bitcast\n");
     inst = builder.CreateSelect( builder.CreateICmpEQ(builder.CreateLShr(inst,arg_type->getScalarSizeInBits()-1), llvm::ConstantInt::get(llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()), 1)), builder.CreateBitCast(
         builder.CreateSub( llvm::ConstantInt::get(llvm::Type::getIntNTy(cont, arg_type->getPrimitiveSizeInBits()), 0), inst), arg_type ) , inst);
@@ -397,10 +324,41 @@ void FloatToFixed::FixFunction(
       inst = builder.CreateIntCast(inst, ret_type, true);
     }
     builder.CreateRet(inst);
-   
+
+
+}
+
+
+bool FloatToFixed::getFunctionInto(
+    Function *NewFunc, Function *OldFunc,
+    SmallVector<std::pair<BasicBlock *, SmallVector<Value *, 10>>, 3>
+        &to_change) {
+
+  auto fName = HandledFunction::demangle(OldFunc->getName());
+
+
+  if (taffo::start_with(fName, "sin") || taffo::start_with(fName, "cos") ||
+      taffo::start_with(fName, "_ZSt3cos") ||
+      taffo::start_with(fName, "_ZSt3sin")) {
+    return createSinCos(NewFunc, OldFunc);
+  
   }
 
+  if(taffo::start_with(fName, "asin"))
+  {
+    return createASin(NewFunc, OldFunc);
   }
 
+  if(taffo::start_with(fName, "acos"))
+  {
+    return createACos(NewFunc, OldFunc);
+  }
+
+
+  if(taffo::start_with(fName, "abs")){
+    return createAbs(NewFunc, OldFunc);
+  }
+  llvm_unreachable("Function not recognized");
+}
 
 } // namespace flttofix
