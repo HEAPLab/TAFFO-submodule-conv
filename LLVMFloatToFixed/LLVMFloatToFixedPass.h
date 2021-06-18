@@ -88,17 +88,17 @@ struct FloatToFixed : public llvm::ModulePass {
   void printAnnotatedObj(llvm::Module &m);
   void openPhiLoop(llvm::PHINode *phi);
   void closePhiLoops();
-  void sortQueue(std::vector<llvm::Value *> &vals);
-  void cleanup(const std::vector<llvm::Value *> &queue);
-  void propagateCall(std::vector<llvm::Value *> &vals,
-                     llvm::SmallPtrSetImpl<llvm::Value *> &global);
-  llvm::Function *createFixFun(llvm::CallSite *call, bool *old);
-  void printConversionQueue(std::vector<llvm::Value *> vals);
-  void performConversion(llvm::Module &m, std::vector<llvm::Value *> &q);
-  llvm::Value *convertSingleValue(llvm::Module &m, llvm::Value *val,
-                                  FixedPointType &fixpt);
-  llvm::Value *createPlaceholder(llvm::Type *type, llvm::BasicBlock *where,
-                                 llvm::StringRef name);
+  void sortQueue(std::vector<llvm::Value*> &vals);
+  void cleanup(const std::vector<llvm::Value*>& queue);
+  void insertOpenMPIndirection(llvm::Module& m);
+  void propagateCall(std::vector<llvm::Value *> &vals, llvm::SmallPtrSetImpl<llvm::Value *> &global);
+  llvm::Function *createFixFun(llvm::CallSite* call, bool *old);
+  void printConversionQueue(std::vector<llvm::Value*> vals);
+  void performConversion(llvm::Module& m, std::vector<llvm::Value*>& q);
+  llvm::Value *convertSingleValue(llvm::Module& m, llvm::Value *val, FixedPointType& fixpt);
+  
+  llvm::Value *createPlaceholder(llvm::Type *type, llvm::BasicBlock *where, llvm::StringRef name);
+  
   enum class TypeMatchPolicy {
     RangeOverHintMaxFrac = 0, /// Minimize extra conversions
     RangeOverHintMaxInt,
@@ -472,10 +472,13 @@ struct FloatToFixed : public llvm::ModulePass {
     MDNode *md = nullptr;
     MDNode *targetMD = nullptr;
     MDNode *constInfoMD = nullptr;
+    MDNode *openMPIndirectMD = nullptr;
+
     if (Instruction *from = dyn_cast<Instruction>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
       constInfoMD = from->getMetadata(CONST_INFO_METADATA);
+      openMPIndirectMD = from->getMetadata(INDIRECT_METADATA);
     } else if (GlobalObject *from = dyn_cast<GlobalObject>(src)) {
       md = from->getMetadata(INPUT_INFO_METADATA);
       targetMD = from->getMetadata(TARGET_METADATA);
@@ -513,6 +516,13 @@ struct FloatToFixed : public llvm::ModulePass {
           to->setMetadata(CONST_INFO_METADATA, constInfoMD);
       }
     }
+
+    if (openMPIndirectMD) {
+      if (auto *to = dyn_cast<Instruction>(dst)) {
+        to->setMetadata(INDIRECT_METADATA, openMPIndirectMD);
+      }
+    }
+
     return dst;
   }
   void updateFPTypeMetadata(llvm::Value *v, bool isSigned, int fracBitsAmt,
@@ -560,6 +570,10 @@ struct FloatToFixed : public llvm::ModulePass {
                                            const FixedPointType &fixpt);
   mdutils::InputInfo *getInputInfo(llvm::Value *v);
   bool associateFixFormat(mdutils::InputInfo *II, FixedPointType &iofixpt);
+
+  void convertIndirectCalls(llvm::Module &m);
+
+  void handleKmpcFork(llvm::CallInst *patchedDirectCall, llvm::Function *indirectFunction);
 };
 } // namespace flttofix
 #endif

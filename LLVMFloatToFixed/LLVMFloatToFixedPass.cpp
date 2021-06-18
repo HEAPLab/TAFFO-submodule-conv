@@ -53,7 +53,9 @@ bool FloatToFixed::runOnModule(Module &m) {
     closePhiLoops();
     cleanup(vals);
 
-    return true;
+  convertIndirectCalls(m);
+
+  return true;
 }
 
 
