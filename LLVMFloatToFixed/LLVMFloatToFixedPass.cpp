@@ -355,8 +355,9 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
                  * createFixFun has RAUWed all arguments
                  * FIXME: is there a cleaner way to do this? */
                 std::string name("placeholder");
-                if (newIt->hasName())
-                    name = newIt->getName().str() + "." + name;
+                if (newIt->hasName()) {
+                  name += newIt->getName().str() + ".";
+                }
                 Value *placehValue = createPlaceholder(oldIt->getType(), &newF->getEntryBlock(), name);
                 /* Reimplement RAUW to defeat the same-type check (which is ironic because
                  * we are attempting to fix a type mismatch here) */
@@ -513,26 +514,26 @@ Function *FloatToFixed::createFixFun(CallSite *call, bool *old) {
 
 void FloatToFixed::printConversionQueue(std::vector<Value *> vals) {
     if (vals.size() > 1000) {
-        dbgs() << "not printing the conversion queue because it exceeds 1000 items\n";
+        LLVM_DEBUG(dbgs() << "not printing the conversion queue because it exceeds 1000 items\n";);
         return;
     }
 
-    dbgs() << "conversion queue:\n";
+    LLVM_DEBUG(dbgs() << "conversion queue:\n";);
     for (Value *val: vals) {
-        dbgs() << "bt=" << valueInfo(val)->isBacktrackingNode << " ";
-        dbgs() << "noconv=" << valueInfo(val)->noTypeConversion << " ";
-        dbgs() << "type=" << valueInfo(val)->fixpType << " ";
+        LLVM_DEBUG(dbgs() << "bt=" << valueInfo(val)->isBacktrackingNode << " ";);
+        LLVM_DEBUG(dbgs() << "noconv=" << valueInfo(val)->noTypeConversion << " ";);
+        LLVM_DEBUG(dbgs() << "type=" << valueInfo(val)->fixpType << " ";);
         if (Instruction *i = dyn_cast<Instruction>(val)) {
-            dbgs() << " fun='" << i->getFunction()->getName() << "' ";
+            LLVM_DEBUG(dbgs() << " fun='" << i->getFunction()->getName() << "' ";);
         }
 
-        dbgs() << "roots=[";
+        LLVM_DEBUG(dbgs() << "roots=[";);
         for (Value *rootv: valueInfo(val)->roots) {
-            dbgs() << *rootv << ", ";
+            LLVM_DEBUG(dbgs() << *rootv << ", ";);
         }
-        dbgs() << "] ";
+        LLVM_DEBUG(dbgs() << "] ";);
 
-        dbgs() << *val << "\n";
+        LLVM_DEBUG(dbgs() << *val << "\n";);
     }
-    dbgs() << "\n\n";
+    LLVM_DEBUG(dbgs() << "\n\n";);
 }

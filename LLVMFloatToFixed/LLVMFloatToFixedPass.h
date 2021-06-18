@@ -125,8 +125,7 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Constant *convertConstant(llvm::Constant *flt, FixedPointType &fixpt,
                                   TypeMatchPolicy typepol);
   llvm::Constant *convertGlobalVariable(llvm::GlobalVariable *glob,
-                                        FixedPointType &fixpt,
-                                        TypeMatchPolicy typepol);
+                                        FixedPointType &fixpt);
   llvm::Constant *convertConstantExpr(llvm::ConstantExpr *cexp,
                                       FixedPointType &fixpt,
                                       TypeMatchPolicy typepol);

@@ -22,20 +22,22 @@ using namespace taffo;
 
 #define defaultFixpType @SYNTAX_ERROR@
 
-
-Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType &fixpt, TypeMatchPolicy typepol) {
-    if (UndefValue *undef = dyn_cast<UndefValue>(flt)) {
-        return UndefValue::get(getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt));
+Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType &fixpt,
+                                        TypeMatchPolicy typepol) {
+  if (dyn_cast<UndefValue>(flt)) {
+    return UndefValue::get(
+        getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt));
     }
     if (GlobalVariable *gvar = dyn_cast<GlobalVariable>(flt)) {
-        return convertGlobalVariable(gvar, fixpt, typepol);
+    return convertGlobalVariable(gvar, fixpt);
     } else if (ConstantFP *fpc = dyn_cast<ConstantFP>(flt)) {
         return convertLiteral(fpc, nullptr, fixpt, typepol);
     } else if (ConstantAggregate *cag = dyn_cast<ConstantAggregate>(flt)) {
         return convertConstantAggregate(cag, fixpt, typepol);
-    } else if (ConstantDataSequential *cds = dyn_cast<ConstantDataSequential>(flt)) {
+  } else if (ConstantDataSequential *cds =
+                 dyn_cast<ConstantDataSequential>(flt)) {
         return convertConstantDataSequential(cds, fixpt);
-    } else if (auto cag = dyn_cast<ConstantAggregateZero>(flt)) {
+  } else if (dyn_cast<ConstantAggregateZero>(flt)) {
         Type *newt = getLLVMFixedPointTypeForFloatType(flt->getType(), fixpt);
         return ConstantAggregateZero::get(newt);
     } else if (ConstantExpr *cexp = dyn_cast<ConstantExpr>(flt)) {
@@ -44,8 +46,9 @@ Constant *FloatToFixed::convertConstant(Constant *flt, FixedPointType &fixpt, Ty
     return nullptr;
 }
 
-
-Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType &fixpt, TypeMatchPolicy typepol) {
+Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp,
+                                            FixedPointType &fixpt,
+                                            TypeMatchPolicy typepol) {
     if (cexp->isGEPWithNoNotionalOverIndexing()) {
         Value *newval = operandPool[cexp->getOperand(0)];
         if (!newval) {
@@ -62,7 +65,7 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType &
             fixpt = fixPType(newval);
 
         std::vector<Constant *> vals;
-        for (int i = 1; i < cexp->getNumOperands(); i++) {
+    for (unsigned int i = 1; i < cexp->getNumOperands(); i++) {
             vals.push_back(cexp->getOperand(i));
         }
 
@@ -72,8 +75,8 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp, FixedPointType &
     return nullptr;
 }
 
-
-Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob, FixedPointType &fixpt, TypeMatchPolicy typepol) {
+Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob,
+                                              FixedPointType &fixpt) {
     bool hasfloats;
     Type *prevt = glob->getType()->getPointerElementType();
     Type *newt = getLLVMFixedPointTypeForFloatType(prevt, fixpt, &hasfloats);
@@ -123,7 +126,8 @@ FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, FixedPointType &f
 
     } else if (ConstantStruct *strt = dyn_cast<ConstantStruct>(cag)) {
         std::vector<Type *> types;
-        for (Constant *c: consts) {
+    types.reserve(consts.size());
+    for (Constant *c : consts) {
             types.push_back(c->getType());
         }
         StructType *strtype = StructType::get(cag->getContext(), types);
@@ -133,9 +137,10 @@ FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, FixedPointType &f
     llvm_unreachable("a ConstantAggregate is not an array, vector or struct...");
 }
 
-
-template<class T>
-Constant *FloatToFixed::createConstantDataSequential(ConstantDataSequential *cds, const FixedPointType &fixpt) {
+template <class T>
+Constant *
+FloatToFixed::createConstantDataSequential(ConstantDataSequential *cds,
+                                           const FixedPointType &fixpt) {
     std::vector<T> newConsts;
 
     for (int i = 0; i < cds->getNumElements(); i++) {
@@ -238,7 +243,6 @@ FloatToFixed::convertLiteral(ConstantFP *fpc, Instruction *context, FixedPointTy
         bool loosesInfo;
 
         val.convert(intty->getFltSemantics(), llvm::APFloatBase::rmTowardPositive, &loosesInfo);
-
 
         return ConstantFP::get(intty, val);
     }

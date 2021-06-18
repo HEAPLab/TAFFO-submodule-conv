@@ -95,9 +95,9 @@ void FloatToFixed::readAllLocalMetadata(Module &m, SmallPtrSetImpl<Value *> &res
 
 
 bool FloatToFixed::parseMetaData(SmallPtrSetImpl<Value *> *variables, MDInfo *raw, Value *instr) {
-    dbgs() << "Collecting metadata for:";
-    instr->print(dbgs());
-    dbgs()<<"\n";;
+    LLVM_DEBUG(dbgs() << "Collecting metadata for:";);
+    LLVM_DEBUG(instr->print(dbgs()););
+    LLVM_DEBUG(dbgs()<<"\n";);
 
 
     ValueInfo vi;
