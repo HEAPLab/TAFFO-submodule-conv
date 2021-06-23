@@ -52,7 +52,7 @@ void FloatToFixed::convertIndirectCalls(llvm::Module &m)
     }
 
     auto indirectCallHandler =
-        indirectCallFunctions.find(indirectFunction->getName());
+        indirectCallFunctions.find((std::string)indirectFunction->getName());
 
     if (indirectCallHandler != indirectCallFunctions.end()) {
       handler_function indirectFunctionHandler = indirectCallHandler->second;
