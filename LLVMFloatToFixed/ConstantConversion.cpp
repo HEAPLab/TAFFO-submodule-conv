@@ -77,7 +77,7 @@ Constant *FloatToFixed::convertConstantExpr(ConstantExpr *cexp,
 
 Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob,
                                               FixedPointType &fixpt) {
-    bool hasfloats;
+    bool hasfloats=false;
     Type *prevt = glob->getType()->getPointerElementType();
     Type *newt = getLLVMFixedPointTypeForFloatType(prevt, fixpt, &hasfloats);
     if (!newt)
@@ -104,7 +104,7 @@ Constant *FloatToFixed::convertGlobalVariable(GlobalVariable *glob,
 Constant *
 FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, FixedPointType &fixpt, TypeMatchPolicy typepol) {
     std::vector<Constant *> consts;
-    for (int i = 0; i < cag->getNumOperands(); i++) {
+    for (unsigned int i = 0; i < cag->getNumOperands(); i++) {
         Constant *oldconst = cag->getOperand(i);
         Constant *newconst;
         if (isFloatType(oldconst->getType())) {
