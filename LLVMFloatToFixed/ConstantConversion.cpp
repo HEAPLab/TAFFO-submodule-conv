@@ -106,7 +106,7 @@ FloatToFixed::convertConstantAggregate(ConstantAggregate *cag, FixedPointType &f
     std::vector<Constant *> consts;
     for (unsigned int i = 0; i < cag->getNumOperands(); i++) {
         Constant *oldconst = cag->getOperand(i);
-        Constant *newconst;
+        Constant *newconst=nullptr;
         if (isFloatType(oldconst->getType())) {
             newconst = convertConstant(cag->getOperand(i), fixpt, TypeMatchPolicy::ForceHint);
             if (!newconst)
@@ -143,7 +143,7 @@ FloatToFixed::createConstantDataSequential(ConstantDataSequential *cds,
                                            const FixedPointType &fixpt) {
     std::vector<T> newConsts;
 
-    for (int i = 0; i < cds->getNumElements(); i++) {
+    for (unsigned int i = 0; i < cds->getNumElements(); i++) {
         APFloat thiselem = cds->getElementAsAPFloat(i);
         APSInt fixval;
         if (!convertAPFloat(thiselem, fixval, nullptr, fixpt)) {
@@ -163,7 +163,7 @@ template<class T>
 Constant *FloatToFixed::createConstantDataSequentialFP(ConstantDataSequential *cds, const FixedPointType &fixpt) {
     std::vector<T> newConsts;
 
-    for (int i = 0; i < cds->getNumElements(); i++) {
+    for (unsigned int i = 0; i < cds->getNumElements(); i++) {
         APFloat thiselem = cds->getElementAsAPFloat(i);
         newConsts.push_back(thiselem.convertToDouble());
     }

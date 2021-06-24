@@ -158,6 +158,8 @@ struct FloatToFixed : public llvm::ModulePass {
   llvm::Value *convertRet(llvm::ReturnInst *ret, FixedPointType &fixpt);
   llvm::Value *convertBinOp(llvm::Instruction *instr,
                             const FixedPointType &fixpt);
+  llvm::Value *convertUnaryOp(llvm::Instruction *instr,
+                                  const FixedPointType &fixpt);
   llvm::Value *convertCmp(llvm::FCmpInst *fcmp);
   llvm::Value *convertCast(llvm::CastInst *cast, const FixedPointType &fixpt);
   llvm::Value *fallback(llvm::Instruction *unsupp, FixedPointType &fixpt);

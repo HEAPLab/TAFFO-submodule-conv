@@ -52,6 +52,9 @@ Value *FloatToFixed::convertInstruction(Module &m, Instruction *val,
       res = convertCast(cast, fixpt);
     } else if (FCmpInst *fcmp = dyn_cast<FCmpInst>(val)) {
       res = convertCmp(fcmp);
+    }else if (instr->isUnaryOp()){
+      
+      res = convertUnaryOp(instr, fixpt);
     }
   }
   if (res == Unsupported) {
@@ -422,6 +425,42 @@ Value *FloatToFixed::convertRet(ReturnInst *ret, FixedPointType &fixpt) {
   ret->setOperand(0, v);
   return ret;
 }
+
+
+
+
+Value *FloatToFixed::convertUnaryOp(Instruction *instr,
+                                  const FixedPointType &fixpt){
+    if (!instr->getType()->isFloatingPointTy() ||
+      valueInfo(instr)->noTypeConversion)
+    return Unsupported;
+
+  unsigned int opc = instr->getOpcode();
+
+  if(opc == Instruction::FNeg){
+    LLVM_DEBUG(instr->getOperand(0)->print(dbgs()););
+    LLVM_DEBUG(dbgs() << "\n";);
+    Value *val1 = translateOrMatchOperandAndType(instr->getOperand(0), fixpt, instr);
+    if (!val1)
+      return nullptr;
+    IRBuilder<> builder(instr);
+    Value *fixop =nullptr;
+
+        if (fixpt.isFixedPoint()) {
+         fixop = builder.CreateNeg(val1);
+      } else if (fixpt.isFloatingPoint()) {
+        fixop = builder.CreateFNeg(val1);
+
+      } else {
+        llvm_unreachable("Unknown variable type. Are you trying to implement a "
+                         "new datatype?");
+      }
+      cpMetaData(fixop, instr);
+      updateConstTypeMetadata(fixop, 0U, fixpt);
+      return fixop;
+  }}
+  
+
 Value *FloatToFixed::convertBinOp(Instruction *instr,
                                   const FixedPointType &fixpt) {
   /*le istruzioni Instruction::
