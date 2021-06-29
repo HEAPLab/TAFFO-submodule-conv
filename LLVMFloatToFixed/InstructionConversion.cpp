@@ -40,8 +40,7 @@ Value *FloatToFixed::convertInstruction(Module &m, Instruction *val,
   } else if (SelectInst *select = dyn_cast<SelectInst>(val)) {
     res = convertSelect(select, fixpt);
   } else if (isa<CallInst>(val) || isa<InvokeInst>(val)) {
-    CallSite *call = new CallSite(val);
-    res = convertCall(call, fixpt);
+    res = convertCall(dyn_cast<CallBase>(val), fixpt);
   } else if (ReturnInst *ret = dyn_cast<ReturnInst>(val)) {
     res = convertRet(ret, fixpt);
   } else if (Instruction *instr = dyn_cast<Instruction>(
@@ -325,10 +324,10 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType &fixpt) {
   Function *newF = functionPool[oldF];
   if (!newF) {
     LLVM_DEBUG(dbgs() << "[Info] no function clone for instruction"
-                      << *(call->getInstruction()) << ", engaging fallback\n");
+                      << *(call) << ", engaging fallback\n");
     return Unsupported;
   }
-  LLVM_DEBUG(dbgs() << *(call->getInstruction())
+  LLVM_DEBUG(dbgs() << *(call)
                     << " will use converted function " << newF->getName() << " "
                     << *newF->getType() << "\n";);
   std::vector<Value *> convArgs;
@@ -365,7 +364,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType &fixpt) {
                              "because mem2reg can interfere\n");
       }
       thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt,
-                                                       call->getInstruction());
+                                                       call);
       fixArgs.push_back(std::pair<int, FixedPointType>(i, funfpt));
     } else {
       FixedPointType funfpt;
@@ -375,7 +374,7 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType &fixpt) {
       LLVM_DEBUG(dbgs() << "      making an attempt to ignore the issue "
                            "because mem2reg can interfere\n");
       thisArgument = translateOrMatchAnyOperandAndType(*call_arg, funfpt,
-                                                       call->getInstruction());
+                                                       call);
     }
     if (!thisArgument) {
       LLVM_DEBUG(dbgs() << "CALL: match of argument " << i << " (" << *f_arg
@@ -393,13 +392,13 @@ Value *FloatToFixed::convertCall(CallSite *call, FixedPointType &fixpt) {
     call_arg++;
     f_arg++;
   }
-  if (call->isCall()) {
+  if (isa<CallInst>(call)) {
     CallInst *newCall = CallInst::Create(newF, convArgs);
     newCall->setCallingConv(call->getCallingConv());
-    newCall->insertBefore(call->getInstruction());
+    newCall->insertBefore(call);
     return newCall;
-  } else if (call->isInvoke()) {
-    InvokeInst *invk = dyn_cast<InvokeInst>(call->getInstruction());
+  } else if (isa<InvokeInst>(call)) {
+    InvokeInst *invk = dyn_cast<InvokeInst>(call);
     InvokeInst *newInvk = InvokeInst::Create(newF, invk->getNormalDest(),
                                              invk->getUnwindDest(), convArgs);
     newInvk->setCallingConv(call->getCallingConv());

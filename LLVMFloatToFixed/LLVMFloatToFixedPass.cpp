@@ -8,6 +8,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include <llvm/IR/InstrTypes.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include "LLVMFloatToFixedPass.h"
@@ -312,14 +313,14 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
 
     for (int i = 0; i < vals.size(); i++) {
         Value *valsi = vals[i];
-        CallSite call(valsi);
+        CallSite* call = dyn_cast<CallBase>(valsi);
 
-        if (!call.getInstruction())
+        if (call == nullptr)
             continue;
 
         bool alreadyHandledNewF;
-        Function *oldF = call.getCalledFunction();
-        Function *newF = createFixFun(&call, &alreadyHandledNewF);
+        Function *oldF = call->getCalledFunction();
+        Function *newF = createFixFun(call, &alreadyHandledNewF);
         if (!newF) {
             LLVM_DEBUG(dbgs() << "Attempted to clone function " << oldF->getName() << " but failed\n");
             continue;
@@ -395,10 +396,10 @@ void FloatToFixed::propagateCall(std::vector<Value *> &vals, llvm::SmallPtrSetIm
         /* Copy the return type on the call instruction to all the return
          * instructions */
         for (ReturnInst *v : returns) {
-            if (!hasInfo(call.getInstruction()))
+            if (!hasInfo(call))
                 continue;
             newVals.push_back(v);
-            demandValueInfo(v)->fixpType = valueInfo(call.getInstruction())->fixpType;
+            demandValueInfo(v)->fixpType = valueInfo(call)->fixpType;
             valueInfo(v)->origType = nullptr;
             valueInfo(v)->fixpTypeRootDistance = 0;
         }
@@ -458,7 +459,7 @@ Function *FloatToFixed::createFixFun(CallSite *call, bool *old) {
 
     std::string suffix;
     if (isFloatType(oldF->getReturnType())) { //ret value in signature
-        FixedPointType retValType = valueInfo(call->getInstruction())->fixpType;
+        FixedPointType retValType = valueInfo(call)->fixpType;
         suffix = retValType.toString();
         fixArgs.push_back(std::pair<int, FixedPointType>(-1, retValType));
     } else {
@@ -480,7 +481,7 @@ Function *FloatToFixed::createFixFun(CallSite *call, bool *old) {
 
     Function *newF = functionPool[oldF]; //check if is previously converted
     if (newF) {
-        LLVM_DEBUG(dbgs() << *(call->getInstruction()) << " use already converted function : " <<
+        LLVM_DEBUG(dbgs() << *(call) << " use already converted function : " <<
                           newF->getName() << " " << *newF->getType() << "\n";);
         if (old) *old = true;
         return newF;
@@ -488,9 +489,9 @@ Function *FloatToFixed::createFixFun(CallSite *call, bool *old) {
     if (old) *old = false;
 
     Type *retType = oldF->getReturnType();
-    if (hasInfo(call->getInstruction())) {
-        if (!valueInfo(call->getInstruction())->noTypeConversion)
-            retType = getLLVMFixedPointTypeForFloatValue(call->getInstruction());
+    if (hasInfo(call)) {
+        if (!valueInfo(call)->noTypeConversion)
+            retType = getLLVMFixedPointTypeForFloatValue(call);
     }
 
     FunctionType *newFunTy = FunctionType::get(
