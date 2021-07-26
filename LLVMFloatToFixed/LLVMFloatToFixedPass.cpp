@@ -1,3 +1,6 @@
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
@@ -7,12 +10,16 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include "LLVMFloatToFixedPass.h"
+#include "llvm/IR/Mangler.h"
 #include "TypeUtils.h"
+
 
 
 using namespace llvm;
@@ -35,6 +42,99 @@ void FloatToFixed::getAnalysisUsage(llvm::AnalysisUsage &au) const {
 }
 
 
+using MLHVec = std::vector<std::pair<llvm::User*, llvm::Type*>>;
+
+MLHVec collectMallocLikeHandler(Module &m){
+LLVM_DEBUG(llvm::dbgs() << "#### " << __func__ <<  " ####\n");
+std::vector<std::string> names{"malloc"};
+MLHVec tmp;
+
+for(const auto& name : names){
+LLVM_DEBUG(llvm::dbgs() << "Searching " <<  name  << " as ");
+//Mangle name to find the function
+std::string mangledName;
+llvm::raw_string_ostream mangledNameStream(mangledName);
+llvm::Mangler::getNameWithPrefix(mangledNameStream, name, m.getDataLayout());
+mangledNameStream.flush();
+LLVM_DEBUG(llvm::dbgs() << mangledName << "\n"); 
+
+//Search function
+auto fun = m.getFunction(mangledName);
+if(fun == nullptr) {LLVM_DEBUG(llvm::dbgs() << "Not Found\n" << "\n");  continue; }
+
+//cycles Users of the function
+for (auto UF : fun->users()){
+    //cycles Users of return value of the function
+    llvm::Type* type = nullptr;
+    for (auto UC : UF->users()){
+        if (auto bitcast = llvm::dyn_cast<llvm::BitCastInst>(UC)){
+                LLVM_DEBUG(llvm::dbgs() << "Found bitcast from ");
+                LLVM_DEBUG(UF->dump());
+                LLVM_DEBUG(llvm::dbgs() << "to ");
+                LLVM_DEBUG(bitcast->dump());
+                if(type == nullptr){
+                    
+                    type = bitcast->getType()->isPtrOrPtrVectorTy() ? bitcast->getType()->getPointerElementType() : bitcast->getType()->getScalarType();
+                    while( type->isPtrOrPtrVectorTy()){
+                        type = bitcast->getType()->getPointerElementType();
+                    }
+                    LLVM_DEBUG(llvm::dbgs() << "Scalar type ");
+                    LLVM_DEBUG(type->dump());
+                }else{
+                  llvm::Type* type_tmp = nullptr; 
+                    type_tmp = bitcast->getType()->isPtrOrPtrVectorTy() ? bitcast->getType()->getPointerElementType() : bitcast->getType()->getScalarType();
+                    while( type_tmp->isPtrOrPtrVectorTy()){
+                        type_tmp = bitcast->getType()->getPointerElementType();
+                    }
+                    LLVM_DEBUG(llvm::dbgs() << "Scalar type ");
+                    LLVM_DEBUG(type_tmp->dump());
+                    if(type->getScalarSizeInBits() < type_tmp->getScalarSizeInBits()){
+                        type = type_tmp;
+                    }
+                }                
+        }        
+    }
+    tmp.push_back({UF,type});
+}
+}
+return tmp;
+}
+
+
+void closeMallocLikeHandler(Module &m, const MLHVec& vec  ){
+LLVM_DEBUG(llvm::dbgs() << "#### " << __func__ <<  " ####\n");
+auto tmp = collectMallocLikeHandler(m);
+llvm::IRBuilder<> builder(m.getContext());
+
+for(auto & V : vec){
+    for(auto & T : tmp){
+
+        if(V.first == T.first && V.second->getScalarSizeInBits() < T.second->getScalarSizeInBits() ){
+        LLVM_DEBUG(llvm::dbgs() << "Old Type " <<"\n");
+        LLVM_DEBUG(V.second->dump());
+        LLVM_DEBUG(llvm::dbgs() << "New Type " <<"\n");
+        LLVM_DEBUG(T.second->dump());
+
+        unsigned int Q = T.second->getScalarSizeInBits() / V.second->getScalarSizeInBits();
+        Q = T.second->getScalarSizeInBits() % V.second->getScalarSizeInBits() == 0 ? Q : Q + 1;
+        LLVM_DEBUG(llvm::dbgs() << "Quotient " << std::to_string(Q)  <<"\n");
+        auto int_const = dyn_cast<ConstantInt>(V.first->getOperand(0)); 
+        if(int_const == nullptr){
+            builder.SetInsertPoint(dyn_cast<llvm::Instruction>(V.first));
+            V.first->setOperand(0, builder.CreateMul(V.first->getOperand(0), ConstantInt::get(V.first->getOperand(0)->getType(), Q)));            
+            LLVM_DEBUG(llvm::dbgs() << "Finish conversion type "  );
+            LLVM_DEBUG(V.first->getOperand(0)->dump());
+            LLVM_DEBUG(V.first->dump());
+            continue;
+        };
+        V.first->getOperand(0)->replaceAllUsesWith(ConstantInt::get(V.first->getOperand(0)->getType(), int_const->getUniqueInteger() * Q)); 
+        LLVM_DEBUG(llvm::dbgs() << "Finish conversion type "  );
+        LLVM_DEBUG(V.first->dump());
+        }}}
+}
+
+
+
 bool FloatToFixed::runOnModule(Module &m) {
     llvm::SmallPtrSet<llvm::Value *, 32> local;
     llvm::SmallPtrSet<llvm::Value *, 32> global;
@@ -50,7 +150,9 @@ bool FloatToFixed::runOnModule(Module &m) {
     LLVM_DEBUG(printConversionQueue(vals));
     ConversionCount = vals.size();
 
+    auto mallocLikevec = collectMallocLikeHandler(m);
     performConversion(m, vals);
+    closeMallocLikeHandler( m,mallocLikevec);
     closePhiLoops();
     cleanup(vals);
 
